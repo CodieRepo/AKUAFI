@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand Colors - Premium Tech & Eco Hybrid */
+  /* Primary: Bold confident blue */
+  --color-primary: #0A66C2; 
+  --color-primary-dark: #004182;
+  --color-primary-light: #E0F2FE;
+
+  /* Accent: Cyan for modern/future feel */
+  --color-accent-cyan: #06B6D4; 
+  --color-accent-cyan-light: #CFFAFE;
+  
+  /* Responsibility: Green (Trust & Eco) */
+  --color-success: #10B981; 
+  --color-success-dark: #047857;
+  --color-success-light: #D1FAE5;
+  
+  /* Neutrals */
+  --color-surface: #F8FAFC;
+  --color-background: #FFFFFF;
+  --color-foreground: #0F172A; /* Slate 900 */
+  --color-text-muted: #64748B;
+  
+  --color-border: #E2E8F0;
+}
+
+@theme {
+  /* Font Mapping */
+  --font-sans: var(--font-inter);
+  
+  /* Color Mapping */
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-light: var(--color-primary-light);
+  
+  --color-accent-cyan: var(--color-accent-cyan);
+  --color-accent-cyan-light: var(--color-accent-cyan-light);
+  
+  --color-success: var(--color-success);
+  --color-success-dark: var(--color-success-dark);
+  --color-success-light: var(--color-success-light);
+
+  --color-surface: var(--color-surface);
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+
+  /* Shadow Profiles - Premium Depth */
+  --shadow-soft-sm: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-soft-md: 0 8px 16px -4px rgba(0,0,0,0.06);
+  --shadow-soft-lg: 0 16px 32px -8px rgba(0,0,0,0.08);
+  --shadow-glow-blue: 0 0 40px rgba(10, 102, 194, 0.25);
+  --shadow-glow-cyan: 0 0 40px rgba(6, 182, 212, 0.25);
+  
+  /* Radius */
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  
+  /* Animation */
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+/* Utilities */
+@layer utilities {
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: var(--shadow-soft-lg);
+  }
+
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-nav.scrolled {
+    background: rgba(255, 255, 255, 0.90);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: var(--shadow-soft-md);
+  }
+  
+  .text-gradient-primary {
+    background: linear-gradient(135deg, #0A66C2 0%, #06B6D4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .text-gradient-green {
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .hero-gradient-overlay {
+    background: radial-gradient(circle at 50% 0%, rgba(224, 242, 254, 0.8) 0%, rgba(255, 255, 255, 0) 60%),
+                radial-gradient(circle at 100% 0%, rgba(207, 250, 254, 0.5) 0%, rgba(255, 255, 255, 0) 40%);
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-inter), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
