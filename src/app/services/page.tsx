@@ -83,11 +83,7 @@ export default function Services() {
                   ))}
                 </ul>
 
-                {service.feature_tag && (
-                    <span className="inline-block px-3 py-1 bg-white/20 rounded text-xs font-bold uppercase tracking-wider text-white mb-4">
-                        {service.feature_tag}
-                    </span>
-                )}
+
               </div>
               
               {/* Decorative Blur */}
