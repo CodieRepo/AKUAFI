@@ -23,7 +23,7 @@ export default function Home() {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: "easeOut",
+        ease: [0.17, 0.55, 0.55, 1] as const,
       },
     },
   };
@@ -119,7 +119,7 @@ export default function Home() {
                 {/* Main Bottle Image */}
                  <motion.div 
                     animate={{ y: [-15, 15, -15], rotate: [0, 2, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    transition={{ duration: 6, repeat: Infinity, ease: [0.42, 0, 0.58, 1] as const }}
                     className="relative z-10 w-full h-full flex items-center justify-center p-8"
                  >
                     <div className="relative w-full h-full filter drop-shadow-[0_20px_50px_rgba(6,182,212,0.3)]">
@@ -137,7 +137,7 @@ export default function Home() {
                  {/* Floating Cards - Repositioned slightly for the image */}
                  <motion.div 
                     animate={{ y: [0, -20, 0], x: [0, 5, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    transition={{ duration: 5, repeat: Infinity, ease: [0.42, 0, 0.58, 1] as const, delay: 0.5 }}
                     className="absolute top-[10%] -right-4 lg:right-0 z-20 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-soft-lg border border-white/50 flex items-center gap-3 w-52"
                  >
                     <div className="bg-success-light p-2 rounded-lg text-success">
@@ -151,7 +151,7 @@ export default function Home() {
 
                  <motion.div 
                     animate={{ y: [0, 20, 0], x: [0, -5, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+                    transition={{ duration: 6, repeat: Infinity, ease: [0.42, 0, 0.58, 1] as const, delay: 1.5 }}
                     className="absolute bottom-[15%] -left-4 lg:left-0 z-20 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-soft-lg border border-white/50 flex items-center gap-3 w-60"
                  >
                     <div className="bg-primary-light p-2 rounded-lg text-primary">

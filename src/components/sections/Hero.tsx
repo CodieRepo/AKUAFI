@@ -17,7 +17,7 @@ export function Hero() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={{ duration: 0.6, ease: [0.17, 0.55, 0.55, 1] as const }}
           className="text-center lg:text-left"
         >
           <div className="inline-block px-4 py-1.5 rounded-full bg-blue-50 text-primary font-bold text-sm mb-6 border border-blue-100 tracking-wide shadow-sm">
@@ -53,7 +53,7 @@ export function Hero() {
         >
             <motion.div
                 animate={{ y: [0, -20, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 6, repeat: Infinity, ease: [0.42, 0, 0.58, 1] as const }}
                 className="relative z-10"
             >
                 <img 
