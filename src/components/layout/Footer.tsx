@@ -35,8 +35,9 @@ export function Footer() {
           <div>
             <h4 className="font-bold text-slate-900 mb-6">Contact</h4>
             <ul className="space-y-4 text-slate-500">
-              <li>hello@akuafi.com</li>
-              <li>+1 (555) 123-4567</li>
+              <li><a href="mailto:info@akuafi.com" className="font-bold hover:text-primary transition-colors">info@akuafi.com</a></li>
+              <li><a href="mailto:akuafiofficial@gmail.com" className="hover:text-primary transition-colors">akuafiofficial@gmail.com</a></li>
+              <li><a href="tel:7522801110" className="hover:text-primary transition-colors">7522801110</a></li>
             </ul>
           </div>
         </div>

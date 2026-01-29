@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Akuafi | Get Your Brand Akuafied",
-  description: "Transform offline ads into measurable sales. Turn every water bottle into a smart advertising channel with real-time tracking.",
+  title: "Akuafi – QR Powered Water Bottle Advertising Platform in India",
+  description: "Turn every water bottle into a smart advertising channel. Akuafi helps brands run QR-powered bottle ads with real-time tracking and measurable ROI.",
 };
 
 export default function RootLayout({

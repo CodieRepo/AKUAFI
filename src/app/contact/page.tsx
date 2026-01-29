@@ -23,8 +23,12 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 mb-1">Email Us</h3>
-                  <p className="text-slate-600">hello@akuafi.com</p>
-                  <p className="text-slate-600">sales@akuafi.com</p>
+                  <p className="text-slate-600 mb-1">
+                    <a href="mailto:info@akuafi.com" className="font-bold text-lg text-primary hover:underline">info@akuafi.com</a>
+                  </p>
+                  <p className="text-slate-600">
+                    <a href="mailto:akuafiofficial@gmail.com" className="hover:text-primary transition-colors">akuafiofficial@gmail.com</a>
+                  </p>
                 </div>
               </div>
 
@@ -34,7 +38,9 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 mb-1">Call Us</h3>
-                  <p className="text-slate-600">+1 (555) 123-4567</p>
+                  <p className="text-slate-600">
+                    <a href="tel:7522801110" className="hover:text-primary transition-colors">7522801110</a>
+                  </p>
                   <p className="text-sm text-slate-400 mt-1">Mon-Fri from 9am to 6pm EST.</p>
                 </div>
               </div>
@@ -45,7 +51,13 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 mb-1">HQ</h3>
-                  <p className="text-slate-600">123 Market Street, Suite 400<br/>San Francisco, CA 94103</p>
+                  <p className="text-slate-600">
+                    AKUAFI PRIVATE LIMITED<br />
+                    4080/93, Pawan Villa,<br />
+                    Haridwarpuram, Basharatpur,<br />
+                    Gorakhpur – 273004,<br />
+                    Uttar Pradesh, India
+                  </p>
                 </div>
               </div>
             </div>

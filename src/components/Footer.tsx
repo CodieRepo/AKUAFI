@@ -11,13 +11,9 @@ export default function Footer() {
             <Link href="/" className="text-2xl font-bold text-primary mb-4 block">
               AKUAFI
             </Link>
-            <p className="text-slate-500 text-sm mb-6">
-              Transforming everyday water bottles into smart, measurable advertising channels.
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+              Akuafi is India’s first QR-powered water bottle advertising platform that helps brands run offline marketing campaigns with real-time tracking. Our smart bottle ads convert physical impressions into digital leads, website visits, and sales. Whether you are a local business or a national brand, Akuafi offers a cost-effective and measurable offline advertising solution.
             </p>
-            <div className="flex items-center gap-2 text-success font-medium text-sm">
-              <Leaf size={16} />
-              <span>Climate Positive Platform</span>
-            </div>
           </div>
 
           {/* Links Column 1 */}
@@ -44,8 +40,16 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold text-slate-900 mb-4">Get in Touch</h4>
             <ul className="space-y-3 text-sm text-slate-600">
-              <li>hello@akuafi.com</li>
-              <li>+1 (555) 123-4567</li>
+              <li><a href="mailto:info@akuafi.com" className="font-bold text-slate-900 hover:text-primary transition-colors">info@akuafi.com</a></li>
+              <li><a href="mailto:akuafiofficial@gmail.com" className="hover:text-primary transition-colors">akuafiofficial@gmail.com</a></li>
+              <li><a href="tel:7522801110" className="hover:text-primary transition-colors">7522801110</a></li>
+              <li className="text-slate-500 pt-2 leading-relaxed">
+                AKUAFI PRIVATE LIMITED<br />
+                4080/93, Pawan Villa,<br />
+                Haridwarpuram, Basharatpur,<br />
+                Gorakhpur – 273004,<br />
+                Uttar Pradesh, India
+              </li>
             </ul>
           </div>
         </div>
