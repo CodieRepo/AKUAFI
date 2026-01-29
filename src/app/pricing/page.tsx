@@ -24,7 +24,7 @@ export default function Pricing() {
       y: 0,
       transition: {
         duration: 0.5,
-        ease: "easeOut",
+        ease: [0, 0, 0.58, 1] as const,
       },
     },
   };
