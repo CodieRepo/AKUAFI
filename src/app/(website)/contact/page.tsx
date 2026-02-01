@@ -11,7 +11,7 @@ export default function Contact() {
           
           {/* Left Column: Info */}
           <div>
-            <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">Let's Get Your Brand <span className="text-primary">Akuafied</span>.</h1>
+            <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">Let&apos;s Get Your Brand <span className="text-primary">Akuafied</span>.</h1>
             <p className="text-lg text-slate-600 mb-12">
               Ready to launch a campaign that is measurable, memorable, and responsible? Fill out the form and our team will get back to you within 24 hours.
             </p>
@@ -84,7 +84,7 @@ export default function Contact() {
                </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="interest" className="text-sm font-semibold text-slate-700">I'm interested in...</label>
+                  <label htmlFor="interest" className="text-sm font-semibold text-slate-700">I&apos;m interested in...</label>
                   <select id="interest" className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
                      <option>Launching a Campaign</option>
                      <option>Becoming a Distribution Partner</option>

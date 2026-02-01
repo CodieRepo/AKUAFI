@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Megaphone, Users, UserCircle, LogOut, Settings, Ticket } from 'lucide-react';
-import { cn } from '../ui/Button';
+import { cn } from '@/components/ui/Button';
 
 const navItems = [
   { name: 'Dashboard', href: '/client/dashboard', icon: LayoutDashboard },

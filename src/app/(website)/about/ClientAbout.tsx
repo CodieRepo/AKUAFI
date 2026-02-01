@@ -92,7 +92,7 @@ export default function ClientAbout() {
                   It started with a simple observation: <strong>traditional offline advertising is broken.</strong> Billboards are ignored, pamphlets are discarded, and brands spend millions without knowing if anyone actually saw their ad.
                </p>
                <p className="mb-6">
-                  Meanwhile, water is essential. It’s everywhere—in hands, on desks, at events. We realized that the humble water bottle wasn't just a container; it was untapped "real estate." But placing a logo on a bottle wasn't enough. It needed to be <strong>smart</strong>.
+                  Meanwhile, water is essential. It’s everywhere—in hands, on desks, at events. We realized that the humble water bottle wasn&apos;t just a container; it was untapped "real estate." But placing a logo on a bottle wasn&apos;t enough. It needed to be <strong>smart</strong>.
                </p>
                <p>
                   That’s how <strong>Akuafi</strong> was born. As India’s first QR-powered bottle advertising platform, we bridged the gap between the physical and digital worlds. We turned a passive object into an interactive experience, giving brands the power to track engagement, generate leads, and measure ROI like never before—while ensuring every campaign gives back to the planet.

@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell, Search, Menu } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Button } from '@/components/ui/Button';
 
 export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
