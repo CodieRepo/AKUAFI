@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 export function Navbar() {
   return (
@@ -26,7 +26,7 @@ export function Navbar() {
         {/* CTA - Fixed Style */}
         <div className="hidden md:flex">
             <Link href="/contact">
-                <Button size="md" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 font-bold px-8 h-11 tracking-wide">
+                <Button size="default" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 font-bold px-8 h-11 tracking-wide">
                     Get Started
                 </Button>
             </Link>
