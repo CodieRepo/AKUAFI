@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/Button';
 interface Campaign {
   id: string;
   name: string;
-  is_active: boolean; // Changed from status string
+  status?: string;
   start_date: string;
   end_date: string;
-  coupon_type: string;
-  coupon_min_value: number;
-  coupon_max_value: number;
+  // Coupon fields ignored for now as they are not in DB, but keeping optional for TS safety if needed later
+  coupon_type?: string;
+  coupon_min_value?: number;
+  coupon_max_value?: number;
 }
 
 export default function CampaignsPage() {
@@ -29,7 +30,8 @@ export default function CampaignsPage() {
         if (!session) return;
 
         const res = await fetch('/api/admin/campaigns', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            cache: 'no-store'
         });
         if (res.ok) {
             setCampaigns(await res.json());
@@ -83,7 +85,6 @@ export default function CampaignsPage() {
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Name</th>
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Duration</th>
-                            <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Reward</th>
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
@@ -92,16 +93,23 @@ export default function CampaignsPage() {
                             const now = new Date();
                             const end = new Date(camp.end_date);
                             const isExpired = now > end;
-                            const isActive = camp.is_active && !isExpired;
+                            const status = isExpired ? 'expired' : camp.status || 'draft';
                             
+                            // Color mapping for status
+                            const statusStyles = {
+                                active: 'bg-green-50 text-green-700 border-green-200',
+                                draft: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                                paused: 'bg-gray-50 text-gray-700 border-gray-200',
+                                expired: 'bg-red-50 text-red-700 border-red-200'
+                            };
+
                             return (
                             <tr key={camp.id} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-6 py-3 font-medium text-gray-900">{camp.name}</td>
                                 <td className="px-6 py-3">
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border capitalize
-                                        ${isActive ? 'bg-green-50 text-green-700 border-green-200' : 
-                                          isExpired ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                                        {isActive ? 'Active' : isExpired ? 'Expired' : 'Inactive'}
+                                        ${statusStyles[status as keyof typeof statusStyles] || 'bg-gray-50 text-gray-700'}`}>
+                                        {status}
                                     </span>
                                 </td>
                                 <td className="px-6 py-3 text-gray-500 text-xs">
@@ -109,14 +117,11 @@ export default function CampaignsPage() {
                                     <span className="text-gray-400 mx-1">→</span>
                                     <span>{new Date(camp.end_date).toLocaleDateString()}</span>
                                 </td>
-                                <td className="px-6 py-3 text-gray-500 font-mono text-xs">
-                                    {camp.coupon_type === 'flat' ? '₹' : ''}{camp.coupon_min_value}-{camp.coupon_max_value}{camp.coupon_type === 'percentage' ? '%' : ''}
-                                </td>
                                 <td className="px-6 py-3 text-right">
                                     <Link 
                                         href={`/admin/campaigns/${camp.id}`}
                                         className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 hover:bg-blue-50 px-3 py-1 rounded-md transition-colors"
-                                    >
+                >
                                         Manage
                                     </Link>
                                 </td>
