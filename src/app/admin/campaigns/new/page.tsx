@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -31,6 +31,7 @@ export default function NewCampaignPage() {
 
     try {
       // TEMP: Authenticate check bypassed for local dev preview
+      // const supabase = getSupabaseClient();
       // const { data: { session } } = await supabase.auth.getSession();
       // if (!session) throw new Error('No session');
 

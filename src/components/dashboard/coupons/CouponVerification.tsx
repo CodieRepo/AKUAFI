@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Search, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 
 export default function CouponVerification() {
   const [code, setCode] = useState('');
@@ -18,6 +18,7 @@ export default function CouponVerification() {
     setCouponData(null);
 
     try {
+        const supabase = getSupabaseClient();
         const { data, error } = await supabase
             .from('coupons')
             .select('*')

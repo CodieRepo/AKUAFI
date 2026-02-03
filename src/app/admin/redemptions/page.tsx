@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Loader2 } from 'lucide-react';
 
 interface Redemption {
@@ -20,6 +20,7 @@ export default function RedemptionsPage() {
   useEffect(() => {
     async function fetchRedemptions() {
       try {
+        const supabase = getSupabaseClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
         const res = await fetch('/api/admin/redemptions', {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Button } from '@/components/ui/Button';
 import { Download, Loader2, QrCode } from 'lucide-react';
 
@@ -24,6 +24,7 @@ export default function QRGeneratorPage() {
   useEffect(() => {
     async function fetchCampaigns() {
       try {
+        const supabase = getSupabaseClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
         const res = await fetch('/api/admin/campaigns', {
@@ -55,6 +56,7 @@ export default function QRGeneratorPage() {
     console.log("SENDING QR GENERATION REQUEST", { campaign_id: formData.campaign_id, quantity: Number(formData.quantity) });
 
     try {
+      const supabase = getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 

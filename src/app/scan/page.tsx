@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, MapPin, Phone, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -31,6 +31,7 @@ function ScanContent() {
       }
 
       try {
+        const supabase = getSupabaseClient();
         const { data: bottleData, error: bottleError } = await supabase
           .from('bottles')
           .select('*')

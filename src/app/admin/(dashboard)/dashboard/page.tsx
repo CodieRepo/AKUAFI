@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
+
+export const dynamic = "force-dynamic";
 
 interface DashboardStats {
   total_campaigns: number;
@@ -19,6 +21,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
+        const supabase = getSupabaseClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { 
   LayoutDashboard, 
   Ticket, 
@@ -25,6 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   /*
   useEffect(() => {
     const checkUser = async () => {
+      const supabase = getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/admin/login');
@@ -40,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => setLoading(false), []);
 
   const handleSignOut = async () => {
+    const supabase = getSupabaseClient();
     await supabase.auth.signOut();
     router.push('/admin/login');
   };

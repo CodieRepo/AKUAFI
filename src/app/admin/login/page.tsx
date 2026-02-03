@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -19,6 +19,7 @@ export default function AdminLogin() {
     setError(null);
 
     try {
+      const supabase = getSupabaseClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -46,6 +47,7 @@ export default function AdminLogin() {
       console.error('Login error:', err);
       setError(err.message || 'Failed to login');
       // Sign out if admin check failed to clear session
+      const supabase = getSupabaseClient();
       await supabase.auth.signOut();
     } finally {
       setLoading(false);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Plus, Search, Calendar, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -24,6 +24,7 @@ export default function CampaignsPage() {
   useEffect(() => {
     async function fetchCampaigns() {
       try {
+        const supabase = getSupabaseClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 

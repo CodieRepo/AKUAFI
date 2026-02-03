@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseclient';
+import { getSupabaseClient } from '@/lib/supabaseclient';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, Play, Pause, Loader2, BarChart3, Settings, QrCode } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ export default function CampaignDetailsPage() {
 
   async function fetchCampaign() {
     try {
+      const supabase = getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const headers = { Authorization: `Bearer ${session.access_token}` };
@@ -46,6 +47,7 @@ export default function CampaignDetailsPage() {
     if (!campaign) return;
     const newStatus = campaign.status === 'active' ? 'paused' : 'active';
     try {
+        const supabase = getSupabaseClient();
         const { data: { session } } = await supabase.auth.getSession();
         await fetch(`/api/admin/campaigns/${id}`, {
             method: 'PATCH',
