@@ -34,7 +34,8 @@ export default function CampaignsPage() {
             cache: 'no-store'
         });
         if (res.ok) {
-            setCampaigns(await res.json());
+            const data = await res.json();
+            setCampaigns(data.campaigns || []);
         }
       } catch (err) {
         console.error(err);
