@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     // Parallel queries for dashboard stats
     // Parallel queries for dashboard stats
     // 1. Campaign Counts
-    const { count: totalCampaigns } = await supabaseAdmin
+    const { count: totalCampaigns } = await getSupabaseAdmin()
         .from('campaigns')
         .select('*', { count: 'exact', head: true });
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     // Note: Accurate "Active" also depends on date, but for stats 'is_active' flag is a good proxy for "Enabled".
     // If we want strictly currently running, we'd need date filter too. Let's do both for accuracy.
     const now = new Date().toISOString();
-    const { count: activeCampaigns } = await supabaseAdmin
+    const { count: activeCampaigns } = await getSupabaseAdmin()
         .from('campaigns')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true)
@@ -25,18 +25,18 @@ export async function GET(request: Request) {
         .gte('end_date', now);
 
     // 3. Bottles Generated
-    const { count: totalBottles } = await supabaseAdmin
+    const { count: totalBottles } = await getSupabaseAdmin()
         .from('bottles')
         .select('*', { count: 'exact', head: true });
 
     // 4. Total Redemptions (Coupons redeemed)
-    const { count: totalRedeemed } = await supabaseAdmin
+    const { count: totalRedeemed } = await getSupabaseAdmin()
         .from('coupons')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'redeemed');
 
     // 5. Recent Activity (Last 5 Redemptions)
-    const { data: recentActivity } = await supabaseAdmin
+    const { data: recentActivity } = await getSupabaseAdmin()
         .from('redemptions')
         .select(`
             redeemed_at,

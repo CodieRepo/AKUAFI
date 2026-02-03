@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -12,8 +12,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         { count: totalBottles, error: totalError },
         { count: usedBottles, error: usedError }
     ] = await Promise.all([
-        supabaseAdmin.from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', id),
-        supabaseAdmin.from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', id).eq('status', 'used')
+        getSupabaseAdmin().from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', id),
+        getSupabaseAdmin().from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', id).eq('status', 'used')
     ]);
 
     if (totalError) throw totalError;

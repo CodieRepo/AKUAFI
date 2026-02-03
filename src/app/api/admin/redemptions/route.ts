@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     // Based on "coupons" table usage in api/redeem.
     
     // Selecting: code, status, created_at, bottles(qr_token), users(phone), campaigns(name)
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('coupons')
       .select(`
         code,
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     }
     
     // 1. Fetch Coupon & Details
-    const { data: coupon, error: fetchError } = await supabaseAdmin
+    const { data: coupon, error: fetchError } = await getSupabaseAdmin()
         .from('coupons')
         .select(`
             id,
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     const redeemedAt = new Date().toISOString();
 
     // A. Update Coupon Status
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
         .from('coupons')
         .update({ status: 'redeemed', redeemed_at: redeemedAt })
         .eq('id', coupon.id);
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     }
 
     // B. Create Redemption Record
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await getSupabaseAdmin()
         .from('redemptions')
         .insert([{
             coupon_id: coupon.id,

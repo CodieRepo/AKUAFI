@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { otpService } from '@/services/otp';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // 2. Fetch Bottle Details
     // Schema: bottles (id, campaign_id, qr_token, status)
-    const { data: bottle, error: bottleError } = await supabaseAdmin
+    const { data: bottle, error: bottleError } = await getSupabaseAdmin()
         .from('bottles')
         .select('id, campaign_id, status, qr_token')
         .eq('qr_token', qr_token) 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     
     // A. Update Bottle Status atomically
     // Attempt to mark as used only if current status is 'unused'.
-    const { data: bottleUpdated, error: bottleUpdateError } = await supabaseAdmin
+    const { data: bottleUpdated, error: bottleUpdateError } = await getSupabaseAdmin()
         .from('bottles')
         .update({ 
             status: 'used',
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
     // B. Insert Coupon
     // Only happens if bottle was successfully marked used by THIS request.
-    const { error: couponError } = await supabaseAdmin
+    const { error: couponError } = await getSupabaseAdmin()
         .from('coupons')
         .insert({
           coupon_code: couponCode,

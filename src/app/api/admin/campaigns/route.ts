@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
   try {
     await verifyAdmin(request);
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('campaigns')
       .select('*')
       .order('created_at', { ascending: false });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     // STRICT SCHEMA INSERT
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('campaigns')
       .insert({
         name: body.name,

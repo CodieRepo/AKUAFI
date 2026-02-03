@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabaseAdmin';
+import { getSupabaseAdmin } from './supabaseAdmin';
 
 export async function verifyAdmin(request: Request) {
   // BYPASS AUTH FOR PREVIEW
@@ -11,14 +11,14 @@ export async function verifyAdmin(request: Request) {
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
 
   if (error || !user || !user.email) {
     throw new Error('Unauthorized: Invalid token');
   }
 
   // Check admins table
-  const { data: admin, error: dbError } = await supabaseAdmin
+  const { data: admin, error: dbError } = await getSupabaseAdmin()
     .from('admins')
     .select('id')
     .eq('email', user.email)

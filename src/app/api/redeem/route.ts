@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
 
     if (authError || !user || !user.phone) {
         console.error("Auth Token Verification Failed:", authError);
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing QR token' }, { status: 400 });
     }
 
-    const { data: bottle, error: bottleError } = await supabaseAdmin
+    const { data: bottle, error: bottleError } = await getSupabaseAdmin()
       .from('bottles')
       .select(`
         id, 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     let userId: string;
     
     // Check if user exists by phone
-    const { data: existingUser } = await supabaseAdmin
+    const { data: existingUser } = await getSupabaseAdmin()
       .from('users')
       .select('id')
       .eq('phone', phone)
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       userId = existingUser.id;
     } else {
       // Create new user map
-      const { data: newUser, error: createUserError } = await supabaseAdmin
+      const { data: newUser, error: createUserError } = await getSupabaseAdmin()
         .from('users')
         .insert([{ 
             phone,
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       if (createUserError || !newUser) {
         // Handle race condition if user created in parallel
         if (createUserError.code === '23505') { // Unique violation
-             const { data: retryUser } = await supabaseAdmin.from('users').select('id').eq('phone', phone).single();
+             const { data: retryUser } = await getSupabaseAdmin().from('users').select('id').eq('phone', phone).single();
              if (retryUser) userId = retryUser.id;
              else throw createUserError;
         } else {
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. CHECK CAMPAIGN ELIGIBILITY (User + Campaign)
-    const { data: existingCoupon } = await supabaseAdmin
+    const { data: existingCoupon } = await getSupabaseAdmin()
       .from('coupons')
       .select('id')
       .eq('user_id', userId)
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
     const issuedAt = new Date().toISOString();
 
     // A. Insert Coupon (Rely on UNIQUE bottle_id constraint)
-    const { error: couponInsertError } = await supabaseAdmin
+    const { error: couponInsertError } = await getSupabaseAdmin()
       .from('coupons')
       .insert([{
         code: couponCode,
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
     
     // B. Mark Bottle as USED (Hard Lock)
     // We update this AFTER coupon issue. 
-    const { error: bottleUpdateError } = await supabaseAdmin
+    const { error: bottleUpdateError } = await getSupabaseAdmin()
         .from('bottles')
         .update({ 
             is_used: true,

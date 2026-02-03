@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     // 1. Redeem Coupon Atomically
     // Validates status is 'active' AND updates to 'redeemed' in one go.
     // This prevents race conditions where a coupon could be redeemed twice.
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('coupons')
       .update({
         status: 'redeemed',

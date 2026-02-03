@@ -2,12 +2,12 @@
 
 import { Check, HelpCircle, ArrowRight, BarChart3, MapPin, Truck, Palette, Smartphone, Calendar, Search } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useState } from "react";
 
 export default function Pricing() {
   // Animation variants
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -17,14 +17,14 @@ export default function Pricing() {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.5,
-        ease: [0, 0, 0.58, 1] as const,
+        ease: [0.16, 1, 0.3, 1],
       },
     },
   };

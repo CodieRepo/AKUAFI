@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdmin } from '@/lib/adminAuth';
 import { randomUUID } from 'crypto';
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     for (let i = 0; i < rows.length; i += chunkSize) {
         const chunk = rows.slice(i, i + chunkSize);
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
             .from('bottles')
             .insert(chunk);
         

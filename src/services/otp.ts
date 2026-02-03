@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const otpService = {
   generateOTP() {
@@ -11,7 +11,7 @@ export const otpService = {
     // Optional: Invalidate previous unverified OTPs to keep table clean, 
     // but not strictly required if we always select latest.
     
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('otp_sessions')
       .insert({
         phone,
@@ -30,7 +30,7 @@ export const otpService = {
 
   async validateOTP(phone: string, otp: string) {
      // Fetch latest unverified OTP that is not expired
-     const { data, error } = await supabaseAdmin
+     const { data, error } = await getSupabaseAdmin()
         .from('otp_sessions')
         .select('*')
         .eq('phone', phone)
@@ -50,7 +50,7 @@ export const otpService = {
 
      // Mark OTP as verified atomically. 
      // We enforce 'verified' is still false at the moment of update.
-     const { data: updatedData, error: updateError } = await supabaseAdmin
+     const { data: updatedData, error: updateError } = await getSupabaseAdmin()
         .from('otp_sessions')
         .update({ verified: true })
         .eq('id', data.id)
