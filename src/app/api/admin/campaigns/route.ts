@@ -30,18 +30,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const now = new Date();
+    const startDate = new Date(body.start_date);
+    const endDate = new Date(body.end_date);
+    
+    // Determine is_active based on date range
+    const isActive = startDate <= now && now <= endDate;
+
     // STRICT SCHEMA INSERT
     const { data, error } = await getSupabaseAdmin()
       .from('campaigns')
       .insert({
         name: body.name,
         description: body.description,
-        coupon_type: body.coupon_type, // 'flat' | 'percentage'
-        coupon_min_value: body.coupon_min_value,
-        coupon_max_value: body.coupon_max_value,
+        // Removed coupon fields as they are not in the schema
         start_date: body.start_date,
         end_date: body.end_date,
-        is_active: false, // Default to inactive
+        is_active: isActive,
         created_at: new Date().toISOString()
       })
       .select()

@@ -21,28 +21,38 @@ export default function NewCampaignPage() {
     coupon_max_value: ''
   });
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    // Clear error when user changes input
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+
+    // Frontend Validation
+    if (new Date(formData.end_date) < new Date(formData.start_date)) {
+        setError("End date cannot be before start date.");
+        setLoading(false);
+        return;
+    }
 
     try {
-      // TEMP: Authenticate check bypassed for local dev preview
-      // const supabase = getSupabaseClient();
-      // const { data: { session } } = await supabase.auth.getSession();
-      // if (!session) throw new Error('No session');
+      // Authenticate check bypassed for local dev preview if handled by middleware/api
+      // Strict auth is handled in the API route calling verifyAdmin
 
       const res = await fetch('/api/admin/campaigns', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer bypassed-token` // Backend is set to auto-bypass
         },
         body: JSON.stringify({
             ...formData,
+            // Coupon values are sent but ignored by API for now as per schema limitations
             coupon_min_value: Number(formData.coupon_min_value),
             coupon_max_value: Number(formData.coupon_max_value)
         })
@@ -54,8 +64,9 @@ export default function NewCampaignPage() {
       }
 
       router.push('/admin/campaigns');
+      router.refresh(); // Refresh Client Cache
     } catch (error: any) {
-      alert(error.message);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -75,6 +86,11 @@ export default function NewCampaignPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        {error && (
+            <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                <strong>Error:</strong> {error}
+            </div>
+        )}
         <form onSubmit={handleSubmit} className="divide-y divide-gray-100">
             {/* Section 1: Campaign Details */}
             <div className="p-6 space-y-4">
