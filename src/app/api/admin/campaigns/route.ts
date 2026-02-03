@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const { data, error } = await getSupabaseAdmin()
       .from('campaigns')
       .select('*')
+      .in('status', ['draft', 'active', 'paused'])
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     const payload = {
         name: body.name,
         description: body.description,
+        status: 'draft',
         start_date: body.start_date,
         end_date: body.end_date,
         created_at: new Date().toISOString()
