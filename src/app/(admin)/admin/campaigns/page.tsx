@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import { Plus, Search, Calendar, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -21,30 +21,35 @@ interface Campaign {
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const supabase = getSupabaseClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        console.log('Fetching campaigns...');
+        // Fetch campaigns with NO filters as requested
+        const { data, error } = await supabase
+          .from('campaigns')
+          .select('*');
 
-        const res = await fetch('/api/admin/campaigns', {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-            cache: 'no-store'
-        });
-        if (res.ok) {
-            const data = await res.json();
-            setCampaigns(data.campaigns || []);
+        if (error) {
+          console.error('Error fetching campaigns:', error);
+          throw error;
         }
+
+        console.log('Campaigns data:', data);
+        setCampaigns((data as Campaign[]) || []);
       } catch (err) {
-        console.error(err);
+        console.error('Unexpected error:', err);
       } finally {
         setLoading(false);
       }
     }
     fetchCampaigns();
-  }, []);
+  }, [supabase]);
 
   return (
     <div className="max-w-4xl">
