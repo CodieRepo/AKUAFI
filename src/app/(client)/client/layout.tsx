@@ -1,36 +1,55 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-import Sidebar from '@/components/layout/Sidebar';
-import Topbar from '@/components/layout/Topbar';
-import { useState } from 'react';
+export default async function ClientLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
 
-export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          // No-op for read-only checks
+        },
+      },
+    }
+  );
+
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    redirect('/login');
+  }
+
+  // Strict Client (User) Check
+  // Note: 'users' table is used for clients per user context
+  const { data: clientUser } = await supabase
+    .from('users') // Ensuring we check the correct table as per prompt (users for clients)
+    .select('id')
+    .eq('id', user.id)
+    .single();
+
+  if (!clientUser) {
+    redirect('/login');
+  }
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar Container - Fixed on Desktop, Slide-over on Mobile */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 h-full transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-         <Sidebar />
-      </div>
-
-      {/* Main Content Area - Offset by sidebar width on desktop */}
-      <div className="flex flex-1 flex-col w-full min-h-screen lg:pl-64 transition-all duration-300">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
-           <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-             {children}
-           </div>
-        </main>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      {/* 
+        Ideally Client components would have their own Navbar/Layout structure.
+        Assuming children contains the client dashboard structure or importing a ClientNavbar if it existed.
+        For now, just rendering children protected by auth.
+      */}
+      {children}
     </div>
   );
 }
