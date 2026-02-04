@@ -3,17 +3,16 @@
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/Button';
-import { Download, Loader2, QrCode } from 'lucide-react';
-
-import QRCode from 'qrcode';
-import JSZip from 'jszip';
+import { Loader2, QrCode } from 'lucide-react';
 
 export default function QRGeneratorPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [zipping, setZipping] = useState(false);
   
+  // Progress tracking
+  const [progress, setProgress] = useState<{ current: number; total: number; status: string } | null>(null);
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -24,12 +23,9 @@ export default function QRGeneratorPage() {
     quantity: '1000'
   });
 
-  const [generated, setGenerated] = useState<{ count: number, tokens: string[] } | null>(null);
-
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        console.log('Fetching campaigns for dropdown...');
         const { data, error } = await supabase
             .from('campaigns')
             .select('id, name')
@@ -46,6 +42,17 @@ export default function QRGeneratorPage() {
     fetchCampaigns();
   }, [supabase]);
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.campaign_id) {
@@ -53,103 +60,76 @@ export default function QRGeneratorPage() {
         return;
     }
     setLoading(true);
-    setGenerated(null);
+    setProgress(null);
 
-    // Logging (MANDATORY)
-    console.log("SENDING QR GENERATION REQUEST", { campaign_id: formData.campaign_id, quantity: Number(formData.quantity) });
+    const totalQuantity = Number(formData.quantity);
+    const BATCH_SIZE = 2000;
+    const batches = Math.ceil(totalQuantity / BATCH_SIZE);
+
+    console.log(`[QR-GEN] Starting generation. Total: ${totalQuantity}, Batches: ${batches}`);
 
     try {
-      // Need session for API authorization
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) throw new Error('No session');
+        // Auth check before starting
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("No session found. Please login.");
 
-      const res = await fetch('/api/admin/qr/generate', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-            campaign_id: formData.campaign_id,
-            quantity: Number(formData.quantity)
-        })
-      });
+        for (let i = 0; i < batches; i++) {
+            const currentBatchNum = i + 1;
+            
+            // Calculate batch quantity (last batch might be smaller)
+            const remaining = totalQuantity - (i * BATCH_SIZE);
+            const batchQty = remaining > BATCH_SIZE ? BATCH_SIZE : remaining;
 
-      const data = await res.json();
-      console.log("QR GENERATION RESPONSE:", data);
+            setProgress({
+                current: currentBatchNum,
+                total: batches,
+                status: `Generating batch ${currentBatchNum} of ${batches} (${batchQty} QRs)...`
+            });
 
-      if (!res.ok) throw new Error(data.error || 'Failed to generate');
+            console.log(`[QR-GEN] Processing Batch ${currentBatchNum}/${batches}. Qty: ${batchQty}`);
 
-      setGenerated({ count: data.count, tokens: data.tokens });
+            const response = await fetch('/api/admin/qr/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    campaign_id: formData.campaign_id,
+                    quantity: batchQty
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || `Failed batch ${currentBatchNum}`);
+            }
+
+            // Get binary data
+            const blob = await response.blob();
+            const filename = `campaign_${formData.campaign_id}_batch_${currentBatchNum}.zip`;
+            
+            // Trigger download
+            downloadBlob(blob, filename);
+
+            // Small delay to prevent browser choking on multiple downloads?
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        setProgress({
+            current: batches,
+            total: batches,
+            status: "All batches completed successfully!"
+        });
+        alert("Generation Complete! Please check your downloads folder.");
 
     } catch (error: any) {
-      alert(error.message);
+        console.error("Geneartion Failed:", error);
+        alert(`Error: ${error.message}`);
+        setProgress(prev => prev ? { ...prev, status: `Failed: ${error.message}` } : null);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
-
-  const downloadCSV = () => {
-    if (!generated || !generated.tokens) return;
-    
-    // Create CSV content
-    const headers = "qr_token,url\n";
-    const rows = generated.tokens.map(t => `${t},https://akuafi.com/scan/${t}`).join("\n");
-    const csvContent = headers + rows;
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `akuafi_qrs_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const downloadZip = async () => {
-      if (!generated || !generated.tokens) return;
-      setZipping(true);
-
-      try {
-          const zip = new JSZip();
-          const campaignName = campaigns.find(c => c.id === formData.campaign_id)?.name || 'Campaign';
-          const sanitizedCampName = campaignName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-          
-          // Generate QR images
-          const promises = generated.tokens.map(async (token, index) => {
-              const url = `https://akuafi.com/scan/${token}`;
-              // Generate Data URL (PNG)
-              const dataUrl = await QRCode.toDataURL(url, {
-                  width: 512,
-                  margin: 2,
-                  errorCorrectionLevel: 'H'
-              });
-              
-              const base64Data = dataUrl.split(',')[1];
-              const filename = `QR_${String(index + 1).padStart(4, '0')}.png`;
-              zip.file(filename, base64Data, { base64: true });
-          });
-
-          await Promise.all(promises);
-
-          const content = await zip.generateAsync({ type: 'blob' });
-          const url = URL.createObjectURL(content);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `${sanitizedCampName}_qr_codes.zip`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-
-      } catch (err) {
-          console.error("Failed to zip QRs", err);
-          alert("Failed to generate ZIP file.");
-      } finally {
-          setZipping(false);
-      }
   };
 
   return (
@@ -168,7 +148,7 @@ export default function QRGeneratorPage() {
                     className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-base"
                     value={formData.campaign_id}
                     onChange={(e) => setFormData({...formData, campaign_id: e.target.value})}
-                    disabled={fetching}
+                    disabled={fetching || loading}
                     required
                 >
                     <option value="">-- Choose Campaign --</option>
@@ -176,7 +156,6 @@ export default function QRGeneratorPage() {
                         <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-2">QRs will be linked to this campaign's rules.</p>
             </div>
 
             {/* Step 2: Quantity */}
@@ -194,6 +173,7 @@ export default function QRGeneratorPage() {
                     value={formData.quantity}
                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    disabled={loading}
                 />
                 
                 <div className="mt-4">
@@ -205,37 +185,29 @@ export default function QRGeneratorPage() {
                         min="1"
                         max="10000"
                         required
+                        disabled={loading}
                     />
-                    <p className="text-xs text-gray-400 mt-2 text-center">Max 10000 per batch.</p>
+                    <p className="text-xs text-gray-400 mt-2 text-center">
+                        Max 10,000. Large batches will be split into multiple downloads.
+                    </p>
                 </div>
             </div>
+
+            {/* Progress / Status */}
+            {progress && (
+                <div className={`p-4 rounded-lg text-center ${progress.status.includes('Failed') ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
+                    <div className="font-bold text-lg mb-1">
+                        Batch {progress.current} / {progress.total}
+                    </div>
+                    <p className="text-sm">{progress.status}</p>
+                </div>
+            )}
 
             <Button type="submit" disabled={loading || fetching} className="w-full h-12 text-base font-semibold shadow-md bg-blue-600 hover:bg-blue-700">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <QrCode className="h-5 w-5 mr-2" />}
-                Generate QR Codes
+                {loading ? 'Generating...' : 'Generate QR Codes'}
             </Button>
         </form>
-
-        {generated && (
-            <div className="mt-8 p-6 bg-green-50 text-green-800 rounded-xl border border-green-200 text-center animate-in fade-in slide-in-from-top-4 shadow-sm">
-                <div className="font-bold text-xl mb-2 flex items-center justify-center gap-2">
-                    <div className="h-8 w-8 bg-green-200 rounded-full flex items-center justify-center text-green-700">✓</div>
-                    Success!
-                </div>
-                <p className="mb-6 opacity-80">Generated {generated.count} unique QR codes for {campaigns.find(c => c.id === formData.campaign_id)?.name}.</p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Button onClick={downloadCSV} variant="outline" className="w-full bg-white hover:bg-green-100 border-2 border-green-200 text-green-700 font-bold h-12">
-                        <Download className="h-5 w-5 mr-2" />
-                        Download CSV
-                    </Button>
-                    <Button onClick={downloadZip} disabled={zipping} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 shadow-md">
-                        {zipping ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Download className="h-5 w-5 mr-2" />}
-                        {zipping ? 'Zipping...' : 'Download QR ZIP'}
-                    </Button>
-                </div>
-            </div>
-        )}
       </div>
     </div>
   );
