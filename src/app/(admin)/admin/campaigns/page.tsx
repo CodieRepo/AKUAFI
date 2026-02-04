@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 import { Plus, Search, Calendar, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 

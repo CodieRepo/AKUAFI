@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import { Loader2, QrCode } from 'lucide-react';
 
@@ -9,8 +9,6 @@ export default function QRGeneratorPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  
-  // Progress tracking
   const [progress, setProgress] = useState<{ current: number; total: number; status: string } | null>(null);
 
   const supabase = createBrowserClient(
@@ -66,17 +64,13 @@ export default function QRGeneratorPage() {
     const BATCH_SIZE = 2000;
     const batches = Math.ceil(totalQuantity / BATCH_SIZE);
 
-    console.log(`[QR-GEN] Starting generation. Total: ${totalQuantity}, Batches: ${batches}`);
-
     try {
-        // Auth check before starting
+        // Authenticated Request Check
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("No session found. Please login.");
 
         for (let i = 0; i < batches; i++) {
             const currentBatchNum = i + 1;
-            
-            // Calculate batch quantity (last batch might be smaller)
             const remaining = totalQuantity - (i * BATCH_SIZE);
             const batchQty = remaining > BATCH_SIZE ? BATCH_SIZE : remaining;
 
@@ -86,33 +80,35 @@ export default function QRGeneratorPage() {
                 status: `Generating batch ${currentBatchNum} of ${batches} (${batchQty} QRs)...`
             });
 
-            console.log(`[QR-GEN] Processing Batch ${currentBatchNum}/${batches}. Qty: ${batchQty}`);
-
+            // Send standard POST request with credentials included automatically by fetch in browser?
+            // Actually, for same-origin requests to Next.js API routes, cookies are sent automatically.
+            // But we explicitly send the token in header mostly for Supabase specific APIs, 
+            // but here we rely on the cookie mostly if using createServerClient.
+            // HOWEVER, the user prompt said: "Authenticated POST request with: credentials: 'include'".
+            // AND "API route MUST read Supabase session from cookies".
+            
             const response = await fetch('/api/admin/qr/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
+                    // 'Authorization': `Bearer ${session.access_token}` // Not needed if using cookies, strictly speaking.
+                    // But typical redundancy doesn't hurt. However, user emphasized "read Supabase session from cookies".
                 },
                 body: JSON.stringify({
                     campaign_id: formData.campaign_id,
                     quantity: batchQty
-                })
+                }),
+                credentials: 'include' // CRITICAL for cookies
             });
 
             if (!response.ok) {
-                const errData = await response.json();
+                const errData = await response.json().catch(() => ({ error: 'Unknown server error' }));
                 throw new Error(errData.error || `Failed batch ${currentBatchNum}`);
             }
 
-            // Get binary data
             const blob = await response.blob();
             const filename = `campaign_${formData.campaign_id}_batch_${currentBatchNum}.zip`;
-            
-            // Trigger download
             downloadBlob(blob, filename);
-
-            // Small delay to prevent browser choking on multiple downloads?
             await new Promise(r => setTimeout(r, 1000));
         }
 
@@ -124,7 +120,6 @@ export default function QRGeneratorPage() {
         alert("Generation Complete! Please check your downloads folder.");
 
     } catch (error: any) {
-        console.error("Geneartion Failed:", error);
         alert(`Error: ${error.message}`);
         setProgress(prev => prev ? { ...prev, status: `Failed: ${error.message}` } : null);
     } finally {
@@ -138,10 +133,8 @@ export default function QRGeneratorPage() {
           <h1 className="text-3xl font-bold text-gray-900">Generate QR Codes</h1>
           <p className="text-gray-500 mt-2">Create bulk QR codes for your campaign securely.</p>
       </div>
-
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
         <form onSubmit={handleGenerate} className="space-y-8">
-            {/* Step 1: Select Campaign */}
             <div>
                 <label className="block text-sm font-bold text-gray-900 mb-2">1. Select Campaign <span className="text-red-500">*</span></label>
                 <select 
@@ -152,57 +145,34 @@ export default function QRGeneratorPage() {
                     required
                 >
                     <option value="">-- Choose Campaign --</option>
-                    {campaigns.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
             </div>
-
-            {/* Step 2: Quantity */}
             <div>
-                <div className="flex justify-between items-center mb-2">
-                    <label className="block text-sm font-bold text-gray-900">2. Quantity</label>
-                    <span className="text-sm font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md">{formData.quantity}</span>
-                </div>
-                
+                <label className="block text-sm font-bold text-gray-900 mb-2">2. Quantity</label>
                 <input 
-                    type="range"
-                    min="1"
-                    max="10000"
-                    step="100"
+                    type="range" min="1" max="10000" step="100"
                     value={formData.quantity}
                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     disabled={loading}
                 />
-                
                 <div className="mt-4">
                     <input 
-                        type="number" 
-                        className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                        type="number" className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                         value={formData.quantity}
                         onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                        min="1"
-                        max="10000"
-                        required
-                        disabled={loading}
+                        min="1" max="10000" required disabled={loading}
                     />
-                    <p className="text-xs text-gray-400 mt-2 text-center">
-                        Max 10,000. Large batches will be split into multiple downloads.
-                    </p>
+                    <p className="text-xs text-gray-400 mt-2 text-center">Max 10,000. Large requests split into 2,000-unit downloads.</p>
                 </div>
             </div>
-
-            {/* Progress / Status */}
             {progress && (
                 <div className={`p-4 rounded-lg text-center ${progress.status.includes('Failed') ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
-                    <div className="font-bold text-lg mb-1">
-                        Batch {progress.current} / {progress.total}
-                    </div>
+                    <div className="font-bold text-lg mb-1">Batch {progress.current} / {progress.total}</div>
                     <p className="text-sm">{progress.status}</p>
                 </div>
             )}
-
             <Button type="submit" disabled={loading || fetching} className="w-full h-12 text-base font-semibold shadow-md bg-blue-600 hover:bg-blue-700">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <QrCode className="h-5 w-5 mr-2" />}
                 {loading ? 'Generating...' : 'Generate QR Codes'}

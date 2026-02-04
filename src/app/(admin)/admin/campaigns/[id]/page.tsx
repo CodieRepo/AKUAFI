@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, Play, Pause, Loader2, BarChart3, Settings, QrCode } from 'lucide-react';
 import Link from 'next/link';
