@@ -13,8 +13,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
     }
 
-    if (quantity > 5000) {
-      return NextResponse.json({ error: 'Max quantity is 5000' }, { status: 400 });
+    if (quantity > 10000) {
+      return NextResponse.json({ error: 'Max quantity is 10000' }, { status: 400 });
     }
 
     // 3. Logging (MANDATORY)

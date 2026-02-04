@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/Button';
 import { Download, Loader2, QrCode } from 'lucide-react';
 
@@ -14,6 +14,11 @@ export default function QRGeneratorPage() {
   const [fetching, setFetching] = useState(true);
   const [zipping, setZipping] = useState(false);
   
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const [formData, setFormData] = useState({
     campaign_id: '',
     quantity: '1000'
@@ -24,24 +29,22 @@ export default function QRGeneratorPage() {
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const supabase = getSupabaseClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        const res = await fetch('/api/admin/campaigns', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            setCampaigns(data);
-        }
+        console.log('Fetching campaigns for dropdown...');
+        const { data, error } = await supabase
+            .from('campaigns')
+            .select('id, name')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setCampaigns(data || []);
       } catch (err) {
-        console.error(err);
+        console.error('Error fetching campaigns:', err);
       } finally {
         setFetching(false);
       }
     }
     fetchCampaigns();
-  }, []);
+  }, [supabase]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +59,9 @@ export default function QRGeneratorPage() {
     console.log("SENDING QR GENERATION REQUEST", { campaign_id: formData.campaign_id, quantity: Number(formData.quantity) });
 
     try {
-      const supabase = getSupabaseClient();
+      // Need session for API authorization
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) throw new Error('No session');
 
       const res = await fetch('/api/admin/qr/generate', {
@@ -90,7 +94,6 @@ export default function QRGeneratorPage() {
     if (!generated || !generated.tokens) return;
     
     // Create CSV content
-    // Format: qr_token, url
     const headers = "qr_token,url\n";
     const rows = generated.tokens.map(t => `${t},https://akuafi.com/scan/${t}`).join("\n");
     const csvContent = headers + rows;
@@ -124,19 +127,14 @@ export default function QRGeneratorPage() {
                   errorCorrectionLevel: 'H'
               });
               
-              // Remove "data:image/png;base64," prefix
               const base64Data = dataUrl.split(',')[1];
-              
               const filename = `QR_${String(index + 1).padStart(4, '0')}.png`;
               zip.file(filename, base64Data, { base64: true });
           });
 
           await Promise.all(promises);
 
-          // Generate Zip Blob
           const content = await zip.generateAsync({ type: 'blob' });
-          
-          // Download
           const url = URL.createObjectURL(content);
           const link = document.createElement("a");
           link.href = url;
@@ -191,7 +189,7 @@ export default function QRGeneratorPage() {
                 <input 
                     type="range"
                     min="1"
-                    max="5000"
+                    max="10000"
                     step="100"
                     value={formData.quantity}
                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
@@ -205,10 +203,10 @@ export default function QRGeneratorPage() {
                         value={formData.quantity}
                         onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                         min="1"
-                        max="5000"
+                        max="10000"
                         required
                     />
-                    <p className="text-xs text-gray-400 mt-2 text-center">Max 5000 per batch.</p>
+                    <p className="text-xs text-gray-400 mt-2 text-center">Max 10000 per batch.</p>
                 </div>
             </div>
 
