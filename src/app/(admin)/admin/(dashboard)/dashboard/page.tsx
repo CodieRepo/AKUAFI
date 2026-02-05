@@ -23,12 +23,6 @@ export default function AdminDashboard() {
         
         const res = await fetch('/api/admin/stats');
         
-        if (res.status === 401 || res.status === 403) {
-            console.error("Unauthorized access to dashboard stats. Redirecting to login.");
-            window.location.href = '/login';
-            return;
-        }
-
         if (!res.ok) {
             throw new Error(`API Error: ${res.status} ${res.statusText}`);
         }

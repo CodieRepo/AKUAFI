@@ -24,12 +24,11 @@ export default function QRGeneratorPage() {
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const { data, error } = await supabase
-            .from('campaigns')
-            .select('id, name')
-            .order('created_at', { ascending: false });
+        const res = await fetch('/api/admin/campaigns');
+        
+        if (!res.ok) throw new Error('Failed to load campaigns');
 
-        if (error) throw error;
+        const data = await res.json();
         setCampaigns(data || []);
       } catch (err) {
         console.error('Error fetching campaigns:', err);
@@ -38,7 +37,7 @@ export default function QRGeneratorPage() {
       }
     }
     fetchCampaigns();
-  }, [supabase]);
+  }, []);
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/ssr';
 import { Plus, Search, Calendar, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -21,25 +20,19 @@ interface Campaign {
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        console.log('Fetching campaigns...');
-        // Fetch campaigns with NO filters as requested
-        const { data, error } = await supabase
-          .from('campaigns')
-          .select('*');
+        console.log('Fetching campaigns from API...');
+        const res = await fetch('/api/admin/campaigns');
 
-        if (error) {
-          console.error('Error fetching campaigns:', error);
-          throw error;
+        if (!res.ok) {
+             throw new Error(`API Error: ${res.status}`);
         }
 
+        const data = await res.json();
         console.log('Campaigns data:', data);
         setCampaigns((data as Campaign[]) || []);
       } catch (err) {
@@ -49,7 +42,7 @@ export default function CampaignsPage() {
       }
     }
     fetchCampaigns();
-  }, [supabase]);
+  }, []);
 
   return (
     <div className="max-w-4xl">
