@@ -31,6 +31,13 @@ export default function LoginPage() {
         throw new Error(authError?.message || 'Authentication failed');
       }
 
+      // STEP 1 DEBUG: Verify Client Session
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("SESSION AFTER LOGIN:", sessionData);
+      
+      // STEP 2 DEBUG HINT: Check browser cookies in console
+      console.log("DOCUMENT COOKIES (Partial):", document.cookie);
+
       // 2. Refresh router to ensure next steps have valid session cookies
       router.refresh();
 

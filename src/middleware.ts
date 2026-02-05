@@ -2,6 +2,13 @@ import { type NextRequest } from 'next/server';
 import { updateSession } from '@/utils/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
+  // STEP 3 DEBUG: Verify Middleware Cookie
+  // Note: The cookie name might vary depending on configuration, usually starts with 'sb-'
+  const allCookies = request.cookies.getAll();
+  const sbCookie = allCookies.find(c => c.name.includes('access-token'));
+  console.log("MIDDLEWARE COOKIES FOUND:", allCookies.map(c => c.name));
+  console.log("MIDDLEWARE SB COOKIE:", sbCookie ? "FOUND" : "MISSING");
+
   return await updateSession(request);
 }
 

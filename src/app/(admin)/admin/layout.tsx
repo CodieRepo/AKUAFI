@@ -12,6 +12,9 @@ export default async function AdminLayout({
 
   const { data: { user }, error } = await supabase.auth.getUser();
 
+  // STEP 4 DEBUG: Verify Server Layout User
+  console.log("ADMIN LAYOUT USER:", user?.id ? `Found User ${user.id}` : "NULL USER", "Error:", error?.message);
+
   if (error || !user) {
     redirect('/login');
   }
