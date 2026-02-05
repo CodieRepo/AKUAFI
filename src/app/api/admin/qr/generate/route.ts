@@ -129,6 +129,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("[QR-GEN] Fatal Error:", error);
     const status = error.message.includes('Unauthorized') ? 401 : 500;
+    // Ensure we don't accidentally return 400 for internal errors
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status });
   }
 }

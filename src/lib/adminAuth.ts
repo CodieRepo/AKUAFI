@@ -1,33 +1,39 @@
-import { getSupabaseAdmin } from './supabaseAdmin';
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export async function verifyAdmin(request: Request) {
-  // BYPASS AUTH FOR PREVIEW
-  return { user: { email: 'preview@akuafi.com' }, adminId: null };
+  const cookieStore = await cookies();
 
-  /* Original Logic
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) {
-    throw new Error('Unauthorized: Missing token');
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+            // No-op for read-only validation
+        },
+      },
+    }
+  );
+
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error('Unauthorized');
   }
 
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await getSupabaseAdmin().auth.getUser(token);
-
-  if (error || !user || !user.email) {
-    throw new Error('Unauthorized: Invalid token');
-  }
-
-  // Check admins table
-  const { data: admin, error: dbError } = await getSupabaseAdmin()
-    .from('admins')
-    .select('id')
-    .eq('email', user.email)
+  const { data: admin, error: adminError } = await supabase
+    .from("admins")
+    .select("id")
+    .eq("id", user.id)
     .single();
 
-  if (dbError || !admin) {
-    throw new Error('Forbidden: Not an admin');
+  if (adminError || !admin) {
+    throw new Error('Forbidden');
   }
 
   return { user, adminId: admin.id };
-  */
 }

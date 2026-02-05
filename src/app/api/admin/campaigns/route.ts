@@ -16,6 +16,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
+    console.error('[API] Campaigns GET Error:', error);
     const status = error.message.includes('Unauthorized') ? 401 : error.message.includes('Forbidden') ? 403 : 500;
     return NextResponse.json({ error: error.message }, { status });
   }
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error: any) {
+    console.error('[API] Campaigns POST Error:', error);
     const status = error.message.includes('Unauthorized') ? 401 : error.message.includes('Forbidden') ? 403 : 500;
     return NextResponse.json({ error: error.message }, { status });
   }
