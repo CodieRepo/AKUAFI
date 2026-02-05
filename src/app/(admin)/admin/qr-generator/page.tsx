@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import { Loader2, QrCode } from 'lucide-react';
 
@@ -10,11 +9,6 @@ export default function QRGeneratorPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [progress, setProgress] = useState<{ current: number; total: number; status: string } | null>(null);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const [formData, setFormData] = useState({
     campaign_id: '',
@@ -64,10 +58,6 @@ export default function QRGeneratorPage() {
     const batches = Math.ceil(totalQuantity / BATCH_SIZE);
 
     try {
-        // Authenticated Request Check
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error("No session found. Please login.");
-
         for (let i = 0; i < batches; i++) {
             const currentBatchNum = i + 1;
             const remaining = totalQuantity - (i * BATCH_SIZE);
@@ -78,20 +68,11 @@ export default function QRGeneratorPage() {
                 total: batches,
                 status: `Generating batch ${currentBatchNum} of ${batches} (${batchQty} QRs)...`
             });
-
-            // Send standard POST request with credentials included automatically by fetch in browser?
-            // Actually, for same-origin requests to Next.js API routes, cookies are sent automatically.
-            // But we explicitly send the token in header mostly for Supabase specific APIs, 
-            // but here we rely on the cookie mostly if using createServerClient.
-            // HOWEVER, the user prompt said: "Authenticated POST request with: credentials: 'include'".
-            // AND "API route MUST read Supabase session from cookies".
             
             const response = await fetch('/api/admin/qr/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'Authorization': `Bearer ${session.access_token}` // Not needed if using cookies, strictly speaking.
-                    // But typical redundancy doesn't hurt. However, user emphasized "read Supabase session from cookies".
                 },
                 body: JSON.stringify({
                     campaign_id: formData.campaign_id,

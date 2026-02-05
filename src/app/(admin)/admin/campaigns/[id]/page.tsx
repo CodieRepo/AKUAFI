@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, Play, Pause, Loader2, BarChart3, Settings, QrCode } from 'lucide-react';
 import Link from 'next/link';
@@ -11,10 +10,6 @@ export default function CampaignDetailsPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const [campaign, setCampaign] = useState<any>(null);
   const [stats, setStats] = useState<any>({
@@ -28,40 +23,13 @@ export default function CampaignDetailsPage() {
   async function fetchCampaign() {
     try {
       console.log('Fetching detail for ID:', id);
+      const res = await fetch(`/api/admin/campaigns/${id}`);
       
-      // 1. Fetch Campaign
-      const { data: campaignData, error: campaignError } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (campaignError) throw campaignError;
-      setCampaign(campaignData);
-
-      // 2. Fetch Stats (Counts)
-      // Total bottles for this campaign
-      const { count: totalBottles } = await supabase
-        .from('bottles')
-        .select('*', { count: 'exact', head: true })
-        .eq('campaign_id', id);
-
-      // Redeemed bottles
-      const { count: redeemedBottles } = await supabase
-        .from('bottles')
-        .select('*', { count: 'exact', head: true })
-        .eq('campaign_id', id)
-        .eq('status', 'redeemed');
-
-      const total = totalBottles || 0;
-      const redeemed = redeemedBottles || 0;
-      const percentage = total > 0 ? ((redeemed / total) * 100).toFixed(1) : 0;
-
-      setStats({
-          total_bottles: total,
-          redeemed_bottles: redeemed,
-          redemption_percentage: percentage
-      });
+      if (!res.ok) throw new Error('Failed to fetch campaign details');
+      
+      const data = await res.json();
+      setCampaign(data.campaign);
+      setStats(data.stats);
 
     } catch (err) {
       console.error('Error fetching campaign details:', err);
@@ -72,22 +40,25 @@ export default function CampaignDetailsPage() {
 
   useEffect(() => {
     if (id) fetchCampaign();
-  }, [id, supabase]);
+  }, [id]);
 
   const toggleStatus = async () => {
     if (!campaign) return;
     const newStatus = campaign.status === 'active' ? 'paused' : 'active';
     try {
-        const { error } = await supabase
-            .from('campaigns')
-            .update({ status: newStatus })
-            .eq('id', id);
-            
-        if (error) throw error;
+        const res = await fetch(`/api/admin/campaigns/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus }),
+        });
         
-        fetchCampaign(); // Refresh locally
+        if (!res.ok) throw new Error('Failed to update status');
+        
+        // Refresh locally
+        fetchCampaign(); 
     } catch (err) {
         console.error('Error updating status:', err);
+        alert('Failed to update status');
     }
   };
 

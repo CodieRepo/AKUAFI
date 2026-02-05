@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Calendar, Tag } from 'lucide-react';
+import { Plus, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface Campaign {
@@ -11,15 +11,10 @@ interface Campaign {
   status?: string;
   start_date: string;
   end_date: string;
-  // Coupon fields ignored for now as they are not in DB, but keeping optional for TS safety if needed later
-  coupon_type?: string;
-  coupon_min_value?: number;
-  coupon_max_value?: number;
 }
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

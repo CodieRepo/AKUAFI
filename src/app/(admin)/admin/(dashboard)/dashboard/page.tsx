@@ -16,6 +16,7 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     async function fetchStats() {
       try {
