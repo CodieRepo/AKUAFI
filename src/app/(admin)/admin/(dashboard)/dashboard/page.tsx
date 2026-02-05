@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/ssr';
-import { getSupabaseClient } from '@/lib/supabaseclient';
 
 export const dynamic = "force-dynamic";
 
@@ -18,40 +16,32 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   useEffect(() => {
     async function fetchStats() {
       try {
-        console.log('Fetching dashboard stats...');
+        console.log('Fetching dashboard stats from API...');
         
-        // Parallel requests for counts
-        const [
-            { count: totalCampaigns }, 
-            { count: activeCampaigns },
-            { count: totalQRs },
-            { count: totalRedeemed },
-        ] = await Promise.all([
-            supabase.from('campaigns').select('*', { count: 'exact', head: true }),
-            supabase.from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-            supabase.from('bottles').select('*', { count: 'exact', head: true }),
-            supabase.from('bottles').select('*', { count: 'exact', head: true }).eq('status', 'redeemed'),
-        ]);
+        const res = await fetch('/api/admin/stats');
+        
+        if (res.status === 401 || res.status === 403) {
+            console.error("Unauthorized access to dashboard stats. Redirecting to login.");
+            window.location.href = '/login';
+            return;
+        }
 
-        console.log('Stats fetched:', { totalCampaigns, activeCampaigns, totalQRs, totalRedeemed });
+        if (!res.ok) {
+            throw new Error(`API Error: ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        console.log('Stats API fetch success:', data);
 
         setStats({
-            total_campaigns: totalCampaigns || 0,
-            active_campaigns: activeCampaigns || 0,
-            total_qr_generated: totalQRs || 0,
-            total_redeemed: totalRedeemed || 0,
-            recent_activity: [] // recentActivity || [] // Disabling recent activity complex fetch for now to ensure numbers work first as per task.
-                                // Actually, I should probably leave recent activity empty or try to fetch it if I can verify the table structure.
-                                // The user task specifically mentioned "Dashboard Numbers Showing 0" and "Fetch real counts".
-                                // I will set numbers correctly.
+            total_campaigns: data.total_campaigns || 0,
+            active_campaigns: data.active_campaigns || 0,
+            total_qr_generated: data.total_qr_generated || 0,
+            total_redeemed: data.total_redeemed || 0,
+            recent_activity: data.recent_activity || []
         });
 
       } catch (err) {
@@ -61,7 +51,7 @@ export default function AdminDashboard() {
       }
     }
     fetchStats();
-  }, [supabase]);
+  }, []);
 
   return (
     <div>
