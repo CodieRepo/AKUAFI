@@ -34,7 +34,50 @@ export async function updateSession(request: NextRequest) {
   );
 
   // refreshing the auth token
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Admin Route Protection
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const isLoginPage = request.nextUrl.pathname === '/admin/login';
+
+    // 1. If not logged in and not on login page -> Redirect to Login
+    if (!user && !isLoginPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/login';
+      return NextResponse.redirect(url);
+    }
+
+    // 2. If logged in -> Check Admin Role
+    if (user) {
+      const { data: adminUser } = await supabase
+        .from('admins')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      
+      const isAdmin = !!adminUser;
+
+      // 2a. If NOT admin -> Redirect to Login with error
+      if (!isAdmin) {
+        // Avoid infinite redirect loop if already on login page with error
+        if (isLoginPage && request.nextUrl.searchParams.get('error') === 'unauthorized') {
+          return response;
+        }
+
+        const url = request.nextUrl.clone();
+        url.pathname = '/admin/login';
+        url.searchParams.set('error', 'unauthorized');
+        return NextResponse.redirect(url);
+      }
+
+      // 2b. If IS admin AND on login page -> Redirect to Dashboard
+      if (isAdmin && isLoginPage) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/admin/dashboard';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
 
   return response;
 }

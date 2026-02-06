@@ -2,13 +2,6 @@ import { type NextRequest } from 'next/server';
 import { updateSession } from '@/utils/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
-  // STEP 3 DEBUG: Verify Middleware Cookie
-  // Note: The cookie name might vary depending on configuration, usually starts with 'sb-'
-  const allCookies = request.cookies.getAll();
-  const sbCookie = allCookies.find(c => c.name.includes('access-token'));
-  console.log("MIDDLEWARE COOKIES FOUND:", allCookies.map(c => c.name));
-  console.log("MIDDLEWARE SB COOKIE:", sbCookie ? "FOUND" : "MISSING");
-
   return await updateSession(request);
 }
 
@@ -23,6 +16,8 @@ export const config = {
      * - auth (auth callback page)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|login|auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Scoping middleware to Admin & Auth routes only as per strict user request.
+    // NOTE: This effectively disables session refreshing for other routes (e.g. /client, /scan).
+    '/admin/:path*',
   ],
 };
