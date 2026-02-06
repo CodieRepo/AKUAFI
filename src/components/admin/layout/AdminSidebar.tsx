@@ -2,25 +2,38 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Megaphone, QrCode, ClipboardList, LogOut } from 'lucide-react';
+import { LayoutDashboard, Megaphone, Users, UserCircle, LogOut, Settings, Ticket, QrCode, ScanLine } from 'lucide-react';
 import { cn } from '@/components/ui/Button';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
   { name: 'QR Generator', href: '/admin/qr-generator', icon: QrCode },
-  { name: 'Redemptions', href: '/admin/redemptions', icon: ClipboardList },
+  { name: 'Redemptions', href: '/admin/redemptions', icon: ScanLine },
+  // { name: 'Analytics', href: '/admin/analytics', icon: Users }, // Future
+  // { name: 'Settings', href: '/admin/settings', icon: Settings }, // Future
 ];
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.refresh();
+    router.replace('/admin/login');
+  };
 
   return (
     <aside className="h-full w-64 border-r border-border bg-white/80 backdrop-blur-xl text-foreground">
       <div className="flex h-full flex-col">
         {/* Logo Area */}
-        <div className="flex h-20 items-center justify-center border-b border-border px-6">
-           <span className="text-xl font-bold tracking-tight text-primary">AKUAFI ADMIN</span>
+        <div className="flex h-20 items-center border-b border-border px-6">
+           <span className="text-2xl font-bold tracking-tight text-primary">AKUAFI</span>
+           <span className="ml-2 text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">ADMIN</span>
         </div>
 
         {/* Navigation */}
@@ -52,7 +65,10 @@ export default function AdminSidebar() {
 
         {/* Bottom Actions */}
         <div className="border-t border-border p-4">
-          <button className="group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-red-50 hover:text-red-600">
+          <button 
+            onClick={handleSignOut}
+            className="group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-text-muted transition-colors hover:bg-red-50 hover:text-red-600"
+          >
             <LogOut className="mr-3 h-5 w-5 group-hover:text-red-600" />
             Sign Out
           </button>
