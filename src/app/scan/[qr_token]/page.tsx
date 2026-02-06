@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Page() {
   const params = useParams();
@@ -87,7 +87,7 @@ export default function Page() {
       }
 
       try {
-        const supabase = getSupabaseClient();
+        const supabase = createClient();
         const { data, error } = await supabase
           .from('bottles')
           .select('*')
@@ -134,7 +134,7 @@ export default function Page() {
     setLoadingAction(true);
 
     try {
-      const supabase = getSupabaseClient();
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({
         phone: fullPhone,
       });
@@ -168,7 +168,7 @@ export default function Page() {
     const fullPhone = `+91${formData.phone}`;
 
     try {
-      const supabase = getSupabaseClient();
+      const supabase = createClient();
       // A. Verify OTP
       const { data: authData, error: authError } = await supabase.auth.verifyOtp({
         phone: fullPhone,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import CouponTable, { Coupon } from '@/components/dashboard/coupons/CouponTable';
 import CouponVerification from '@/components/dashboard/coupons/CouponVerification';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createClient } from '@/utils/supabase/client';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -12,7 +12,7 @@ export default function CouponsPage() {
   useEffect(() => {
     async function fetchCoupons() {
       try {
-        const supabase = getSupabaseClient();
+        const supabase = createClient();
         const { data, error } = await supabase
           .from('coupons')
           .select('*')

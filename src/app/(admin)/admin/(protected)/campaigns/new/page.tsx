@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -45,6 +45,7 @@ export default function NewCampaignPage() {
       // Authenticate check bypassed for local dev preview if handled by middleware/api
       // Strict auth is handled in the API route calling verifyAdmin
 
+      const supabase = createClient(); 
       const res = await fetch('/api/admin/campaigns', {
         method: 'POST',
         headers: {

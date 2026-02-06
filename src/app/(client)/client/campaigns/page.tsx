@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import CampaignTable, { Campaign } from '@/components/dashboard/CampaignTable';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createClient } from '@/utils/supabase/client';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -11,7 +11,7 @@ export default function CampaignsPage() {
   useEffect(() => {
     async function fetchCampaigns() {
       try {
-        const supabase = getSupabaseClient();
+        const supabase = createClient();
         const { data, error } = await supabase
           .from('campaigns')
           .select('*')
