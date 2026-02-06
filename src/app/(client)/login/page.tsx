@@ -31,44 +31,12 @@ export default function LoginPage() {
         throw new Error(authError?.message || 'Authentication failed');
       }
 
-      // STEP 1 DEBUG: Verify Client Session
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("SESSION AFTER LOGIN:", sessionData);
-      
-      // STEP 2 DEBUG HINT: Check browser cookies in console
-      console.log("DOCUMENT COOKIES (Partial):", document.cookie);
-
       // 2. Refresh router to ensure next steps have valid session cookies
       router.refresh();
 
-      // 3. Check Role: Admins FIRST
-      const { data: adminUser } = await supabase
-        .from('admins')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (adminUser) {
-        // Use router.replace to navigate without adding login to history stack
-        router.replace('/admin/dashboard');
-        return;
-      }
-
-      // 4. Check Role: Clients (Users) SECOND
-      const { data: clientUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (clientUser) {
-        router.replace('/client/dashboard');
-        return;
-      }
-
-      // 5. No Role Found
-        await supabase.auth.signOut();
-        throw new Error('Unauthorized account type');
+      // 3. User is logged in, redirect to Client Dashboard
+      // Middleware will handle role protection if they try to access something they shouldn't
+      router.replace('/client/dashboard');
 
     } catch (err: any) {
         console.error('Login error:', err);

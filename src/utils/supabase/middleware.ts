@@ -33,51 +33,82 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // refreshing the auth token
+  // Refresh auth token
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Admin Route Protection
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    const isLoginPage = request.nextUrl.pathname === '/admin/login';
+  const path = request.nextUrl.pathname;
 
-    // 1. If not logged in and not on login page -> Redirect to Login
-    if (!user && !isLoginPage) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin/login';
-      return NextResponse.redirect(url);
+  // --- BRANCH 1: ADMIN ROUTES ---
+  if (path.startsWith('/admin')) {
+    const isLoginPage = path === '/admin/login';
+
+    // 1. Not Logged In -> Redirect to /admin/login
+    if (!user) {
+      if (!isLoginPage) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/admin/login';
+        return NextResponse.redirect(url);
+      }
+      return response; // Allow access to login page
     }
 
-    // 2. If logged in -> Check Admin Role
-    if (user) {
-      const { data: adminUser } = await supabase
-        .from('admins')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-      
-      const isAdmin = !!adminUser;
+    // 2. Logged In -> Check Admin Role
+    const { data: adminUser } = await supabase
+      .from('admins')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+    
+    const isAdmin = !!adminUser;
 
-      // 2a. If NOT admin -> Redirect to Login with error
-      if (!isAdmin) {
-        // Avoid infinite redirect loop if already on login page with error
-        if (isLoginPage && request.nextUrl.searchParams.get('error') === 'unauthorized') {
-          return response;
-        }
-
+    if (!isAdmin) {
+      // Logged in but NOT admin -> Redirect to /admin/login with error
+      if (!isLoginPage) {
         const url = request.nextUrl.clone();
         url.pathname = '/admin/login';
         url.searchParams.set('error', 'unauthorized');
+        await supabase.auth.signOut(); // Force signout to prevent loop
         return NextResponse.redirect(url);
       }
-
-      // 2b. If IS admin AND on login page -> Redirect to Dashboard
-      if (isAdmin && isLoginPage) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/admin/dashboard';
-        return NextResponse.redirect(url);
+      // If already on login page (likely redirected), allow it to show error
+      if (request.nextUrl.searchParams.get('error') === 'unauthorized') {
+          return response;
       }
     }
+
+    // 3. Logged In & Is Admin -> Redirect Login to Dashboard
+    if (isAdmin && isLoginPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/dashboard';
+      return NextResponse.redirect(url);
+    }
+    
+    // Allow access to other admin routes
+    return response;
   }
 
+  // --- BRANCH 2: CLIENT/PROTECTED ROUTES ---
+  // Assuming strict separation: anything NOT /admin is Client territory.
+  // We explicitly protect "/client" routes.
+  // Public routes (/, /about, /login, etc.) are implicitly allowed unless matched here.
+  
+  if (path.startsWith('/client')) {
+    // 1. Not Logged In -> Redirect to /login
+    if (!user) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+    }
+
+    // 2. Logged In -> Allow access
+    // Note: We don't check 'users' table here strictly because any valid auth user is a client 
+    // unless you want to block admins from client routes.
+    // Ideally, admins shouldn't use client routes, but if they do, they are just "users".
+    
+    return response;
+  }
+
+  // --- BRANCH 3: PUBLIC ROUTES ---
+  // Allow everything else
   return response;
 }
