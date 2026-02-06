@@ -8,29 +8,31 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // 1. Create Supabase Client (Standard Server Client)
   const supabase = await createClient();
 
+  // 2. Verified User Check (Secure)
   const { data: { user }, error } = await supabase.auth.getUser();
 
-  // STEP 4 DEBUG: Verify Server Layout User
-  console.log("ADMIN LAYOUT USER:", user?.id ? `Found User ${user.id}` : "NULL USER", "Error:", error?.message);
-
   if (error || !user) {
+    console.log("Admin Layout: No verified user. Redirecting to /login.");
     redirect('/login');
   }
 
-  // Strict Admin Check
-  const { data: adminUser } = await supabase
+  // 3. Strict Admin Role Check (Service Role / Secure Query)
+  const { data: adminUser, error: adminError } = await supabase
     .from('admins')
     .select('id')
     .eq('id', user.id)
     .single();
 
-  if (!adminUser) {
-    // Optionally sign out or show unauthorized
+  if (adminError || !adminUser) {
+    console.log("Admin Layout: User is not admin. Redirecting to /login.");
     redirect('/login'); 
   }
 
+  // 4. Render UI ONLY if Auth Passes
+  // If we reached here, the user is logged in and is an admin.
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
