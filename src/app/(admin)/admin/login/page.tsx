@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient } from '@/lib/supabaseclient';
+import { createClient } from '@/utils/supabase/client';
 import { Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -18,8 +18,9 @@ export default function AdminLogin() {
     setLoading(true);
     setError(null);
 
+    const supabase = createClient();
+
     try {
-      const supabase = getSupabaseClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -28,34 +29,24 @@ export default function AdminLogin() {
       if (error) throw error;
 
       if (data.user) {
-        // Check if user is an admin (Optional: Check against admins table here or relying on RLS/API)
-        // For Phase 1, we assume if they can login, they are admin, or we let dashboard handle strict check.
-        // We can do a quick check:
-        const { data: adminData } = await supabase
-          .from('admins')
-          .select('id')
-          .eq('email', data.user.email)
-          .single();
-
-        if (!adminData) {
-           throw new Error('Access Denied: Not an admin account.');
-        }
-
-        router.push('/admin/dashboard');
+        // Refresh router to sync server-side session
+        router.refresh();
+        
+        // Use replace to prevent back-navigation to login
+        router.replace('/admin/dashboard');
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to login');
-      // Sign out if admin check failed to clear session
-      const supabase = getSupabaseClient();
+      // Clean up local session if auth failed partially
       await supabase.auth.signOut();
+      setError(err.message || 'Failed to login');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
+    <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 text-blue-600 mb-4">
