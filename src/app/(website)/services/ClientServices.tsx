@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Target
 } from "lucide-react";
+import Image from "next/image";
 
 export default function ClientServices() {
   return (
@@ -51,8 +52,14 @@ export default function ClientServices() {
             {/* Image Side */}
             <div className="relative order-2 lg:order-1">
                 <div className="absolute inset-0 bg-accent-cyan-light rounded-[3rem] rotate-3 scale-95 opacity-50 -z-10" />
-                <div className="bg-slate-50 rounded-[2.5rem] p-12 flex items-center justify-center min-h-[400px]">
-                   <span className="text-9xl">💧</span>
+                <div className="bg-slate-50 rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-100/50">
+                   <Image 
+                     src="/assets/images/bottled-branding.jpg" 
+                     alt="Bottled Branding" 
+                     fill 
+                     className="object-cover hover:scale-105 transition-transform duration-700"
+                     sizes="(max-width: 768px) 100vw, 50vw"
+                   />
                 </div>
             </div>
             
@@ -134,8 +141,14 @@ export default function ClientServices() {
             {/* Image Side */}
             <div className="relative">
                 <div className="absolute inset-0 bg-indigo-100 rounded-[3rem] -rotate-3 scale-95 opacity-50 -z-10" />
-                <div className="bg-white rounded-[2.5rem] p-12 flex items-center justify-center min-h-[400px] shadow-soft-xl">
-                   <span className="text-9xl">📱</span>
+                <div className="bg-white rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-100/50">
+                   <Image 
+                     src="/assets/images/qr-engage.jpg" 
+                     alt="QR Engage" 
+                     fill 
+                     className="object-cover hover:scale-105 transition-transform duration-700"
+                     sizes="(max-width: 768px) 100vw, 50vw"
+                   />
                 </div>
             </div>
           </div>
@@ -151,8 +164,14 @@ export default function ClientServices() {
             {/* Image Side */}
             <div className="relative order-2 lg:order-1">
                 <div className="absolute inset-0 bg-primary-light rounded-[3rem] rotate-3 scale-95 opacity-30 -z-10" />
-                <div className="bg-slate-900 rounded-[2.5rem] p-12 flex items-center justify-center min-h-[400px] shadow-soft-xl border border-slate-800">
-                   <span className="text-9xl">📊</span>
+                <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-800">
+                   <Image 
+                     src="/assets/images/analytics.jpg" 
+                     alt="Analytics Dashboard" 
+                     fill 
+                     className="object-cover hover:scale-105 transition-transform duration-700 opacity-90"
+                     sizes="(max-width: 768px) 100vw, 50vw"
+                   />
                 </div>
             </div>
             
