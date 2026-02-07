@@ -57,9 +57,7 @@ function LoginForm() {
     <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 text-blue-600 mb-4">
-            <Lock className="h-6 w-6" />
-          </div>
+          <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-12 mx-auto mb-6" />
           <h1 className="text-2xl font-bold text-gray-900">Admin Access</h1>
           <p className="text-sm text-gray-500 mt-2">Login to manage campaigns</p>
         </div>

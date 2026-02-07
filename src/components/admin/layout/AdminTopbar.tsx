@@ -11,8 +11,8 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void 
             <Menu className="h-6 w-6" />
          </button>
          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold text-foreground hidden sm:block">Administration</span>
+            <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-8 w-auto" />
+            <span className="text-lg font-semibold text-foreground hidden sm:block pl-2 border-l border-slate-200 ml-2">Administration</span>
          </div>
       </div>
 

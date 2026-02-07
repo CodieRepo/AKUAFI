@@ -36,11 +36,13 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 group">
               
-              {/* ⬇️ LOGO REVERTED TO TEXT */}
+              {/* ⬇️ LOGO UPDATED TO IMAGE */}
               <div className="navbar-logo relative flex items-center">
-                 <span className="text-2xl font-bold tracking-tight text-slate-900 group-hover:text-primary transition-colors">
-                  AKUAFI
-                </span>
+                 <img 
+                    src="/logo/akuafi-logo.png" 
+                    alt="Akuafi" 
+                    className="h-10 w-auto object-contain" 
+                 />
               </div>
             </Link>
 

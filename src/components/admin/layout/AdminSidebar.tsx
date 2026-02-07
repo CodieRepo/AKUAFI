@@ -32,8 +32,8 @@ export default function AdminSidebar() {
       <div className="flex h-full flex-col">
         {/* Logo Area */}
         <div className="flex h-20 items-center border-b border-border px-6">
-           <span className="text-2xl font-bold tracking-tight text-primary">AKUAFI</span>
-           <span className="ml-2 text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">ADMIN</span>
+           <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-8 w-auto mr-2" />
+           <span className="text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">ADMIN</span>
         </div>
 
         {/* Navigation */}

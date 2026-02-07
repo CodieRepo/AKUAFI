@@ -8,7 +8,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-soft-lg border border-border">
         {/* Logo */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-primary">AKUAFI</h1>
+          <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-12 mx-auto mb-4" />
           <p className="mt-2 text-sm text-text-muted">Sign in to your client dashboard</p>
         </div>
 

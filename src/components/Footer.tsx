@@ -8,8 +8,12 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-1">
-            <Link href="/" className="text-2xl font-bold text-primary mb-4 block">
-              AKUAFI
+            <Link href="/" className="mb-4 block">
+              <img 
+                src="/logo/akuafi-logo.png" 
+                alt="Akuafi" 
+                className="h-8 w-auto object-contain" 
+              />
             </Link>
             <p className="text-slate-500 text-sm mb-6 leading-relaxed">
               Akuafi is India’s first QR-powered water bottle advertising platform that helps brands run offline marketing campaigns with real-time tracking. Our smart bottle ads convert physical impressions into digital leads, website visits, and sales. Whether you are a local business or a national brand, Akuafi offers a cost-effective and measurable offline advertising solution.
