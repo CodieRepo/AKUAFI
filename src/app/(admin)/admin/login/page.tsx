@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 import { Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -57,7 +58,16 @@ function LoginForm() {
     <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-8">
         <div className="text-center mb-8">
-          <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-12 mx-auto mb-6" />
+          <div className="flex justify-center mb-6">
+            <Image 
+              src="/logo/akuafi-logo.png" 
+              alt="Akuafi" 
+              width={150} 
+              height={50} 
+              priority
+              className="h-12 w-auto object-contain" 
+            />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Access</h1>
           <p className="text-sm text-gray-500 mt-2">Login to manage campaigns</p>
         </div>

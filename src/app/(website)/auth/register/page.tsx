@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Mail, Lock, User, Building } from 'lucide-react';
 
@@ -8,7 +9,16 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-soft-lg border border-border">
         {/* Logo */}
         <div className="text-center">
-           <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-12 mx-auto mb-4" />
+           <div className="flex justify-center mb-4">
+             <Image 
+               src="/logo/akuafi-logo.png" 
+               alt="Akuafi" 
+               width={160} 
+               height={48} 
+               priority
+               className="h-12 w-auto object-contain" 
+             />
+           </div>
           <p className="mt-2 text-sm text-text-muted">Create your partner account</p>
         </div>
 

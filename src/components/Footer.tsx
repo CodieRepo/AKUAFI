@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Leaf } from "lucide-react";
 
 export default function Footer() {
@@ -9,9 +10,11 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-1">
             <Link href="/" className="mb-4 block">
-              <img 
+              <Image 
                 src="/logo/akuafi-logo.png" 
                 alt="Akuafi" 
+                width={120}
+                height={40}
                 className="h-8 w-auto object-contain" 
               />
             </Link>

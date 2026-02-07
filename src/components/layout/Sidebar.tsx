@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Megaphone, Users, UserCircle, LogOut, Settings, Ticket } from 'lucide-react';
 import { cn } from '@/components/ui/Button';
@@ -21,7 +22,13 @@ export default function Sidebar() {
       <div className="flex h-full flex-col">
         {/* Logo Area */}
         <div className="flex h-20 items-center border-b border-border px-6">
-           <span className="text-2xl font-bold tracking-tight text-primary">AKUAFI</span>
+           <Image 
+              src="/logo/akuafi-logo.png" 
+              alt="Akuafi" 
+              width={120}
+              height={40}
+              className="h-8 w-auto object-contain" 
+           />
         </div>
 
         {/* Navigation */}

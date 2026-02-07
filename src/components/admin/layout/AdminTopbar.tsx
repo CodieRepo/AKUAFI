@@ -1,6 +1,7 @@
 'use client';
 
 import { Menu, ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 
 export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -11,7 +12,13 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void 
             <Menu className="h-6 w-6" />
          </button>
          <div className="flex items-center gap-2">
-            <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-8 w-auto" />
+            <Image 
+               src="/logo/akuafi-logo.png" 
+               alt="Akuafi" 
+               width={120} 
+               height={32} 
+               className="h-8 w-auto object-contain" 
+            />
             <span className="text-lg font-semibold text-foreground hidden sm:block pl-2 border-l border-slate-200 ml-2">Administration</span>
          </div>
       </div>

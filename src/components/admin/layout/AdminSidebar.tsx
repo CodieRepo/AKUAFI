@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Megaphone, Users, UserCircle, LogOut, Settings, Ticket, QrCode, ScanLine } from 'lucide-react';
 import { cn } from '@/components/ui/Button';
@@ -32,7 +33,13 @@ export default function AdminSidebar() {
       <div className="flex h-full flex-col">
         {/* Logo Area */}
         <div className="flex h-20 items-center border-b border-border px-6">
-           <img src="/logo/akuafi-logo.png" alt="Akuafi" className="h-8 w-auto mr-2" />
+           <Image 
+              src="/logo/akuafi-logo.png" 
+              alt="Akuafi" 
+              width={120}
+              height={32}
+              className="h-8 w-auto mr-2 object-contain" 
+           />
            <span className="text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">ADMIN</span>
         </div>
 

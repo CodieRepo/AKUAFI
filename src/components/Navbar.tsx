@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,9 +39,12 @@ export default function Navbar() {
               
               {/* ⬇️ LOGO UPDATED TO IMAGE */}
               <div className="navbar-logo relative flex items-center">
-                 <img 
+                 <Image 
                     src="/logo/akuafi-logo.png" 
                     alt="Akuafi" 
+                    width={120}
+                    height={40}
+                    priority
                     className="h-10 w-auto object-contain" 
                  />
               </div>
