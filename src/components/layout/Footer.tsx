@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -7,7 +8,13 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-12 mb-16 text-center md:text-left">
           {/* Brand */}
           <div className="flex flex-col items-center md:items-start">
-            <img src="/images/logo.png" alt="AKUAFI" className="h-[60px] mb-6 grayscale brightness-200 opacity-60" />
+            <Image 
+               src="/logo/akuafi-logo.png" 
+               alt="Akuafi" 
+               width={160} 
+               height={56} 
+               className="h-[60px] mb-6 object-contain" 
+            />
             <p className="text-slate-400 text-sm">Smart Offline Advertising Platform.</p>
           </div>
 

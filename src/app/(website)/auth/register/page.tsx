@@ -13,10 +13,10 @@ export default function RegisterPage() {
              <Image 
                src="/logo/akuafi-logo.png" 
                alt="Akuafi" 
-               width={160} 
-               height={48} 
+               width={200} 
+               height={72} 
                priority
-               className="h-12 w-auto object-contain" 
+               className="h-16 w-auto object-contain" 
              />
            </div>
           <p className="mt-2 text-sm text-text-muted">Create your partner account</p>

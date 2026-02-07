@@ -16,7 +16,7 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void 
                src="/logo/akuafi-logo.png" 
                alt="Akuafi" 
                width={120} 
-               height={32} 
+               height={40} 
                className="h-8 w-auto object-contain" 
             />
             <span className="text-lg font-semibold text-foreground hidden sm:block pl-2 border-l border-slate-200 ml-2">Administration</span>

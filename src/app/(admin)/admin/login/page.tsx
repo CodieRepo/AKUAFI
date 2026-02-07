@@ -62,10 +62,10 @@ function LoginForm() {
             <Image 
               src="/logo/akuafi-logo.png" 
               alt="Akuafi" 
-              width={150} 
-              height={50} 
+              width={200} 
+              height={72} 
               priority
-              className="h-12 w-auto object-contain" 
+              className="h-16 w-auto object-contain" 
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Access</h1>

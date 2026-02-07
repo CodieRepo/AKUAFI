@@ -36,9 +36,9 @@ export default function AdminSidebar() {
            <Image 
               src="/logo/akuafi-logo.png" 
               alt="Akuafi" 
-              width={120}
-              height={32}
-              className="h-8 w-auto mr-2 object-contain" 
+              width={150}
+              height={48}
+              className="h-10 w-auto mr-2 object-contain" 
            />
            <span className="text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">ADMIN</span>
         </div>

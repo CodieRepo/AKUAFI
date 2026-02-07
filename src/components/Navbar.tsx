@@ -42,10 +42,10 @@ export default function Navbar() {
                  <Image 
                     src="/logo/akuafi-logo.png" 
                     alt="Akuafi" 
-                    width={120}
-                    height={40}
+                    width={160}
+                    height={56}
                     priority
-                    className="h-10 w-auto object-contain" 
+                    className="h-14 w-auto object-contain" 
                  />
               </div>
             </Link>

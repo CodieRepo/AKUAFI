@@ -25,9 +25,9 @@ export default function Sidebar() {
            <Image 
               src="/logo/akuafi-logo.png" 
               alt="Akuafi" 
-              width={120}
-              height={40}
-              className="h-8 w-auto object-contain" 
+              width={150}
+              height={48}
+              className="h-10 w-auto object-contain" 
            />
         </div>
 

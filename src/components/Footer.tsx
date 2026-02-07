@@ -13,9 +13,9 @@ export default function Footer() {
               <Image 
                 src="/logo/akuafi-logo.png" 
                 alt="Akuafi" 
-                width={120}
-                height={40}
-                className="h-8 w-auto object-contain" 
+                width={160}
+                height={56}
+                className="h-14 w-auto object-contain" 
               />
             </Link>
             <p className="text-slate-500 text-sm mb-6 leading-relaxed">
