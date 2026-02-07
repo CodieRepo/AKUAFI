@@ -9,7 +9,7 @@ import { createClient } from '@/utils/supabase/client';
 export default function Page() {
   const params = useParams();
   // Ensure we handle the possibility of params being null/undefined or the specific token being array/string
-  const qr_token = params?.qr_token as string;
+  const qr_token = (params?.code as string) || (params?.qr_token as string); // Fallback for safety, but prioritize 'code'
   const hasRedeemedRef = useRef(false);
 
   // View States: 'loading' | 'error' | 'used' | 'form' | 'success'

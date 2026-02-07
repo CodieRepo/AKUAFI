@@ -99,7 +99,8 @@ export async function POST(request: Request) {
     let csvContent = "qr_token,url,campaign_id,created_at\n";
 
     const imagePromises = rows.map(async (row, index) => {
-        const url = `https://akuafi.com/scan/${row.qr_token}`;
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://akuafi.com';
+        const url = `${baseUrl}/scan/${row.qr_token}`;
         csvContent += `${row.qr_token},${url},${row.campaign_id},${row.created_at}\n`;
 
         const buffer = await QRCode.toBuffer(url, {
