@@ -1,3 +1,7 @@
+build_log.txt
+debug_*
+verify_*
+e2e_test.js
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies

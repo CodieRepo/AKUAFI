@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,11 +37,16 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 group">
               
-              {/* ⬇️ LOGO REVERTED TO TEXT */}
+              {/* ⬇️ LOGO UPDATED TO IMAGE */}
               <div className="navbar-logo relative flex items-center">
-                 <span className="text-2xl font-bold tracking-tight text-slate-900 group-hover:text-primary transition-colors">
-                  AKUAFI
-                </span>
+                 <Image 
+                    src="/logo/akuafi-logo.png" 
+                    alt="Akuafi" 
+                    width={160}
+                    height={56}
+                    priority
+                    className="h-14 w-auto object-contain" 
+                 />
               </div>
             </Link>
 

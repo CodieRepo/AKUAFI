@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Button } from "@/components/ui/Button";
 
 export function Navbar() {
   return (
@@ -8,7 +9,14 @@ export function Navbar() {
         {/* Logo & Tagline */}
         <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center">
-                <img src="/images/logo.png" alt="AKUAFI" className="h-14 w-auto object-contain" />
+                <Image 
+                   src="/logo/akuafi-logo.png" 
+                   alt="Akuafi" 
+                   width={160} 
+                   height={56} 
+                   priority
+                   className="h-14 w-auto object-contain" 
+                />
             </Link>
             <span className="hidden lg:block text-sm font-medium text-slate-400 border-l border-slate-200 pl-6 tracking-wide">
                 Get Your Brand Akuafied.
@@ -26,7 +34,7 @@ export function Navbar() {
         {/* CTA - Fixed Style */}
         <div className="hidden md:flex">
             <Link href="/contact">
-                <Button size="md" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 font-bold px-8 h-11 tracking-wide">
+                <Button size="default" className="shadow-lg shadow-primary/20 hover:shadow-primary/40 font-bold px-8 h-11 tracking-wide">
                     Get Started
                 </Button>
             </Link>
