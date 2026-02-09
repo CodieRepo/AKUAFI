@@ -79,6 +79,7 @@ export default function Page() {
 
   // 1. Fetch Bottle on Mount (Updated to use API)
   useEffect(() => {
+    console.log("SCAN_CODE_PAGE_V2_MOUNTED");
     async function fetchBottle() {
       if (!qr_token) {
         setErrorMsg('No QR token provided.');

@@ -22,6 +22,7 @@ function ScanContent() {
 
   // 1. Initial Load - Fetch Bottle
   useEffect(() => {
+    console.log("SCAN_QUERY_PAGE_V2_MOUNTED");
     async function fetchBottle() {
       if (!token) {
         setErrorMsg('No QR token provided.');
