@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Debug / local verification files
+build_log.txt
+debug_*.ts
+debug_*.js
+verify_*.js
+verify_*.ts
+e2e_test.js
