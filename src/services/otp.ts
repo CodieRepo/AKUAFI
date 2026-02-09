@@ -1,85 +1,94 @@
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const TWOFACTOR_API_KEY = process.env.TWOFACTOR_API_KEY;
-// const TWOFACTOR_SENDER_ID = process.env.TWOFACTOR_SENDER_ID; // Not used in this implementation (using Template ID instead)
-const TWOFACTOR_TEMPLATE_ID = process.env.TWOFACTOR_TEMPLATE_ID;
 
 export const otpService = {
-  generateOTP() {
-    // Determine environment
+  // We no longer generate OTP locally for production
+  
+  async sendOTP(phone: string) {
     const isProduction = process.env.VERCEL_ENV === 'production';
     
-    if (isProduction) {
-        return Math.floor(100000 + Math.random() * 900000).toString();
+    // 1. Check if we have a valid API Key
+    if (!TWOFACTOR_API_KEY) {
+      console.error('Missing TWOFACTOR_API_KEY');
+      if (isProduction) {
+        return { success: false, message: 'SMS service not configured' };
+      }
     }
-    
-    // Non-production (local/preview): Return static OTP
-    return "1234";
-  },
 
-  async storeOTP(phone: string, otp: string) {
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
+    // 2. Production Flow (or if Key exists and we want to test)
+    if (isProduction || TWOFACTOR_API_KEY) {
+      try {
+        // 2Factor AUTOGEN API
+        // https://2factor.in/API/V1/{api_key}/SMS/{phone_number}/AUTOGEN
+        const response = await fetch(`https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/AUTOGEN`);
+        const data = await response.json();
+
+        if (data.Status === 'Success') {
+          const sessionId = data.Details;
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes expiry
+
+          // Store session_id in DB
+          const { error } = await getSupabaseAdmin()
+            .from('otp_sessions')
+            .insert({
+              phone,
+              session_id: sessionId,
+              expires_at: expiresAt,
+              verified: false,
+              attempts: 0
+            });
+
+          if (error) {
+            console.error('Error storing OTP session:', error);
+            // We successfully sent OTP but failed to store session. 
+            // The user will receive OTP but verify will fail if we rely on DB session_id.
+            // However, 2Factor Verify API needs session_id. 
+            // We can return success but log the error. Ideally, this should not happen.
+            return { success: false, message: 'System error initializing login' };
+          }
+
+          return { success: true, message: 'OTP sent successfully', session_id: sessionId };
+        } else {
+          console.error('2Factor API Error:', data);
+          return { success: false, message: 'Failed to send OTP via SMS/Call' };
+        }
+      } catch (error) {
+        console.error('2Factor Network Error:', error);
+        return { success: false, message: 'Network error sending OTP' };
+      }
+    }
+
+    // 3. Fallback / Dev Flow (No API Key or Local Dev)
+    // We simulate sending an OTP.
+    console.log(`[Dev] Simulating OTP for ${phone}. Use '123456'.`);
     
-    // Optional: Invalidate previous unverified OTPs to keep table clean, 
-    // but not strictly required if we always select latest.
-    
-    const { error } = await getSupabaseAdmin()
+    // We still need a "session" for the Verify step consistency
+    const mockSessionId = `mock-session-${Date.now()}`;
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await getSupabaseAdmin()
       .from('otp_sessions')
       .insert({
         phone,
-        otp,
+        session_id: mockSessionId,
         expires_at: expiresAt,
-        verified: false
+        verified: false, 
+        otp: '123456', // Storing for local verify check
+        attempts: 0
       });
-      
-    if (error) {
-        console.error('Error storing OTP:', error);
-        throw new Error('Failed to store OTP');
-    }
-    
-    return { otp, expiresAt };
-  },
 
-  async sendOTP(phone: string) {
-      const otp = this.generateOTP();
-      const { expiresAt } = await this.storeOTP(phone, otp);
-      
-      const isProduction = process.env.VERCEL_ENV === 'production';
-      
-      if (!isProduction) {
-          console.log(`[Non-Production] OTP for ${phone}: ${otp}`);
-          // Return simulated success
-          return { success: true, sms_sent: true, message: 'OTP sent (simulated)' };
-      }
-      
-      // Production Logic
-      if (!TWOFACTOR_TEMPLATE_ID) {
-          console.warn(`[Production] Missing TWOFACTOR_TEMPLATE_ID. OTP generated but SMS NOT sent.`);
-          // Graceful degradation: Return success: true (to not block user flow) but sms_sent: false
-          return { success: true, sms_sent: false, message: 'SMS configuration pending' };
-      }
-      
-      // Call 2Factor API
-      try {
-          const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/${otp}/${TWOFACTOR_TEMPLATE_ID}`;
-          const response = await fetch(url);
-          const data = await response.json();
-          
-          if (data.Status === 'Success') {
-              return { success: true, sms_sent: true, message: 'OTP sent successfully' };
-          } else {
-              console.error('2Factor API Error:', data);
-              return { success: false, sms_sent: false, message: 'Failed to send SMS' };
-          }
-      } catch (error) {
-          console.error('2Factor API Network Error:', error);
-          return { success: false, sms_sent: false, message: 'Network error sending SMS' };
-      }
+    return { 
+        success: true, 
+        message: 'OTP sent (Dev: 123456)', 
+        session_id: mockSessionId,
+        is_dev: true 
+    };
   },
 
   async validateOTP(phone: string, otp: string) {
-     // Fetch latest unverified OTP that is not expired
-     const { data, error } = await getSupabaseAdmin()
+    // 1. Retrieve the latest active session for this phone
+    const { data: session, error } = await getSupabaseAdmin()
         .from('otp_sessions')
         .select('*')
         .eq('phone', phone)
@@ -89,33 +98,60 @@ export const otpService = {
         .limit(1)
         .single();
 
-     if (error || !data) {
-         return { valid: false, message: 'Invalid or expired OTP' };
-     }
+    if (error || !session) {
+        return { valid: false, message: 'OTP expired or invalid session' };
+    }
 
-     if (data.otp !== otp) {
-         return { valid: false, message: 'Invalid OTP' };
-     }
+    // 2. Check Attempts to prevent brute force (e.g. max 3 attempts)
+    if (session.attempts >= 3) {
+        return { valid: false, message: 'Too many failed attempts. Please request a new OTP.' };
+    }
 
-     // Mark OTP as verified atomically. 
-     // We enforce 'verified' is still false at the moment of update.
-     const { data: updatedData, error: updateError } = await getSupabaseAdmin()
-        .from('otp_sessions')
-        .update({ verified: true })
-        .eq('id', data.id)
-        .eq('verified', false) // Atomic check
-        .select();
+    let isValid = false;
+    const isProduction = process.env.VERCEL_ENV === 'production';
 
-     if (updateError) {
-        console.error('Error updating OTP status:', updateError);
-        return { valid: false, message: 'System error verifying OTP' };
-     }
+    // 3. Verify Logic
+    if (isProduction || (TWOFACTOR_API_KEY && !session.otp)) { // Real API Verify
+       try {
+           // https://2factor.in/API/V1/{api_key}/SMS/VERIFY/{session_id}/{otp_input}
+           const verifyUrl = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/VERIFY/${session.session_id}/${otp}`;
+           const response = await fetch(verifyUrl);
+           const data = await response.json();
 
-     // If no rows were updated, it means it was already verified in a race condition
-     if (!updatedData || updatedData.length === 0) {
-         return { valid: false, message: 'OTP already verified' };
-     }
-        
-     return { valid: true };
+           if (data.Status === 'Success') {
+               isValid = true;
+           } else {
+               isValid = false;
+           }
+       } catch (err) {
+           console.error('2Factor Verify Error:', err);
+           return { valid: false, message: 'Error verifying OTP with provider' };
+       }
+    } else {
+        // Dev Fallback
+        isValid = otp === '123456' || otp === session.otp;
+    }
+
+    // 4. Update Session Response
+    if (isValid) {
+        // Mark verified
+        await getSupabaseAdmin()
+            .from('otp_sessions')
+            .update({ 
+                verified: true, 
+                verified_at: new Date().toISOString() 
+            })
+            .eq('id', session.id);
+            
+        return { valid: true, session_id: session.session_id };
+    } else {
+        // Increment attempts
+        await getSupabaseAdmin()
+            .from('otp_sessions')
+            .update({ attempts: session.attempts + 1 })
+            .eq('id', session.id);
+            
+        return { valid: false, message: 'Invalid OTP' };
+    }
   }
 }

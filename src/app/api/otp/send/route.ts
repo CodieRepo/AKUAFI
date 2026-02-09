@@ -20,7 +20,9 @@ export async function POST(request: Request) {
          return NextResponse.json({ 
              success: true, 
              message: result.message,
-             sms_sent: result.sms_sent 
+             session_id: result.session_id,
+             // sms_sent is no longer returned explicitly by new service, but success implies it was initiated
+             sms_sent: true 
          });
     } else {
         return NextResponse.json({ error: result.message || 'Failed to send OTP' }, { status: 500 });

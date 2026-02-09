@@ -134,12 +134,18 @@ export default function Page() {
     setLoadingAction(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: fullPhone,
+      const response = await fetch('/api/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: fullPhone })
       });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send OTP');
+      }
+
       setOtpSent(true);
     } catch (error: any) {
       console.error('OTP Send Error:', error);
@@ -168,49 +174,32 @@ export default function Page() {
     const fullPhone = `+91${formData.phone}`;
 
     try {
-      const supabase = createClient();
-      // A. Verify OTP
-      const { data: authData, error: authError } = await supabase.auth.verifyOtp({
-        phone: fullPhone,
-        token: otp,
-        type: 'sms',
+      // Clean token
+      const cleanToken = Array.isArray(qr_token) ? qr_token[0] : qr_token;
+
+      // Verify OTP and Redeem (Combined Endpoint)
+      const response = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+           phone: fullPhone,
+           otp: otp,
+           qr_token: cleanToken.trim(),
+           name: formData.name.trim()
+        })
       });
 
-      if (authError || !authData.user) {
-        throw new Error(authError?.message || 'Invalid verification code.');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Verification failed');
       }
 
-      // GUARD: Prevent Double Redemption
+      // GUARD: Prevent Double Redemption (Frontend Ref)
       if (hasRedeemedRef.current) return;
       hasRedeemedRef.current = true;
 
-      // B. Redemption API
-      const cleanToken = Array.isArray(qr_token) ? qr_token[0] : qr_token;
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Authentication failed.");
-
-      const res = await fetch('/api/redeem', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          // Phone is now extracted from token on backend, but we can send if needed (backend ignores)
-          qr_token: cleanToken.trim(),
-          name: formData.name.trim() 
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errorText = data.details ? `${data.error}: ${data.details}` : (data.error || 'Redemption failed');
-        throw new Error(errorText);
-      }
-
-      setCouponCode(data.coupon);
+      setCouponCode(data.coupon_code);
       setView('success');
 
     } catch (error: any) {
@@ -373,7 +362,7 @@ export default function Page() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Sent to +91 {formData.phone}. <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">Change</button>
+                    Sent to +91 {formData.phone}. You may receive OTP via SMS or call. <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">Change</button>
                   </p>
                 </div>
 
