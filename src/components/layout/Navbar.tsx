@@ -11,10 +11,11 @@ export function Navbar() {
             <Link href="/" className="flex items-center">
                 <Image 
                    src="/images/akuafi-logo-08.png" 
-                   alt="Akuafi" 
-                   width={160} 
-                   height={56} 
+                   alt="Akuafi Logo" 
+                   width={180} 
+                   height={60} 
                    priority
+                   unoptimized
                    className="h-14 w-auto object-contain" 
                 />
             </Link>
