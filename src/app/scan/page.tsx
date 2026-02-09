@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, MapPin, Phone, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -31,22 +30,25 @@ function ScanContent() {
       }
 
       try {
-        const supabase = createClient();
-        const { data: bottleData, error: bottleError } = await supabase
-          .from('bottles')
-          .select('*')
-          .eq('qr_token', token)
-          .single();
+        const response = await fetch('/api/bottles/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qr_token: token })
+        });
+        
+        const result = await response.json();
 
-        if (bottleError || !bottleData) {
+        if (!response.ok || !result.success) {
+          console.error('Bottle lookup failed:', result.error);
           setErrorMsg('Invalid QR code. Bottle not found.');
           setView('error');
           return;
         }
 
-        setBottle(bottleData);
+        const data = result.bottle;
+        setBottle(data);
 
-        if (bottleData.status === 'used') {
+        if (data.status === 'used') {
           setView('used');
         } else {
           setView('form');
