@@ -1,7 +1,18 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/utils/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
+  // STRICT EXCLUSION: Skip middleware for OTP and Bottle Check APIs
+  const { pathname } = request.nextUrl;
+  
+  if (
+    pathname.startsWith('/api/otp') || 
+    pathname.startsWith('/api/bottles') ||
+    pathname.startsWith('/scan')
+  ) {
+    return NextResponse.next();
+  }
+
   return await updateSession(request);
 }
 
@@ -12,12 +23,11 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - login (login page)
-     * - auth (auth callback page)
+     * - api/otp (OTP flow - pure 2Factor)
+     * - api/bottles (Bottle check - public)
+     * - scan (Scan page - public)
      * Feel free to modify this pattern to include more paths.
      */
-    // Scoping middleware to Admin & Auth routes only as per strict user request.
-    // NOTE: This effectively disables session refreshing for other routes (e.g. /client, /scan).
-    '/admin/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|api/otp|api/bottles|scan).*)',
   ],
 };
