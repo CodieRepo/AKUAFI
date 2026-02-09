@@ -10,7 +10,7 @@ export function Navbar() {
         <div className="flex items-center">
             <Link href="/" className="flex items-center">
                 <Image 
-                   src="/images/akuafi-logo-08.png" 
+                   src="/images/header-logo.png" 
                    alt="Akuafi Logo" 
                    width={180} 
                    height={60} 
