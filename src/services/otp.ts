@@ -3,33 +3,72 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 const TWOFACTOR_API_KEY = process.env.TWOFACTOR_API_KEY;
 
 export const otpService = {
-  // We no longer generate OTP locally for production
+  // Robust OTP Service for 2Factor (Autogen)
   
   async sendOTP(phone: string) {
-    console.log(`[2Factor] Sending OTP to ${phone} via AUTOGEN`);
+    console.log(`[2Factor] Processing OTP request for ${phone}`);
 
     if (!TWOFACTOR_API_KEY) {
         console.error("Scanning OTP Flow: Missing TWOFACTOR_API_KEY");
         return { success: false, message: 'SMS Configuration Error' };
     }
 
-    try {
-        // 1. Call 2Factor AUTOGEN API
-        const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/AUTOGEN`;
-        const response = await fetch(url);
-        const data = await response.json();
+    // 1. THROTTLING CHECK (Rate Limit: 1 OTP per 60s)
+    const { data: recentSession } = await getSupabaseAdmin()
+        .from('otp_sessions')
+        .select('created_at')
+        .eq('phone', phone)
+        .gt('created_at', new Date(Date.now() - 60 * 1000).toISOString()) // Last 60s
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
+    if (recentSession) {
+        console.warn(`[OTP Throttled] Request for ${phone} blocked (too soon)`);
+        return { success: false, message: 'Please wait 60 seconds before requesting a new OTP.' };
+    }
+
+    // 2. RETRY WRAPPER for Upstream API
+    const callProvider = async (retryCount = 0): Promise<any> => {
+        try {
+            // Using AUTOGEN endpoint
+            // Template Name should ideally be passed if you have a specific DLT template
+            // const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/AUTOGEN/TemplateName`;
+            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/AUTOGEN`;
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s Timeout
+
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            return await response.json();
+        } catch (e) {
+            console.error(`[2Factor] Attempt ${retryCount + 1} failed:`, e);
+            if (retryCount < 2) { // Max 3 attempts (0, 1, 2)
+                await new Promise(r => setTimeout(r, 1000 * (retryCount + 1))); // Backoff 1s, 2s
+                return callProvider(retryCount + 1);
+            }
+            throw e;
+        }
+    };
+
+    try {
+        // 3. CALL PROVIDER
+        const data = await callProvider();
         console.log("2FACTOR AUTOGEN RESPONSE:", data);
 
         if (data.Status !== 'Success') {
              console.error('2Factor API Failed:', data);
-             return { success: false, message: 'Failed to send OTP' };
+             // Handle specific 2Factor errors if needed
+             return { success: false, message: 'Failed to send OTP via SMS provider.' };
         }
 
         const sessionId = data.Details;
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
 
-        // 2. Store Session in DB (Required for Validation lookup)
+        // 4. DB INSERT (Robust)
+        // Store session. 'otp' column MUST be nullable in DB as we don't have it.
         const { error } = await getSupabaseAdmin()
             .from('otp_sessions')
             .insert({
@@ -42,7 +81,7 @@ export const otpService = {
 
         if (error) {
             console.error('DB Session Store Error:', error);
-            return { success: false, message: 'System error initializing login' };
+            return { success: false, message: 'System error: OTP sent but session storage failed.' };
         }
 
         return { 
@@ -52,8 +91,8 @@ export const otpService = {
         };
 
     } catch (error) {
-        console.error('2Factor Network Error:', error);
-        return { success: false, message: 'Network error sending OTP' };
+        console.error('Critical OTP Failure:', error);
+        return { success: false, message: 'Service temporarily unavailable. Please try again later.' };
     }
   },
 
@@ -83,7 +122,6 @@ export const otpService = {
     let isValid = false;
     
     if (!TWOFACTOR_API_KEY) {
-        // Critical Configuration Error
         return { valid: false, message: 'Server configuration error (Missing API Key)' };
     }
 
@@ -99,6 +137,8 @@ export const otpService = {
            isValid = true;
        } else {
            isValid = false;
+           // If 2Factor says "OTP Mismatch", it's invalid
+           // If "Session Expired", it's invalid
        }
     } catch (err) {
        console.error('2Factor Verify Exception:', err);
