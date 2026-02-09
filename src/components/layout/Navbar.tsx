@@ -7,10 +7,10 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 h-20">
       <div className="container mx-auto px-6 h-full flex items-center justify-between">
         {/* Logo & Tagline */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center">
             <Link href="/" className="flex items-center">
                 <Image 
-                   src="/logo/akuafi-logo.png" 
+                   src="/logo/Akuafi-09.png" 
                    alt="Akuafi" 
                    width={160} 
                    height={56} 
@@ -18,9 +18,6 @@ export function Navbar() {
                    className="h-14 w-auto object-contain" 
                 />
             </Link>
-            <span className="hidden lg:block text-sm font-medium text-slate-400 border-l border-slate-200 pl-6 tracking-wide">
-                Get Your Brand Akuafied.
-            </span>
         </div>
         
         {/* Nav Links */}
