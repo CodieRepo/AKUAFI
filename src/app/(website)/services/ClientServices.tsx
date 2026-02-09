@@ -143,11 +143,11 @@ export default function ClientServices() {
                 <div className="absolute inset-0 bg-indigo-100 rounded-[3rem] -rotate-3 scale-95 opacity-50 -z-10" />
                 <div className="bg-white rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-100/50">
                    <Image 
-                     src="/images/QREngagement.png" 
-                     alt="QR Engage" 
+                     src="/images/qr-engagement.png" 
+                     alt="QR Engage Dynamic QR Marketing Platform" 
                      fill 
-                     className="object-cover hover:scale-105 transition-transform duration-700"
-                     sizes="(max-width: 768px) 100vw, 50vw"
+                     className="object-cover rounded-2xl"
+                     unoptimized
                    />
                 </div>
             </div>
