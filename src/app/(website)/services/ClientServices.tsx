@@ -54,7 +54,7 @@ export default function ClientServices() {
                 <div className="absolute inset-0 bg-accent-cyan-light rounded-[3rem] rotate-3 scale-95 opacity-50 -z-10" />
                 <div className="bg-slate-50 rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-100/50">
                    <Image 
-                     src="/assets/images/bottled-branding.jpg" 
+                     src="/images/Branding.png" 
                      alt="Bottled Branding" 
                      fill 
                      className="object-cover hover:scale-105 transition-transform duration-700"
@@ -143,7 +143,7 @@ export default function ClientServices() {
                 <div className="absolute inset-0 bg-indigo-100 rounded-[3rem] -rotate-3 scale-95 opacity-50 -z-10" />
                 <div className="bg-white rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-100/50">
                    <Image 
-                     src="/assets/images/qr-engage.jpg" 
+                     src="/images/QREngagement.png" 
                      alt="QR Engage" 
                      fill 
                      className="object-cover hover:scale-105 transition-transform duration-700"
@@ -166,7 +166,7 @@ export default function ClientServices() {
                 <div className="absolute inset-0 bg-primary-light rounded-[3rem] rotate-3 scale-95 opacity-30 -z-10" />
                 <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden relative min-h-[400px] shadow-soft-xl border border-slate-800">
                    <Image 
-                     src="/assets/images/analytics.jpg" 
+                     src="/images/Dashboard.png" 
                      alt="Analytics Dashboard" 
                      fill 
                      className="object-cover hover:scale-105 transition-transform duration-700 opacity-90"
