@@ -3,6 +3,7 @@ import { otpService } from '@/services/otp';
 
 export async function POST(request: Request) {
   try {
+    console.log("SCAN OTP FLOW → USING 2FACTOR ONLY");
     const { phone } = await request.json();
 
     if (!phone) {

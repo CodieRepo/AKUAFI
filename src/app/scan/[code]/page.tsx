@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { createClient } from '@/utils/supabase/client';
+
 
 export default function Page() {
   const params = useParams();
@@ -77,7 +77,7 @@ export default function Page() {
 
   // --- API Interactions ---
 
-  // 1. Fetch Bottle on Mount (Existing logic)
+  // 1. Fetch Bottle on Mount (Updated to use API)
   useEffect(() => {
     async function fetchBottle() {
       if (!qr_token) {
@@ -87,20 +87,22 @@ export default function Page() {
       }
 
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('bottles')
-          .select('*')
-          .eq('qr_token', qr_token)
-          .single();
+        const response = await fetch('/api/bottles/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qr_token })
+        });
+        
+        const result = await response.json();
 
-        if (error || !data) {
-          console.error('Bottle lookup failed:', error?.message);
+        if (!response.ok || !result.success) {
+          console.error('Bottle lookup failed:', result.error);
           setErrorMsg('Invalid QR code. Bottle not found.');
           setView('error');
           return;
         }
 
+        const data = result.bottle;
         setBottle(data);
         
         // Check if already used
@@ -131,6 +133,7 @@ export default function Page() {
     
     // Auto-prepend +91
     const fullPhone = `+91${formData.phone}`;
+    console.log("Frontend: handleSendCode called - Custom Flow");
     setLoadingAction(true);
 
     try {
