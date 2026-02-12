@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
+// Corrected Env Var Name
 const TWOFACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
 
 // Robust OTP Service for 2Factor (DLT Approved)
@@ -36,35 +37,30 @@ export const otpService = {
     // 3. RETRY WRAPPER for Upstream API
     const callProvider = async (retryCount = 0): Promise<any> => {
         try {
-            // Using DLT TSMS Endpoint (POST JSON)
-            // https://2factor.in/API/V1/{API_KEY}/ADDON_SERVICES/SEND/TSMS
+            // Using DLT OTP Endpoint (GET)
+            // https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}/{TEMPLATE_NAME}
             
-            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/ADDON_SERVICES/SEND/TSMS`;
-            
-            // Remove '+' from phone number for 2Factor
             const cleanPhone = phone.replace(/^\+/, '');
+            const templateName = encodeURIComponent("AKUAFI COUPON OTP");
 
-            const payload = {
-                From: "AKUAFI",
-                To: cleanPhone,
-                CTID: "1107177081023616021", // Explicit CTID
-                VAR1: otp
-            };
+            // Use process.env directly to avoid any stale variable reference issues, though const above is fine.
+            const url = `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${cleanPhone}/${otp}/${templateName}`;
+            
+            console.log("[2Factor] Calling URL:", url.replace(process.env.TWO_FACTOR_API_KEY!, "API_KEY_HIDDEN"));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s Timeout
 
             const response = await fetch(url, { 
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload),
+                method: "GET",
                 signal: controller.signal 
             });
             clearTimeout(timeoutId);
 
-            return await response.json();
+            const data = await response.json();
+            console.log("2FACTOR RESPONSE:", data);
+            return data;
+
         } catch (e) {
             console.error(`[2Factor] Attempt ${retryCount + 1} failed:`, e);
             if (retryCount < 2) { // Max 3 attempts (0, 1, 2)
@@ -78,8 +74,8 @@ export const otpService = {
     try {
         // 4. CALL PROVIDER
         const data = await callProvider();
-        console.log("2FACTOR DLT RESPONSE:", JSON.stringify(data)); 
 
+        // 2Factor GET OTP Status is usually "Success" or "Status":"Success"
         if (data.Status !== 'Success') {
              console.error('2Factor API Failed:', JSON.stringify(data));
              return { success: false, message: 'Failed to send OTP via SMS provider.' };
@@ -91,8 +87,8 @@ export const otpService = {
         const { error } = await getSupabaseAdmin()
             .from('otp_sessions')
             .insert({
-              phone,
-              session_id: sessionId || 'DLT-SESSION', // Fallback if ID invalid, but local verification matters
+              phone, // Store the FULL phone number including +91 for matching
+              session_id: sessionId || 'DLT-SESSION', 
               otp: otp, 
               expires_at: expiresAt,
               verified: false,
@@ -101,14 +97,14 @@ export const otpService = {
 
         if (error) {
             console.error('DB Session Store Error:', error);
-            // We should ideally not fail here if SMS went through, but for security strictness, we do.
+            // Limit failure impact if SMS sent
             return { success: false, message: 'System error: OTP sent but session storage failed.' };
         }
 
         return { 
             success: true, 
             message: 'OTP Sent', 
-            session_id: null // Hiding session ID from frontend as requested
+            session_id: null 
         };
 
     } catch (error) {
