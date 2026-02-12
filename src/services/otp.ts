@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
-const TWOFACTOR_API_KEY = process.env.TWOFACTOR_API_KEY;
+const TWOFACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
 
 // Robust OTP Service for 2Factor (DLT Approved)
 
