@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const { data, error } = await getSupabaseAdmin()
       .from('campaigns')
       .select('*')
-      .in('status', ['draft', 'active', 'paused'])
+      .in('status', ['draft', 'active', 'paused', 'completed'])
       .order('created_at', { ascending: false });
 
     if (error) throw error;
