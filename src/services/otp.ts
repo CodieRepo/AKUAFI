@@ -14,8 +14,6 @@ export const otpService = {
         return { success: false, message: 'SMS Configuration Error' };
     }
 
-    const TEMPLATE_ID = process.env.TWO_FACTOR_TEMPLATE_ID || "1107177081023616021";
-
     // 1. GENERATE OTP (6 Digits)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 mins
@@ -38,14 +36,32 @@ export const otpService = {
     // 3. RETRY WRAPPER for Upstream API
     const callProvider = async (retryCount = 0): Promise<any> => {
         try {
-            // Using DLT Template Endpoint
-            // https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE_NUMBER}/{OTP}/{TEMPLATE_ID}
-            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/${otp}/${TEMPLATE_ID}`;
+            // Using DLT Template Endpoint (POST JSON)
+            // https://2factor.in/API/V1/{API_KEY}/SMS
             
+            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS`;
+            
+            // Remove '+' from phone number for 2Factor
+            const cleanPhone = phone.replace(/^\+/, '');
+
+            const payload = {
+                From: "AKUAFI",
+                To: cleanPhone,
+                TemplateName: "AKUAFI COUPON OTP",
+                VAR1: otp
+            };
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s Timeout
 
-            const response = await fetch(url, { signal: controller.signal });
+            const response = await fetch(url, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal 
+            });
             clearTimeout(timeoutId);
 
             return await response.json();
@@ -62,10 +78,10 @@ export const otpService = {
     try {
         // 4. CALL PROVIDER
         const data = await callProvider();
-        console.log("2FACTOR DLT RESPONSE:", data);
+        console.log("2FACTOR DLT RESPONSE:", JSON.stringify(data)); 
 
         if (data.Status !== 'Success') {
-             console.error('2Factor API Failed:', data);
+             console.error('2Factor API Failed:', JSON.stringify(data));
              return { success: false, message: 'Failed to send OTP via SMS provider.' };
         }
 
@@ -76,7 +92,7 @@ export const otpService = {
             .from('otp_sessions')
             .insert({
               phone,
-              session_id: sessionId,
+              session_id: sessionId || 'DLT-SESSION', // Fallback if ID invalid, but local verification matters
               otp: otp, 
               expires_at: expiresAt,
               verified: false,
@@ -85,13 +101,14 @@ export const otpService = {
 
         if (error) {
             console.error('DB Session Store Error:', error);
+            // We should ideally not fail here if SMS went through, but for security strictness, we do.
             return { success: false, message: 'System error: OTP sent but session storage failed.' };
         }
 
         return { 
             success: true, 
-            message: 'OTP sent successfully', 
-            session_id: sessionId 
+            message: 'OTP Sent', 
+            session_id: null // Hiding session ID from frontend as requested
         };
 
     } catch (error) {
