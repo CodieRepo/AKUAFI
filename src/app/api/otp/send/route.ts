@@ -2,10 +2,21 @@ import { NextResponse } from 'next/server';
 import { otpService } from '@/services/otp';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic'; // Ensure no static caching
+
 export async function POST(request: Request) {
   try {
     console.log("SCAN OTP FLOW → VALIDATING REQUEST");
-    const { phone, qr_token } = await request.json();
+    
+    // Parse Body Safely
+    let body;
+    try {
+        body = await request.json();
+    } catch (e) {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const { phone, qr_token } = body;
 
     if (!phone || !qr_token) {
       return NextResponse.json({ error: 'Phone and QR Token are required' }, { status: 400 });
@@ -15,8 +26,7 @@ export async function POST(request: Request) {
     const normalizedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
 
     // 1. PRE-FLIGHT CHECKS (Must happen BEFORE sending OTP)
-    // We want to fail fast if the user can't redeem anyway.
-
+    
     // A. Check Bottle Status
     const { data: bottle, error: bottleError } = await getSupabaseAdmin()
         .from('bottles')
@@ -62,8 +72,6 @@ export async function POST(request: Request) {
     }
 
     // C. Check User Eligibility (Phone-based Lock)
-    // We check if this phone number already has a coupon for this campaign.
-    // First, find the user_id for this phone (if exists).
     const { data: user } = await getSupabaseAdmin()
         .from('users')
         .select('id')
