@@ -20,16 +20,15 @@ export async function POST(request: Request) {
 
     const { phone, qr_token } = body;
 
-    // 2️⃣ Log Exact QR Token Received
+    // Log Exact QR Token Received (Diagnostic)
     console.log("QR TOKEN RECEIVED:", `"${qr_token}"`);
-    console.log("QR TOKEN LENGTH:", qr_token ? qr_token.length : 'N/A');
 
     if (!phone || !qr_token) {
       console.warn("MISSING PARAMS: phone or qr_token");
       return NextResponse.json({ error: 'Phone and QR Token are required' }, { status: 400 });
     }
 
-    // 5️⃣ Add Defensive Normalization
+    // Defensive Normalization
     const cleanQrToken = qr_token.trim();
     if (cleanQrToken !== qr_token) {
         console.warn("QR TOKEN TRIMMED: Whitespace removed.");
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
             campaign_id,
             campaigns (
                 id,
-                is_active,
+                status,
                 start_date,
                 end_date
             )
@@ -83,8 +82,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
 
-    if (!campaign.is_active) {
-        return NextResponse.json({ error: 'Campaign is inactive' }, { status: 400 });
+    // Updated Logic: Check status instead of is_active
+    if (campaign.status !== 'active') {
+        return NextResponse.json(
+            { error: 'Campaign is inactive' },
+            { status: 400 }
+        );
     }
 
     const now = new Date();
