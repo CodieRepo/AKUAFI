@@ -36,10 +36,10 @@ export const otpService = {
     // 3. RETRY WRAPPER for Upstream API
     const callProvider = async (retryCount = 0): Promise<any> => {
         try {
-            // Using DLT Template Endpoint (POST JSON)
-            // https://2factor.in/API/V1/{API_KEY}/SMS
+            // Using DLT TSMS Endpoint (POST JSON)
+            // https://2factor.in/API/V1/{API_KEY}/ADDON_SERVICES/SEND/TSMS
             
-            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS`;
+            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/ADDON_SERVICES/SEND/TSMS`;
             
             // Remove '+' from phone number for 2Factor
             const cleanPhone = phone.replace(/^\+/, '');
@@ -47,7 +47,7 @@ export const otpService = {
             const payload = {
                 From: "AKUAFI",
                 To: cleanPhone,
-                TemplateName: "AKUAFI COUPON OTP",
+                CTID: "1107177081023616021", // Explicit CTID
                 VAR1: otp
             };
 
