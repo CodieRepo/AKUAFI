@@ -2,8 +2,9 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const TWOFACTOR_API_KEY = process.env.TWOFACTOR_API_KEY;
 
+// Robust OTP Service for 2Factor (DLT Approved)
+
 export const otpService = {
-  // Robust OTP Service for 2Factor (Autogen)
   
   async sendOTP(phone: string) {
     console.log(`[2Factor] Processing OTP request for ${phone}`);
@@ -13,7 +14,13 @@ export const otpService = {
         return { success: false, message: 'SMS Configuration Error' };
     }
 
-    // 1. THROTTLING CHECK (Rate Limit: 1 OTP per 60s)
+    const TEMPLATE_ID = process.env.TWO_FACTOR_TEMPLATE_ID || "1107177081023616021";
+
+    // 1. GENERATE OTP (6 Digits)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 mins
+
+    // 2. THROTTLING CHECK (Rate Limit: 1 OTP per 60s)
     const { data: recentSession } = await getSupabaseAdmin()
         .from('otp_sessions')
         .select('created_at')
@@ -28,13 +35,12 @@ export const otpService = {
         return { success: false, message: 'Please wait 60 seconds before requesting a new OTP.' };
     }
 
-    // 2. RETRY WRAPPER for Upstream API
+    // 3. RETRY WRAPPER for Upstream API
     const callProvider = async (retryCount = 0): Promise<any> => {
         try {
-            // Using AUTOGEN endpoint
-            // Template Name should ideally be passed if you have a specific DLT template
-            // const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/AUTOGEN/TemplateName`;
-            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/AUTOGEN`;
+            // Using DLT Template Endpoint
+            // https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE_NUMBER}/{OTP}/{TEMPLATE_ID}
+            const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${phone}/${otp}/${TEMPLATE_ID}`;
             
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s Timeout
@@ -54,26 +60,24 @@ export const otpService = {
     };
 
     try {
-        // 3. CALL PROVIDER
+        // 4. CALL PROVIDER
         const data = await callProvider();
-        console.log("2FACTOR AUTOGEN RESPONSE:", data);
+        console.log("2FACTOR DLT RESPONSE:", data);
 
         if (data.Status !== 'Success') {
              console.error('2Factor API Failed:', data);
-             // Handle specific 2Factor errors if needed
              return { success: false, message: 'Failed to send OTP via SMS provider.' };
         }
 
-        const sessionId = data.Details;
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
+        const sessionId = data.Details; 
 
-        // 4. DB INSERT (Robust)
-        // Store session. 'otp' column MUST be nullable in DB as we don't have it.
+        // 5. STORE SESSION
         const { error } = await getSupabaseAdmin()
             .from('otp_sessions')
             .insert({
               phone,
               session_id: sessionId,
+              otp: otp, 
               expires_at: expiresAt,
               verified: false,
               attempts: 0
@@ -118,31 +122,14 @@ export const otpService = {
         return { valid: false, message: 'Too many failed attempts. Please request a new OTP.' };
     }
 
-    // 3. STRICT 2FACTOR VERIFY
+    // 3. VERIFY
     let isValid = false;
     
-    if (!TWOFACTOR_API_KEY) {
-        return { valid: false, message: 'Server configuration error (Missing API Key)' };
-    }
-
-    try {
-       // https://2factor.in/API/V1/{api_key}/SMS/VERIFY/{session_id}/{otp_input}
-       const verifyUrl = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/VERIFY/${session.session_id}/${otp}`;
-       const response = await fetch(verifyUrl);
-       const data = await response.json();
-
-       console.log("2FACTOR VERIFY RESPONSE:", data);
-
-       if (data.Status === 'Success') {
-           isValid = true;
-       } else {
-           isValid = false;
-           // If 2Factor says "OTP Mismatch", it's invalid
-           // If "Session Expired", it's invalid
-       }
-    } catch (err) {
-       console.error('2Factor Verify Exception:', err);
-       return { valid: false, message: 'Error verifying OTP with provider' };
+    // Check against stored OTP
+    if (session.otp === otp) { 
+        isValid = true;
+    } else {
+        isValid = false; 
     }
 
     // 4. Update Session Response
