@@ -2,14 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-
 
 export default function Page() {
   const params = useParams();
-  // Ensure we handle the possibility of params being null/undefined or the specific token being array/string
-  const qr_token = (params?.code as string) || (params?.qr_token as string); // Fallback for safety, but prioritize 'code'
+  // 1️⃣ Scan Route Parameter Handling: Extract qr_token strictly from params
+  const qr_token = params?.qr_token as string;
   const hasRedeemedRef = useRef(false);
 
   // View States: 'loading' | 'error' | 'used' | 'form' | 'success'
@@ -36,7 +35,6 @@ export default function Page() {
   // --- Input Handlers (Strict Validation) ---
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow alphabets and spaces only
     const val = e.target.value;
     if (/^[a-zA-Z\s]*$/.test(val)) {
       setFormData(prev => ({ ...prev, name: val }));
@@ -44,7 +42,6 @@ export default function Page() {
   };
 
   const handleCityStateChange = (field: 'city' | 'state') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow alphabets and spaces only
     const val = e.target.value;
     if (/^[a-zA-Z\s]*$/.test(val)) {
       setFormData(prev => ({ ...prev, [field]: val }));
@@ -52,7 +49,6 @@ export default function Page() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Digits only, max 10
     const val = e.target.value.replace(/\D/g, '');
     if (val.length <= 10) {
       setFormData(prev => ({ ...prev, phone: val }));
@@ -60,7 +56,6 @@ export default function Page() {
   };
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Digits only, max 6
     const val = e.target.value.replace(/\D/g, '');
     if (val.length <= 6) {
       setFormData(prev => ({ ...prev, pincode: val }));
@@ -68,7 +63,6 @@ export default function Page() {
   };
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Letters, numbers, spaces, commas
     const val = e.target.value;
     if (/^[a-zA-Z0-9\s,]*$/.test(val)) {
       setFormData(prev => ({ ...prev, addressLine: val }));
@@ -79,10 +73,11 @@ export default function Page() {
 
   // 1. Fetch Bottle on Mount (Updated to use API)
   useEffect(() => {
-    console.log("SCAN_CODE_PAGE_V2_MOUNTED");
+    console.log("SCAN_QR_TOKEN_PAGE_MOUNTED", qr_token);
+    
     async function fetchBottle() {
       if (!qr_token) {
-        setErrorMsg('No QR token provided.');
+        setErrorMsg('Invalid QR Code. Token missing.');
         setView('error');
         return;
       }
@@ -98,7 +93,14 @@ export default function Page() {
 
         if (!response.ok || !result.success) {
           console.error('Bottle lookup failed:', result.error);
-          setErrorMsg('Invalid QR code. Bottle not found.');
+          
+          // 6️⃣ Error Handling (User Friendly)
+          if (result.error === 'Coupon redeemed from this QR') {
+              setView('used');
+              return;
+          }
+
+          setErrorMsg(result.error || 'Invalid QR code. Bottle not found.');
           setView('error');
           return;
         }
@@ -127,27 +129,50 @@ export default function Page() {
   // 2. Handle Send OTP
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 4️⃣ Pre-Submission Validation
     if (!formData.phone || formData.phone.length !== 10) {
       alert('Please enter a valid 10-digit phone number.');
       return;
     }
     
+    if (!qr_token) {
+        alert('Invalid Request: Missing QR Token');
+        return;
+    }
+    
     // Auto-prepend +91
     const fullPhone = `+91${formData.phone}`;
-    console.log("Frontend: handleSendCode called - Custom Flow");
+    
+    // 5️⃣ Logging & Debug
+    console.log("Frontend: handleSendCode called");
+    console.log("Sending OTP Request:", { phone: fullPhone, qr_token });
+
     setLoadingAction(true);
 
     try {
+      // 2️⃣ OTP Send API Call Fix: Send BOTH phone and qr_token
       const response = await fetch('/api/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: fullPhone })
+        body: JSON.stringify({ 
+            phone: fullPhone,
+            qr_token: qr_token
+        })
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to send OTP');
+        // 6️⃣ Error Handling (User Friendly)
+        if (result.error === 'Mobile already registered') {
+             alert('This mobile number has already claimed a reward for this campaign.');
+        } else if (result.error === 'Coupon redeemed from this QR') {
+             setView('used');
+        } else {
+             throw new Error(result.error || 'Failed to send OTP');
+        }
+        return;
       }
 
       setOtpSent(true);
@@ -162,7 +187,16 @@ export default function Page() {
   // 3. Handle Verify & Redeem
   const handleVerifyAndRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp) return;
+    
+    // 4️⃣ Pre-Submission Validation
+    if (!otp || otp.length !== 6) {
+        alert("Please enter a valid 6-digit OTP.");
+        return;
+    }
+    if (!qr_token) {
+        alert("Session invalid: Missing QR Token.");
+        return;
+    }
 
     // Validate Address Fields if user is verifyng (checking only if we are in otpSent state, which we are)
     if (formData.pincode.length !== 6) {
@@ -178,17 +212,16 @@ export default function Page() {
     const fullPhone = `+91${formData.phone}`;
 
     try {
-      // Clean token
-      const cleanToken = Array.isArray(qr_token) ? qr_token[0] : qr_token;
+      // 3️⃣ Redeem API Call Fix: Send ALL 3 fields
+      console.log("Redeeming:", { phone: fullPhone, otp, qr_token });
 
-      // Verify OTP and Redeem (Combined Endpoint)
-      const response = await fetch('/api/otp/verify', {
+      const response = await fetch('/api/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
            phone: fullPhone,
            otp: otp,
-           qr_token: cleanToken.trim(),
+           qr_token: qr_token,
            name: formData.name.trim()
         })
       });
@@ -196,14 +229,22 @@ export default function Page() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Verification failed');
+        // 6️⃣ Error Handling
+        if (data.error === 'Coupon redeemed from this QR') {
+            setView('used');
+        } else if (data.error === 'Mobile already registered') {
+            alert('This mobile number has already registered for this campaign.');
+        } else {
+            throw new Error(data.error || 'Verification failed');
+        }
+        return;
       }
 
       // GUARD: Prevent Double Redemption (Frontend Ref)
       if (hasRedeemedRef.current) return;
       hasRedeemedRef.current = true;
 
-      setCouponCode(data.coupon_code);
+      setCouponCode(data.coupon);
       setView('success');
 
     } catch (error: any) {
@@ -254,7 +295,7 @@ export default function Page() {
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Claim Reward (V3)</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Claim Reward</h1>
             <p className="text-sm text-gray-500">Enter your details to generate your coupon.</p>
           </div>
 
@@ -360,17 +401,17 @@ export default function Page() {
                       required
                       maxLength={6}
                       placeholder="Enter 6-digit code"
-                      className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none tracking-widest"
+                      className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none tracking-widest text-center text-lg"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Sent to +91 {formData.phone}. You may receive OTP via SMS or call. <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">Change</button>
+                    Sent to +91 {formData.phone}. <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">Change</button>
                   </p>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loadingAction}>
+                <Button type="submit" className="w-full" disabled={loadingAction || otp.length !== 6}>
                   {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Verify & Claim <CheckCircle className="ml-2 h-4 w-4" /></>}
                 </Button>
               </div>
