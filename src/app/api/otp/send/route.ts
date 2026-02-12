@@ -6,20 +6,33 @@ export const dynamic = 'force-dynamic'; // Ensure no static caching
 
 export async function POST(request: Request) {
   try {
-    console.log("SCAN OTP FLOW → VALIDATING REQUEST");
+    const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'UNKNOWN';
+    console.log(`SCAN OTP FLOW → VALIDATING REQUEST [ENV: ${sbUrl.substring(0, 15)}...]`);
     
     // Parse Body Safely
     let body;
     try {
         body = await request.json();
     } catch (e) {
+        console.error("JSON PARSE ERROR:", e);
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
     const { phone, qr_token } = body;
 
+    // 2️⃣ Log Exact QR Token Received
+    console.log("QR TOKEN RECEIVED:", `"${qr_token}"`);
+    console.log("QR TOKEN LENGTH:", qr_token ? qr_token.length : 'N/A');
+
     if (!phone || !qr_token) {
+      console.warn("MISSING PARAMS: phone or qr_token");
       return NextResponse.json({ error: 'Phone and QR Token are required' }, { status: 400 });
+    }
+
+    // 5️⃣ Add Defensive Normalization
+    const cleanQrToken = qr_token.trim();
+    if (cleanQrToken !== qr_token) {
+        console.warn("QR TOKEN TRIMMED: Whitespace removed.");
     }
 
     // 0. Normalize Phone Number
@@ -28,6 +41,8 @@ export async function POST(request: Request) {
     // 1. PRE-FLIGHT CHECKS (Must happen BEFORE sending OTP)
     
     // A. Check Bottle Status
+    console.log(`Querying bottles for token: "${cleanQrToken}"`);
+    
     const { data: bottle, error: bottleError } = await getSupabaseAdmin()
         .from('bottles')
         .select(`
@@ -41,14 +56,22 @@ export async function POST(request: Request) {
                 end_date
             )
         `)
-        .eq('qr_token', qr_token)
+        .eq('qr_token', cleanQrToken)
         .single();
 
-    if (bottleError || !bottle) {
+    if (bottleError) {
+        console.error("DB QUERY ERROR (bottles):", bottleError);
+    }
+
+    if (!bottle) {
+        console.warn(`BOTTLE NOT FOUND for token: "${cleanQrToken}"`);
         return NextResponse.json({ error: 'Invalid QR code' }, { status: 404 });
     }
 
+    console.log("BOTTLE FOUND:", bottle.id, "USED:", bottle.is_used);
+
     if (bottle.is_used) {
+        console.warn("BOTTLE ALREADY USED");
         return NextResponse.json({ error: 'Coupon redeemed from this QR' }, { status: 409 });
     }
 
@@ -56,6 +79,7 @@ export async function POST(request: Request) {
     const campaign = Array.isArray(bottle.campaigns) ? bottle.campaigns[0] : bottle.campaigns;
 
     if (!campaign) {
+        console.error("CAMPAIGN NOT FOUND or LINK BROKEN for bottle:", bottle.id);
         return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
 
@@ -88,6 +112,7 @@ export async function POST(request: Request) {
             .maybeSingle();
             
         if (existingCoupon) {
+            console.warn(`MOBILE ALREADY REGISTERED: ${normalizedPhone} for campaign ${campaign.id}`);
             return NextResponse.json({ error: 'Mobile already registered' }, { status: 409 });
         }
     }
@@ -107,7 +132,7 @@ export async function POST(request: Request) {
     }
 
   } catch (error) {
-    console.error('Error sending OTP:', error);
+    console.error('CRITICAL ERROR sending OTP:', error);
     return NextResponse.json({ error: 'Failed to send OTP' }, { status: 500 });
   }
 }
