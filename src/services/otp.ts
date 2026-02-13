@@ -7,8 +7,20 @@ const TWOFACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
 
 export const otpService = {
   
+  // Helper for consistent normalization
+  normalizePhone(phone: string): string {
+    // 1. Remove all non-digits
+    let normalized = phone.replace(/\D/g, ''); 
+    // 2. Ensure 91 prefix if length is 10 (India specific assumption safe for this project)
+    if (normalized.length === 10) {
+        normalized = '91' + normalized;
+    }
+    return normalized;
+  },
+
   async sendOTP(phone: string) {
-    console.log(`[2Factor] Processing OTP request for ${phone}`);
+    const normalizedPhone = this.normalizePhone(phone); // Strict normalization
+    console.log(`[2Factor] Processing OTP request for ${normalizedPhone} (Original: ${phone})`);
 
     if (!TWOFACTOR_API_KEY) {
         console.error("Scanning OTP Flow: Missing TWOFACTOR_API_KEY");
@@ -20,17 +32,18 @@ export const otpService = {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 mins
 
     // 2. THROTTLING CHECK (Rate Limit: 1 OTP per 60s)
+    // We check against normalized phone
     const { data: recentSession } = await getSupabaseAdmin()
         .from('otp_sessions')
         .select('created_at')
-        .eq('phone', phone)
+        .eq('phone', normalizedPhone)
         .gt('created_at', new Date(Date.now() - 60 * 1000).toISOString()) // Last 60s
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
     if (recentSession) {
-        console.warn(`[OTP Throttled] Request for ${phone} blocked (too soon)`);
+        console.warn(`[OTP Throttled] Request for ${normalizedPhone} blocked (too soon)`);
         return { success: false, message: 'Please wait 60 seconds before requesting a new OTP.' };
     }
 
@@ -40,7 +53,8 @@ export const otpService = {
             // Using DLT OTP Endpoint (GET)
             // https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}/{TEMPLATE_NAME}
             
-            const cleanPhone = phone.replace(/^\+/, '');
+            // 2Factor expects just digits, usually with country code. normalizedPhone has 91 prefix.
+            const cleanPhone = normalizedPhone; 
             const templateName = encodeURIComponent("AKUAFI COUPON OTP");
 
             // Use process.env directly to avoid any stale variable reference issues, though const above is fine.
@@ -87,7 +101,7 @@ export const otpService = {
         const { error } = await getSupabaseAdmin()
             .from('otp_sessions')
             .insert({
-              phone, // Store the FULL phone number including +91 for matching
+              phone: normalizedPhone, // Store normalized
               session_id: sessionId || 'DLT-SESSION', 
               otp: otp, 
               expires_at: expiresAt,
@@ -114,50 +128,52 @@ export const otpService = {
   },
 
   async validateOTP(phone: string, otp: string) {
-    // 1. Retrieve the latest active session for this phone
+    const normalizedPhone = this.normalizePhone(phone);
+    console.log(`[OTP Validate] Request for ${normalizedPhone} (Original: ${phone}) with OTP: ${otp}`);
+
+    // 1. Retrieve the LATEST session for this phone, regardless of verified status
+    //    This helps us differentiate between "Expired", "Already Used", and "Invalid"
     const { data: session, error } = await getSupabaseAdmin()
         .from('otp_sessions')
         .select('*')
-        .eq('phone', phone)
-        .eq('verified', false)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
+        .eq('phone', normalizedPhone)
+        .order('created_at', { ascending: false }) // Get NEWEST
         .limit(1)
         .single();
 
     if (error || !session) {
-        console.log("No active OTP session found for", phone);
-        return { valid: false, message: 'OTP expired or session invalid' };
+        console.log(`[OTP Validate] No session found for ${normalizedPhone}`);
+        return { valid: false, message: 'No OTP found for this number' };
     }
 
-    // 2. Check Attempts
-    if (session.attempts >= 3) {
-        return { valid: false, message: 'Too many failed attempts. Please request a new OTP.' };
-    }
+    console.log(`[OTP Validate] Fetched Session: ID=${session.id}, OTP=${session.otp}, Exp=${session.expires_at}, Verified=${session.verified}, Attempts=${session.attempts}`);
 
-    // 3. VERIFY
-    let isValid = false;
+    // 2. CHECK EXPIRED
+    // Ensure strict UTC comparison
+    const now = new Date();
+    const expiresAt = new Date(session.expires_at);
     
-    // Check against stored OTP
-    if (session.otp === otp) { 
-        isValid = true;
-    } else {
-        isValid = false; 
+    if (now > expiresAt) {
+        console.warn(`[OTP Validate] Session expired. Now: ${now.toISOString()}, Exp: ${expiresAt.toISOString()}`);
+        return { valid: false, message: 'OTP has expired. Please request a new one.' };
     }
 
-    // 4. Update Session Response
-    if (isValid) {
-        // Mark verified
-        await getSupabaseAdmin()
-            .from('otp_sessions')
-            .update({ 
-                verified: true, 
-                verified_at: new Date().toISOString() 
-            })
-            .eq('id', session.id);
-            
-        return { valid: true, session_id: session.session_id };
-    } else {
+    // 3. CHECK IF ALREADY USED
+    if (session.verified) {
+        console.warn(`[OTP Validate] Session already verified at ${session.verified_at}`);
+        return { valid: false, message: 'This OTP has already been used.' };
+    }
+
+    // 4. CHECK ATTEMPTS
+    if (session.attempts >= 3) {
+         console.warn(`[OTP Validate] Too many attempts: ${session.attempts}`);
+         return { valid: false, message: 'Too many failed attempts. Please request a new OTP.' };
+    }
+
+    // 5. CHECK OTP MATCH
+    if (String(session.otp).trim() !== String(otp).trim()) {
+        console.warn(`[OTP Validate] Mismatch. Input: ${otp}, Stored: ${session.otp}`);
+        
         // Increment attempts
         await getSupabaseAdmin()
             .from('otp_sessions')
@@ -166,5 +182,19 @@ export const otpService = {
             
         return { valid: false, message: 'Invalid OTP' };
     }
+
+    // 6. SUCCESS
+    console.log(`[OTP Validate] Success! Marking session ${session.id} as verified.`);
+    
+    // Mark verified
+    await getSupabaseAdmin()
+        .from('otp_sessions')
+        .update({ 
+            verified: true, 
+            verified_at: new Date().toISOString() 
+        })
+        .eq('id', session.id);
+            
+    return { valid: true, session_id: session.session_id };
   }
 }

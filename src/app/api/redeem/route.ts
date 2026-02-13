@@ -17,7 +17,16 @@ export async function POST(req: NextRequest) {
 
     // Token Normalization
     const normalizedToken = qr_token ? qr_token.trim() : "";
-    const normalizedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+    
+    // Phone Normalization (must match OTP Service)
+    const normalizePhone = (p: string) => {
+        let n = p.replace(/\D/g, '');
+        if (n.length === 10) n = '91' + n;
+        return n;
+    };
+    const normalizedPhone = normalizePhone(phone);
+
+    console.log(`[Redeem API] Received Phone: ${phone}, Normalized: ${normalizedPhone}, Token: ${normalizedToken}`);
 
     // --- INITIALIZE SERVICE ROLE CLIENT ---
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

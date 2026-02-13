@@ -35,7 +35,18 @@ export async function POST(request: Request) {
     }
 
     // 0. Normalize Phone Number
-    const normalizedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+    // Handled inside otpService for consistency, but good to be explicit for logs if needed.
+    // We pass raw phone to service, service normalizes it.
+    // But for the RPC check below, we should also normalize consistent with the service.
+    
+    // Helper to match service logic:
+    const normalizePhone = (p: string) => {
+        let n = p.replace(/\D/g, '');
+        if (n.length === 10) n = '91' + n;
+        return n;
+    };
+
+    const normalizedPhone = normalizePhone(phone);
 
     // 1. PRE-FLIGHT CHECKS (Must happen BEFORE sending OTP)
     // Validate via RPC (Atomic Time & Logic Check)
