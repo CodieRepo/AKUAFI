@@ -209,6 +209,9 @@ export default function Page() {
     }
 
     setLoadingAction(true);
+    // Explicit State Reset
+    setCouponCode("");
+    
     const fullPhone = `+91${formData.phone}`;
 
     try {
@@ -226,26 +229,40 @@ export default function Page() {
         })
       });
 
-      const data = await response.json();
+      const result = await response.json();
+      console.log("FULL API RESPONSE:", result);
 
       if (!response.ok) {
         // 6️⃣ Error Handling
-        if (data.error === 'Coupon redeemed from this QR') {
+        if (result.error === 'Coupon redeemed from this QR') {
             setView('used');
-        } else if (data.error === 'Mobile already registered') {
+        } else if (result.error === 'Mobile already registered') {
             alert('This mobile number has already registered for this campaign.');
         } else {
-            throw new Error(data.error || 'Verification failed');
+            throw new Error(result.error || 'Verification failed');
         }
         return;
       }
 
-      // GUARD: Prevent Double Redemption (Frontend Ref)
-      if (hasRedeemedRef.current) return;
-      hasRedeemedRef.current = true;
+      // Check strictly for success and coupon_code (or coupon as fallback)
+      const finalCoupon = result.coupon_code || result.coupon;
 
-      setCouponCode(data.coupon);
-      setView('success');
+      if (finalCoupon) {
+          console.log("SETTING COUPON:", finalCoupon);
+          setCouponCode(finalCoupon);
+
+          // GUARD: Prevent Double Redemption (Frontend Ref)
+          if (hasRedeemedRef.current) return;
+          hasRedeemedRef.current = true;
+
+          // IMPORTANT: delay view switch to ensure state commit
+          setTimeout(() => {
+            setView("success");
+          }, 0);
+      } else {
+          console.error("Coupon missing or invalid response:", result);
+          alert("Coupon generation failed: Code missing in response.");
+      }
 
     } catch (error: any) {
       console.error('Verification/Redemption error:', error);
@@ -422,19 +439,29 @@ export default function Page() {
     );
   }
 
-  // Success
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center animate-in fade-in zoom-in">
-      <div className="h-20 w-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
-        <CheckCircle className="h-10 w-10" />
-      </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Success!</h1>
-      <p className="text-gray-600 mb-8">Your reward is ready:</p>
+  // Render Debug
+  console.log("RENDER STATE:", { view, couponCode });
 
-      <div className="bg-white rounded-xl shadow p-6 w-full max-w-xs border border-dashed border-gray-300">
-        <code className="text-3xl font-mono font-bold text-primary block select-all">{couponCode}</code>
+  // Success
+  if (view === 'success') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center animate-in fade-in zoom-in">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 w-full max-w-sm">
+          <h1 className="text-2xl font-bold mb-4">Success!</h1>
+          <p className="mb-4">Your reward is ready:</p>
+
+          <div className="border-2 border-dashed border-gray-300 rounded-lg py-3 px-4 text-lg font-mono font-bold text-primary">
+            {couponCode}
+          </div>
+
+          <p className="text-sm text-gray-500 mt-3">
+            Take a screenshot to save.
+          </p>
+        </div>
       </div>
-      <p className="text-sm text-gray-400 mt-4">Take a screenshot to save.</p>
-    </div>
-  );
+    );
+  }
+  
+  // Default Return (Should not be reached ideally if states cover all cases, but fallback to null)
+  return null;
 }
