@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { createClient } from '@supabase/supabase-js';
 import { otpService } from '@/services/otp';
 
 export async function POST(req: NextRequest) {
   try {
     const { phone, otp, qr_token, name } = await req.json();
 
-    console.log("--- API REDEEM V2 (RPC) ---");
-    console.log("Phone:", phone, "QR:", qr_token);
+    console.log("--- API REDEEM V2 (FIXED SERVICE ROLE) ---");
+    console.log("Details:", { phone, qr_token });
 
     if (!phone || !otp || !qr_token) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -16,8 +16,35 @@ export async function POST(req: NextRequest) {
     // 0. Normalize Phone
     const normalizedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
 
-    // --- CAMPAIGN ACTIVE CHECK (STRICT UTC) ---
-    const supabaseAdmin = getSupabaseAdmin();
+    // --- INITIALIZE SERVICE ROLE CLIENT ---
+    // STRICT REQUIREMENT: Use Service Role to bypass RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.error("CRITICAL: Missing Supabase Admin Keys");
+        return NextResponse.json({ error: 'Server Configuration Error' }, { status: 500 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // --- DIAGNOSTIC LOGGING (TEMPORARY) ---
+    console.log("QR TOKEN RECEIVED:", qr_token);
+
+    const { data: debugBottle, error: debugError } = await supabaseAdmin
+        .from("bottles")
+        .select("id, campaign_id, status")
+        .eq("qr_token", qr_token)
+        .maybeSingle();
+
+    console.log("Bottle Query Result:", debugBottle);
+    console.log("Bottle Query Error:", debugError);
+    // --------------------------------------
 
     // Fetch bottle -> campaign_id
     const { data: bottleData, error: bottleError } = await supabaseAdmin
@@ -27,6 +54,7 @@ export async function POST(req: NextRequest) {
         .single();
 
     if (bottleError || !bottleData) {
+        console.error("Bottle Lookup Failed:", bottleError);
         return NextResponse.json({ error: 'Invalid QR Token' }, { status: 400 });
     }
 
@@ -81,7 +109,7 @@ export async function POST(req: NextRequest) {
 
     // 2. CALL RPC: redeem_coupon
     // This handles all atomic checks and locking
-    const { data: result, error: rpcError } = await getSupabaseAdmin()
+    const { data: result, error: rpcError } = await supabaseAdmin
         .rpc('redeem_coupon', {
             p_phone: normalizedPhone,
             p_qr_token: qr_token,
