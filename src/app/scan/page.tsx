@@ -94,42 +94,33 @@ function ScanContent() {
             }),
         });
 
-        const data = await response.json();
+        const result = await response.json();
 
         console.log("=== FULL REDEEM RESPONSE ===");
-        console.log(data);
-        console.log("Type of data:", typeof data);
-        console.log("Keys:", Object.keys(data));
+        console.log(result);
+        console.log("Coupon received in frontend:", result);
 
-        if (!response.ok || !data.success) {
+        if (!response.ok || !result.success) {
             // Handle specific error cases
             if (response.status === 409) {
-                alert(data.error || 'Duplicate redemption attempt.');
+                alert(result.error || 'Duplicate redemption attempt.');
             } else if (response.status === 404) {
                  setErrorMsg('Invalid QR code.');
                  setView('error');
             } else {
-                alert(data.error || 'Something went wrong.');
+                alert(result.error || 'Something went wrong.');
             }
             setLoadingAction(false);
             return;
         }
 
-        const couponFromResponse = data.coupon_code ?? data.coupon ?? data.code ?? null;
-        console.log("Extracted Coupon:", couponFromResponse);
-
-        if (!couponFromResponse) {
-             console.error("Critical: API success but no coupon_code found in", data);
-             alert("Redemption succeeded but coupon code is missing. Please contact support.");
-             setLoadingAction(false);
-             return;
+        if (!result.success || !result.coupon_code) {
+          throw new Error("Coupon generation failed")
         }
 
-        // Explicitly set state and log it
-        setCouponCode(couponFromResponse);
-        console.log("SETTING COUPON STATE TO:", couponFromResponse);
-        
-        setView('success');
+        console.log("Frontend received coupon:", result.coupon_code);
+        setCouponCode(result.coupon_code);
+        setView("success");
 
     } catch (err) {
         console.error('Error redeeming coupon:', err);

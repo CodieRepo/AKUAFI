@@ -51,6 +51,12 @@ export async function POST(request: Request) {
         status: 'draft',
         start_date: body.start_date,
         end_date: body.end_date,
+        // Coupon Config
+        coupon_prefix: body.coupon_prefix,
+        coupon_length: body.coupon_length,
+        coupon_type: body.coupon_type,
+        coupon_min_value: body.coupon_min_value,
+        coupon_max_value: body.coupon_max_value,
         created_at: new Date().toISOString()
     };
 
