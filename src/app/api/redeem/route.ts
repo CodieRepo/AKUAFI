@@ -45,26 +45,32 @@ export async function POST(req: NextRequest) {
 
     // STEP 3: Remove .single() and Debug Query
     // We use authorized client but select ANY match to debug
+    // FIX: Removed 'status' column as it does not exist in the schema
     const { data: rawBottleData, error: bottleError } = await supabaseAdmin
         .from('bottles')
-        .select('id, campaign_id, status, qr_token')
+        .select('id, campaign_id, qr_token')
         .eq('qr_token', normalizedToken);
 
     console.log("Raw Bottle Query Result:", rawBottleData);
     console.log("Bottle Query Error:", bottleError);
 
     // Handle results for flow continuity
-    if (bottleError || !rawBottleData || rawBottleData.length === 0) {
-        console.error("Bottle Lookup Failed or Empty");
+    if (bottleError) {
+        console.error("Bottle Query Error:", bottleError);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+
+    if (!rawBottleData || rawBottleData.length === 0) {
+        console.error("Bottle Lookup Failed: Token not found");
         return NextResponse.json({ error: 'Invalid QR Token' }, { status: 400 });
     }
 
     // Take the first match if multiple (should be unique though)
     const bottleData = rawBottleData[0];
 
-    if (bottleData.status === 'used') {
-         return NextResponse.json({ error: 'This QR code has already been used.' }, { status: 400 });
-    }
+    // Status check removed as column does not exist on bottles table.
+    // The RPC 'redeem_coupon' handles the used status check atomically.
+
 
     // Fetch campaign details
     const { data: campaign, error: campaignError } = await supabaseAdmin
