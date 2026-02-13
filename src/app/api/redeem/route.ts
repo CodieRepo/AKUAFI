@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     //    Using .limit(1) and .maybeSingle() equivalent checks to avoid 0-row errors
     const { data: bottles, error: bottleError } = await supabaseAdmin
         .from('bottles')
-        .select('id, campaign_id, status')
+        .select('id, campaign_id')
         .eq('qr_code', normalizedToken)
         .limit(1);
 
