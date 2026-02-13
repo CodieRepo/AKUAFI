@@ -81,6 +81,9 @@ function ScanContent() {
   // 3. Handle OTP Verify -> Generate Coupon
   const handleVerifyOtp = async () => {
     setLoadingAction(true);
+    // Explicit State Reset
+    setCouponCode("");
+
     try {
         console.log("SENDING REDEEM REQUEST:", { phone: formData.phone, qr_token: token });
 
@@ -95,32 +98,15 @@ function ScanContent() {
         });
 
         const result = await response.json();
+        console.log("FULL API RESPONSE:", result);
 
-        console.log("=== FULL REDEEM RESPONSE ===");
-        console.log(result);
-        console.log("Coupon received in frontend:", result);
-
-        if (!response.ok || !result.success) {
-            // Handle specific error cases
-            if (response.status === 409) {
-                alert(result.error || 'Duplicate redemption attempt.');
-            } else if (response.status === 404) {
-                 setErrorMsg('Invalid QR code.');
-                 setView('error');
-            } else {
-                alert(result.error || 'Something went wrong.');
-            }
-            setLoadingAction(false);
-            return;
+        if (result && result.success === true && result.coupon_code) {
+          setCouponCode(result.coupon_code);
+          setView("success");
+        } else {
+          console.error("Coupon missing in response:", result);
+          alert("Coupon generation failed");
         }
-
-        if (!result.success || !result.coupon_code) {
-          throw new Error("Coupon generation failed")
-        }
-
-        console.log("Frontend received coupon:", result.coupon_code);
-        setCouponCode(result.coupon_code);
-        setView("success");
 
     } catch (err) {
         console.error('Error redeeming coupon:', err);
@@ -273,36 +259,31 @@ function ScanContent() {
 
   // Success View
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center animate-in fade-in duration-500">
-        <div className="h-20 w-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
-            <CheckCircle className="h-10 w-10" />
+  if (view === 'success') {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center animate-in fade-in duration-500">
+           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 w-full max-w-sm">
+              <h2>Success!</h2>
+              <p>Your reward is ready:</p>
+              <div style={{
+                padding: "16px",
+                border: "2px dashed #ccc",
+                fontSize: "22px",
+                fontWeight: "bold",
+                marginTop: "16px",
+                marginBottom: "16px"
+              }}>
+                {couponCode ? couponCode : "Coupon Missing"}
+              </div>
+              <p className="text-sm text-gray-500">
+                  Please screenshot this screen.
+              </p>
+          </div>
         </div>
-        
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Success!</h1>
-        <p className="text-gray-600 mb-8 max-w-xs mx-auto">
-            Your reward has been claimed. Here is your coupon code:
-        </p>
+      );
+  }
 
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 w-full max-w-sm">
-            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2">Coupon Code</p>
-            <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4">
-                {couponCode ? (
-                    <code className="text-3xl font-mono font-bold text-primary tracking-wide block select-all break-all">
-                        {couponCode}
-                    </code>
-                ) : (
-                    <div className="text-red-500 font-semibold p-2 bg-red-50 rounded">
-                        Generation Failed. <br/>
-                        <span className="text-sm font-normal text-gray-600">Please contact support.</span>
-                    </div>
-                )}
-            </div>
-
-            <p className="text-sm text-gray-500">
-                Please screenshot this screen.
-            </p>
-        </div>
-    </div>
+  return null;
   );
 }
 
