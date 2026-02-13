@@ -32,6 +32,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const startUTC = new Date(body.start_date);
+    const endUTC = new Date(body.end_date);
+    const nowUTC = new Date();
+
+    if (startUTC >= endUTC) {
+        return NextResponse.json({ error: 'Start date must be before end date' }, { status: 400 });
+    }
+
+    if (endUTC < nowUTC) {
+        return NextResponse.json({ error: 'Cannot create campaign entirely in the past' }, { status: 400 });
+    }
+
     // STRICT SCHEMA INSERT
     const payload = {
         name: body.name,

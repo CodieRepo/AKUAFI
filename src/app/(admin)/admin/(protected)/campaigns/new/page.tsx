@@ -45,6 +45,10 @@ export default function NewCampaignPage() {
       // Authenticate check bypassed for local dev preview if handled by middleware/api
       // Strict auth is handled in the API route calling verifyAdmin
 
+      // Convert to UTC ISO Strings for Storage
+      const startUTC = new Date(formData.start_date).toISOString();
+      const endUTC = new Date(formData.end_date).toISOString();
+
       const supabase = createClient(); 
       const res = await fetch('/api/admin/campaigns', {
         method: 'POST',
@@ -53,6 +57,8 @@ export default function NewCampaignPage() {
         },
         body: JSON.stringify({
             ...formData,
+            start_date: startUTC,
+            end_date: endUTC,
             // Coupon values are sent but ignored by API for now as per schema limitations
             coupon_min_value: Number(formData.coupon_min_value),
             coupon_max_value: Number(formData.coupon_max_value)

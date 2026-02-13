@@ -15,6 +15,17 @@ export interface Campaign {
   end_date: string;
 }
 
+// FORMATTER: UTC -> IST Display Only
+function formatIST(dateString: string) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+}
+
+
 interface CampaignTableProps {
   campaigns: Campaign[];
   loading?: boolean;
@@ -98,6 +109,8 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
           <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
             <tr>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Campaign Name</th>
+              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Start Date (IST)</th>
+              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">End Date (IST)</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Status</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Scans</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Redeemed</th>
@@ -127,6 +140,12 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
                           <p className="text-xs text-gray-500 font-mono">ID: {campaign.id.slice(0, 8)}...</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        {formatIST(campaign.start_date)}
+                    </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        {formatIST(campaign.end_date)}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium border capitalize ${BadgeColor}`}>
