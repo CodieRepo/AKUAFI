@@ -117,7 +117,10 @@ function ScanContent() {
         }
 
         // Success
-        setCouponCode(data.coupon);
+        // API v4 returns { success: true, coupon_code: "..." }
+        // We fallback to data.coupon just in case, but prefer coupon_code
+        const finalCode = data.coupon_code || data.coupon;
+        setCouponCode(finalCode);
         setView('success');
 
     } catch (err) {
@@ -284,10 +287,17 @@ function ScanContent() {
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 w-full max-w-sm">
             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2">Coupon Code</p>
             <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4">
-                <code className="text-3xl font-mono font-bold text-primary tracking-wide block select-all">
-                    {couponCode}
-                </code>
+                {couponCode ? (
+                    <code className="text-3xl font-mono font-bold text-primary tracking-wide block select-all break-all">
+                        {couponCode}
+                    </code>
+                ) : (
+                    <div className="text-red-500 font-semibold">
+                        Generation Failed. Contact Support.
+                    </div>
+                )}
             </div>
+
             <p className="text-sm text-gray-500">
                 Please screenshot this screen.
             </p>
