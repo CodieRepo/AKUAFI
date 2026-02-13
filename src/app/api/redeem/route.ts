@@ -80,10 +80,14 @@ export async function POST(req: NextRequest) {
 
     console.log(`Redemption Success: ${normalizedPhone} got ${couponCode}`);
 
-    return NextResponse.json({ 
+    const responsePayload = { 
         success: true,
         coupon_code: couponCode 
-    });
+    };
+
+    console.log("API RETURNING:", responsePayload);
+
+    return NextResponse.json(responsePayload);
 
   } catch (err) {
     console.error('Unexpected error:', err);

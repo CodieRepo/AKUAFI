@@ -80,29 +80,28 @@ function ScanContent() {
 
   // 3. Handle OTP Verify -> Generate Coupon
   const handleVerifyOtp = async () => {
-    // For testing/MVP, we're accepting the OTP without strict server verification here 
-    // because the prompt asked to handle logic in the new API step. 
-    // Assuming '123456' or basic check is still fine, but the real work happens in /api/redeem.
-    
-    // Note: In a real flow, you might verify the OTP with Firebase/Supabase Auth *before* this step,
-    // getting an Auth Token to send to the API. 
-    // For this specific request, we send the phone number directly to the API as trusted input 
-    // (or assuming previous step validated ownership).
-
     setLoadingAction(true);
     try {
+        console.log("SENDING REDEEM REQUEST:", { phone: formData.phone, qr_token: token });
+
         const response = await fetch('/api/redeem', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 phone: formData.phone,
+                otp: otp, // Use current OTP state
                 qr_token: token,
             }),
         });
 
         const data = await response.json();
 
-        if (!response.ok) {
+        console.log("=== FULL REDEEM RESPONSE ===");
+        console.log(data);
+        console.log("Type of data:", typeof data);
+        console.log("Keys:", Object.keys(data));
+
+        if (!response.ok || !data.success) {
             // Handle specific error cases
             if (response.status === 409) {
                 alert(data.error || 'Duplicate redemption attempt.');
@@ -116,22 +115,20 @@ function ScanContent() {
             return;
         }
 
-        // Success
-        console.log("REDEEM API RESPONSE:", data);
-        
-        // Strictly use coupon_code as per API v4 spec
-        const finalCode = data.coupon_code;
-        
-        console.log("EXTRACTED COUPON START:", finalCode);
+        const couponFromResponse = data.coupon_code ?? data.coupon ?? data.code ?? null;
+        console.log("Extracted Coupon:", couponFromResponse);
 
-        if (!finalCode) {
-            console.error("Critical: API success but no coupon_code found in", data);
-            alert("Redemption succeeded but coupon code is missing. Please contact support.");
-            setLoadingAction(false);
-            return;
+        if (!couponFromResponse) {
+             console.error("Critical: API success but no coupon_code found in", data);
+             alert("Redemption succeeded but coupon code is missing. Please contact support.");
+             setLoadingAction(false);
+             return;
         }
 
-        setCouponCode(finalCode);
+        // Explicitly set state and log it
+        setCouponCode(couponFromResponse);
+        console.log("SETTING COUPON STATE TO:", couponFromResponse);
+        
         setView('success');
 
     } catch (err) {
