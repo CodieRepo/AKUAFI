@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
         couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
         const { error: couponError } = await supabaseAdmin.from('coupons').insert({
-            code: couponCode,
+            coupon_code: couponCode,
             campaign_id: bottle.campaign_id,
             user_id: userId,
             status: 'redeemed',
