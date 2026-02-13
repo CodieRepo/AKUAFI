@@ -293,7 +293,7 @@ function ScanContent() {
                     </code>
                 ) : (
                     <div className="text-red-500 font-semibold">
-                        Generation Failed. Contact Support.
+                        Generation Failed. Please contact support.
                     </div>
                 )}
             </div>

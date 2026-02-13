@@ -16,9 +16,11 @@ export default function NewCampaignPage() {
     description: '',
     start_date: '',
     end_date: '',
-    coupon_type: 'flat',
+    coupon_type: 'alphanumeric',
     coupon_min_value: '',
-    coupon_max_value: ''
+    coupon_max_value: '',
+    coupon_prefix: '',
+    coupon_length: 6,
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,11 @@ export default function NewCampaignPage() {
             end_date: endUTC,
             // Coupon values are sent but ignored by API for now as per schema limitations
             coupon_min_value: Number(formData.coupon_min_value),
-            coupon_max_value: Number(formData.coupon_max_value)
+            coupon_max_value: Number(formData.coupon_max_value),
+            // New Customization Fields
+            coupon_prefix: formData.coupon_prefix,
+            coupon_length: Number(formData.coupon_length),
+            coupon_type: formData.coupon_type,
         })
       });
 
@@ -155,20 +161,45 @@ export default function NewCampaignPage() {
             <div className="p-6 bg-gray-50/50 space-y-4">
                 <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-2">Coupon Configuration</h3>
                 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
-                    <select 
-                        name="coupon_type"
-                        className="w-full h-9 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
-                        value={formData.coupon_type}
-                        onChange={handleChange}
-                    >
-                        <option value="flat">Flat Amount (₹)</option>
-                        <option value="percentage">Percentage (%)</option>
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Coupon Prefix</label>
+                        <input 
+                            name="coupon_prefix"
+                            type="text" 
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm uppercase"
+                            placeholder="e.g. SUMMER"
+                            value={formData.coupon_prefix}
+                            onChange={(e) => setFormData({...formData, coupon_prefix: e.target.value.toUpperCase()})}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Length</label>
+                        <input 
+                            name="coupon_length"
+                            type="number" 
+                            min="4"
+                            max="12"
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            value={formData.coupon_length}
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select 
+                            name="coupon_type"
+                            className="w-full h-9 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                            value={formData.coupon_type}
+                            onChange={handleChange}
+                        >
+                            <option value="alphanumeric">Alphanumeric (A-Z, 0-9)</option>
+                            <option value="numeric">Numeric (0-9)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200 mt-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Min Value</label>
                         <input 
