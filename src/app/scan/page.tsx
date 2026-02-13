@@ -117,9 +117,20 @@ function ScanContent() {
         }
 
         // Success
-        // API v4 returns { success: true, coupon_code: "..." }
-        // We fallback to data.coupon just in case, but prefer coupon_code
-        const finalCode = data.coupon_code || data.coupon;
+        console.log("REDEEM API RESPONSE:", data);
+        
+        // Strictly use coupon_code as per API v4 spec
+        const finalCode = data.coupon_code;
+        
+        console.log("EXTRACTED COUPON START:", finalCode);
+
+        if (!finalCode) {
+            console.error("Critical: API success but no coupon_code found in", data);
+            alert("Redemption succeeded but coupon code is missing. Please contact support.");
+            setLoadingAction(false);
+            return;
+        }
+
         setCouponCode(finalCode);
         setView('success');
 
@@ -292,8 +303,9 @@ function ScanContent() {
                         {couponCode}
                     </code>
                 ) : (
-                    <div className="text-red-500 font-semibold">
-                        Generation Failed. Please contact support.
+                    <div className="text-red-500 font-semibold p-2 bg-red-50 rounded">
+                        Generation Failed. <br/>
+                        <span className="text-sm font-normal text-gray-600">Please contact support.</span>
                     </div>
                 )}
             </div>
