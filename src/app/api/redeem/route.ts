@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const { data: bottles, error: bottleError } = await supabaseAdmin
         .from('bottles')
         .select('id, campaign_id')
-        .eq('qr_code', normalizedToken)
+        .eq('qr_token', normalizedToken)
         .limit(1);
 
     if (bottleError) {
