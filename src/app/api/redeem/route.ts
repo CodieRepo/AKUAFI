@@ -6,18 +6,28 @@ export async function POST(req: NextRequest) {
   try {
     const { phone, otp, qr_token, name } = await req.json();
 
-    console.log("--- API REDEEM V2 (FIXED SERVICE ROLE) ---");
-    console.log("Details:", { phone, qr_token });
+    console.log("--- API REDEEM V3 (DEBUG MODE) ---");
+    
+    // STEP 1: Log Supabase Environment
+    console.log("SUPABASE URL BEING USED:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
     if (!phone || !otp || !qr_token) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // STEP 2: Token Normalization & Logging
+    console.log("QR TOKEN RECEIVED RAW:", qr_token);
+    console.log("TOKEN LENGTH:", qr_token ? qr_token.length : 0);
+
+    const normalizedToken = qr_token ? qr_token.trim() : "";
+    
+    console.log("QR TOKEN NORMALIZED:", normalizedToken);
+    console.log("NORMALIZED LENGTH:", normalizedToken.length);
+
     // 0. Normalize Phone
     const normalizedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
 
     // --- INITIALIZE SERVICE ROLE CLIENT ---
-    // STRICT REQUIREMENT: Use Service Role to bypass RLS
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -33,30 +43,24 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // --- DIAGNOSTIC LOGGING (TEMPORARY) ---
-    console.log("QR TOKEN RECEIVED:", qr_token);
-
-    const { data: debugBottle, error: debugError } = await supabaseAdmin
-        .from("bottles")
-        .select("id, campaign_id, status")
-        .eq("qr_token", qr_token)
-        .maybeSingle();
-
-    console.log("Bottle Query Result:", debugBottle);
-    console.log("Bottle Query Error:", debugError);
-    // --------------------------------------
-
-    // Fetch bottle -> campaign_id
-    const { data: bottleData, error: bottleError } = await supabaseAdmin
+    // STEP 3: Remove .single() and Debug Query
+    // We use authorized client but select ANY match to debug
+    const { data: rawBottleData, error: bottleError } = await supabaseAdmin
         .from('bottles')
-        .select('campaign_id, status')
-        .eq('qr_token', qr_token)
-        .single();
+        .select('id, campaign_id, status, qr_token')
+        .eq('qr_token', normalizedToken);
 
-    if (bottleError || !bottleData) {
-        console.error("Bottle Lookup Failed:", bottleError);
+    console.log("Raw Bottle Query Result:", rawBottleData);
+    console.log("Bottle Query Error:", bottleError);
+
+    // Handle results for flow continuity
+    if (bottleError || !rawBottleData || rawBottleData.length === 0) {
+        console.error("Bottle Lookup Failed or Empty");
         return NextResponse.json({ error: 'Invalid QR Token' }, { status: 400 });
     }
+
+    // Take the first match if multiple (should be unique though)
+    const bottleData = rawBottleData[0];
 
     if (bottleData.status === 'used') {
          return NextResponse.json({ error: 'This QR code has already been used.' }, { status: 400 });
