@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { MoreHorizontal, ExternalLink, QrCode, Eye, Pause, Play, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -158,6 +159,17 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
                     <td className="px-6 py-4 text-center">
                        <div className="flex items-center justify-center gap-2">
                            
+                           <Link href={`/admin/campaigns/${campaign.id}`}>
+                               <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                    title="View Details"
+                               >
+                                   <Eye className="h-4 w-4" />
+                               </Button>
+                           </Link>
+
                            {/* Action Buttons based on Status */}
                            
                            {status === 'draft' && (

@@ -1,182 +1,266 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
-import { ChevronLeft, Play, Pause, Loader2, BarChart3, Settings, QrCode } from 'lucide-react';
+import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { 
+  ArrowLeft, QrCode, ScanLine, Ticket, TrendingUp, 
+  Calendar, Clock, Tag, Hash, Type, Percent, AlertCircle 
+} from 'lucide-react';
 
-export default function CampaignDetailsPage() {
-  const params = useParams();
-  const id = params?.id as string;
-  const router = useRouter();
+interface PageProps {
+  params: { id: string };
+}
 
-  const [campaign, setCampaign] = useState<any>(null);
-  const [stats, setStats] = useState<any>({
-      total_bottles: 0,
-      redeemed_bottles: 0,
-      redemption_percentage: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'rules' | 'stats'>('overview');
+// FORMATTTER: UTC -> Update to show localized time
+function formatDate(dateStr: string | null) {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
 
-  async function fetchCampaign() {
-    try {
-      console.log('Fetching detail for ID:', id);
-      const res = await fetch(`/api/admin/campaigns/${id}`);
-      
-      if (!res.ok) throw new Error('Failed to fetch campaign details');
-      
-      const data = await res.json();
-      setCampaign(data.campaign);
-      setStats(data.stats);
+function StatCard({ title, value, subtext, icon: Icon, colorClass }: any) {
+    return (
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-start justify-between">
+            <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+                <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+                {subtext && <p className="text-xs text-gray-400 mt-1">{subtext}</p>}
+            </div>
+            <div className={`p-3 rounded-lg ${colorClass}`}>
+                <Icon className="h-5 w-5" />
+            </div>
+        </div>
+    );
+}
 
-    } catch (err) {
-      console.error('Error fetching campaign details:', err);
-    } finally {
-      setLoading(false);
-    }
+function ConfigItem({ label, value, icon: Icon }: any) {
+    return (
+        <div className="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm mr-4 border border-gray-100">
+                <Icon className="h-5 w-5" />
+            </div>
+            <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+                <p className="text-sm font-semibold text-gray-900">{value || '-'}</p>
+            </div>
+        </div>
+    );
+}
+
+// MAIN COMPONENT
+export default async function CampaignDetailsPage({ params }: PageProps) {
+  const supabase = getSupabaseAdmin();
+  const { id } = params;
+
+  // PARALLEL DATA FETCHING
+  // Using Promise.allSettled to handle potential failures in individual queries gracefully
+  // This is especially important if schema for 'scanned' is inconsistent
+  const [campaignRes, qrRes, scannedRes, redeemedRes] = await Promise.allSettled([
+    supabase.from('campaigns').select('*').eq('id', id).single(),
+    
+    // 1. Expected Total QR
+    supabase
+        .from('bottles')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', id),
+
+    // 2. Total Scanned
+    // Trying primary requirement: .not('scanned_at', 'is', null)
+    // If this fails (e.g. column missing), we might get an error.
+    // However, since I can't wrap a Supabase query definition in a try/catch easily without executing it,
+    // I will rely on the fact that if it fails, the error will be in the result of allSettled.
+    // AND I will provide a fallback query if the first one fails? No, that's too complex for one go.
+    // I will use 'used_at' which I verified exists, to guarantee stability.
+    // User asked for "If not available, count rows where used_at or similar exists."
+    // I verified 'scanned_at' is NOT in the schema found earlier.
+    supabase
+        .from('bottles')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', id)
+        .not('used_at', 'is', null), 
+
+    // 3. Total Redeemed
+    supabase
+        .from('coupons')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', id),
+  ]);
+
+  // UNWRAP RESULTS
+  const campaignData = campaignRes.status === 'fulfilled' ? campaignRes.value.data : null;
+  
+  if (!campaignData) {
+    return notFound();
   }
 
-  useEffect(() => {
-    if (id) fetchCampaign();
-  }, [id]);
+  const campaign = campaignData;
+  const totalQR = qrRes.status === 'fulfilled' ? qrRes.value.count || 0 : 0;
+  const totalScanned = scannedRes.status === 'fulfilled' ? scannedRes.value.count || 0 : 0;
+  const totalRedeemed = redeemedRes.status === 'fulfilled' ? redeemedRes.value.count || 0 : 0;
 
-  const toggleStatus = async () => {
-    if (!campaign) return;
-    const newStatus = campaign.status === 'active' ? 'paused' : 'active';
-    try {
-        const res = await fetch(`/api/admin/campaigns/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus }),
-        });
-        
-        if (!res.ok) throw new Error('Failed to update status');
-        
-        // Refresh locally
-        fetchCampaign(); 
-    } catch (err) {
-        console.error('Error updating status:', err);
-        alert('Failed to update status');
-    }
+  // DERIVED METRICS
+  const redemptionRate = totalQR > 0 ? ((totalRedeemed / totalQR) * 100).toFixed(1) : '0.0';
+  const scanRate = totalQR > 0 ? ((totalScanned / totalQR) * 100).toFixed(1) : '0.0';
+
+  // STATUS BADGE UTILS
+  const getStatusColor = (status: string) => {
+      switch (status) {
+          case 'active': return 'bg-green-100 text-green-700 border-green-200';
+          case 'paused': return 'bg-orange-50 text-orange-700 border-orange-200';
+          case 'expired': return 'bg-red-50 text-red-700 border-red-200';
+          case 'completed': return 'bg-gray-100 text-gray-700 border-gray-200';
+          default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      }
   };
 
-  if (loading) return <div className="p-12 text-center text-gray-500">Loading...</div>;
-  if (!campaign) return <div className="p-12 text-center">Campaign not found</div>;
-
   return (
-    <div>
-      <div className="mb-6">
-        <Link href="/admin/campaigns" className="text-sm text-gray-500 hover:text-gray-900 inline-flex items-center mb-2">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Campaigns
+    <div className="max-w-6xl mx-auto pb-12">
+      {/* 1. HEADER */}
+      <div className="mb-8">
+        <Link 
+            href="/admin/campaigns" 
+            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+        >
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Campaigns
         </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                {campaign.name}
-                <span className={`text-sm px-2.5 py-0.5 rounded-full capitalize font-medium
-                    ${campaign.status === 'active' ? 'bg-green-100 text-green-700' : 
-                      campaign.status === 'draft' ? 'bg-gray-100 text-gray-700' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {campaign.status}
-                </span>
-            </h1>
-            <div className="flex gap-2">
-                {campaign.status !== 'draft' && (
-                    <Button 
-                        variant="outline" 
-                        onClick={toggleStatus}
-                        className={campaign.status === 'active' ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}
-                    >
-                        {campaign.status === 'active' ? <><Pause className="mr-2 h-4 w-4" /> Pause</> : <><Play className="mr-2 h-4 w-4" /> Activate</>}
-                    </Button>
-                )}
-                <Link href="/admin/qr-generator">
-                    <Button>
-                        Generate QRs
-                    </Button>
-                </Link>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900">{campaign.name}</h1>
+                <div className="flex items-center gap-3 mt-2">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border uppercase ${getStatusColor(campaign.status)}`}>
+                        {campaign.status}
+                    </span>
+                    <span className="text-xs text-gray-400 font-mono flex items-center">
+                        <Hash className="h-3 w-3 mr-1" /> {campaign.id}
+                    </span>
+                </div>
             </div>
+             {/* Optional: Add Edit Button Here */}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-            <button onClick={() => setActiveTab('overview')} className={`${activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
-                <Settings className="h-4 w-4 mr-2" /> Overview
-            </button>
-            <button onClick={() => setActiveTab('rules')} className={`${activeTab === 'rules' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
-                <QrCode className="h-4 w-4 mr-2" /> Coupon Rules
-            </button>
-            <button onClick={() => setActiveTab('stats')} className={`${activeTab === 'stats' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
-                <BarChart3 className="h-4 w-4 mr-2" /> Stats
-            </button>
-        </nav>
+      {/* 2. ANALYTICS GRID */}
+      <section className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard 
+                  title="Total QR Generated" 
+                  value={totalQR.toLocaleString()} 
+                  icon={QrCode} 
+                  colorClass="bg-blue-50 text-blue-600" 
+              />
+              <StatCard 
+                  title="Total Scanned" 
+                  value={totalScanned.toLocaleString()} 
+                  subtext="Verified Scans"
+                  icon={ScanLine} 
+                  colorClass="bg-purple-50 text-purple-600" 
+              />
+              <StatCard 
+                  title="Total Redeemed" 
+                  value={totalRedeemed.toLocaleString()} 
+                  subtext="Coupons Issued"
+                  icon={Ticket} 
+                  colorClass="bg-orange-50 text-orange-600" 
+              />
+               <StatCard 
+                  title="Redemption Rate" 
+                  value={`${redemptionRate}%`} 
+                  subtext={`of ${totalQR.toLocaleString()} QRs`}
+                  icon={TrendingUp} 
+                  colorClass="bg-green-50 text-green-600" 
+              />
+          </div>
+          
+          {/* Progress Bars */}
+          <div className="mt-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+               <div className="mb-4">
+                   <div className="flex justify-between text-sm mb-1">
+                       <span className="text-gray-600">Scan Rate</span>
+                       <span className="font-medium text-gray-900">{scanRate}%</span>
+                   </div>
+                   <div className="w-full bg-gray-100 rounded-full h-2">
+                       <div 
+                            className="bg-purple-500 h-2 rounded-full transition-all duration-500" 
+                            style={{ width: `${Math.min(parseFloat(scanRate), 100)}%` }}
+                       />
+                   </div>
+               </div>
+               <div>
+                   <div className="flex justify-between text-sm mb-1">
+                       <span className="text-gray-600">Redemption Rate</span>
+                       <span className="font-medium text-gray-900">{redemptionRate}%</span>
+                   </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                       <div 
+                            className="bg-green-500 h-2 rounded-full transition-all duration-500" 
+                            style={{ width: `${Math.min(parseFloat(redemptionRate), 100)}%` }}
+                       />
+                   </div>
+               </div>
+          </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 3. COUPON CONFIGURATION */}
+          <section className="lg:col-span-2">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Coupon Configuration</h2>
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <ConfigItem 
+                          label="Prefix" 
+                          value={campaign.coupon_prefix} 
+                          icon={Tag} 
+                      />
+                      <ConfigItem 
+                          label="Length" 
+                          value={`${campaign.coupon_length || 6} chars`} 
+                          icon={Hash} 
+                      />
+                      <ConfigItem 
+                          label="Type" 
+                          value={campaign.coupon_type} 
+                          icon={Type} 
+                      />
+                       <ConfigItem 
+                          label="Value Range" 
+                          value={`₹${campaign.coupon_min_value || 0} - ₹${campaign.coupon_max_value || 0}`} 
+                          icon={Percent} 
+                      />
+                  </div>
+              </div>
+          </section>
+
+          {/* 4. TIMELINE */}
+          <section>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h2>
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-6">
+                  <div className="relative border-l-2 border-gray-100 pl-4 ml-2 space-y-6">
+                      <div className="relative">
+                          <span className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-green-500 ring-4 ring-white"></span>
+                          <p className="text-xs text-gray-500 uppercase">Start Date</p>
+                          <p className="text-sm font-medium text-gray-900">{formatDate(campaign.start_date)}</p>
+                      </div>
+                      <div className="relative">
+                          <span className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-gray-300 ring-4 ring-white"></span>
+                          <p className="text-xs text-gray-500 uppercase">End Date</p>
+                          <p className="text-sm font-medium text-gray-900">{formatDate(campaign.end_date)}</p>
+                      </div>
+                      <div className="relative">
+                          <span className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-blue-200 ring-4 ring-white"></span>
+                          <p className="text-xs text-gray-500 uppercase">Created On</p>
+                          <p className="text-sm font-medium text-gray-900">{formatDate(campaign.created_at)}</p>
+                      </div>
+                  </div>
+              </div>
+          </section>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        
-        {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Campaign ID</h3>
-                    <p className="font-mono text-sm">{campaign.id}</p>
-                </div>
-                <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Duration</h3>
-                    <p>{new Date(campaign.start_date).toLocaleDateString()} — {new Date(campaign.end_date).toLocaleDateString()}</p>
-                </div>
-                <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Created At</h3>
-                    <p>{new Date(campaign.created_at).toLocaleString()}</p>
-                </div>
-                <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Last Updated</h3>
-                    <p>{campaign.updated_at ? new Date(campaign.updated_at).toLocaleString() : '-'}</p>
-                </div>
-            </div>
-        )}
-
-        {activeTab === 'rules' && (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Coupon Structure</h3>
-                    <p className="text-lg font-bold">
-                        {campaign.coupon_type === 'flat' ? 'Flat Amount' : 'Percentage'} 
-                        <span className="ml-2 text-primary">
-                            {campaign.coupon_type === 'flat' ? '₹' : ''}{campaign.coupon_value}{campaign.coupon_type === 'percent' ? '%' : ''}
-                        </span>
-                    </p>
-                </div>
-                <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Coupon Prefix</h3>
-                    <p className="font-mono text-lg">{campaign.coupon_prefix}</p>
-                    <p className="text-xs text-gray-400 mt-1">Example: {campaign.coupon_prefix}-A1B2C</p>
-                </div>
-                <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Expiry Rule</h3>
-                    <p>{campaign.coupon_expiry_days} days from redemption</p>
-                </div>
-             </div>
-        )}
-
-        {activeTab === 'stats' && stats && (
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <h3 className="text-sm font-medium text-blue-700 mb-1">Total Bottles</h3>
-                    <p className="text-3xl font-bold text-blue-900">{stats.total_bottles}</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg text-center">
-                    <h3 className="text-sm font-medium text-green-700 mb-1">Redeemed</h3>
-                    <p className="text-3xl font-bold text-green-900">{stats.redeemed_bottles}</p>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-lg text-center">
-                    <h3 className="text-sm font-medium text-purple-700 mb-1">Redemption Rate</h3>
-                    <p className="text-3xl font-bold text-purple-900">{stats.redemption_percentage}%</p>
-                </div>
-             </div>
-        )}
-      </div>
     </div>
   );
 }
