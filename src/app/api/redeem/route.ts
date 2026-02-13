@@ -6,19 +6,17 @@ export async function POST(req: NextRequest) {
   try {
     const { phone, otp, qr_token, name } = await req.json();
 
-    console.log("--- API REDEEM V4 (FINAL ATOMIC) ---");
+    console.log("--- API REDEEM V6 (HARDENED PRODUCTION) ---");
+    // NOTE: This route runs in the Node.js runtime environment.
+    // The SUPABASE_SERVICE_ROLE_KEY is used here to perform backend-only admin tasks.
+    // This key is NEVER exposed to the client.
     
-    // STEP 1: Log Supabase Environment
-    console.log("SUPABASE URL BEING USED:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-
     if (!phone || !otp || !qr_token) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Token Normalization
-    const normalizedToken = qr_token ? qr_token.trim() : "";
-    
-    // Phone Normalization (must match OTP Service)
+    // 1. Normalize Inputs
+    const normalizedToken = qr_token.trim();
     const normalizePhone = (p: string) => {
         let n = p.replace(/\D/g, '');
         if (n.length === 10) n = '91' + n;
@@ -26,9 +24,9 @@ export async function POST(req: NextRequest) {
     };
     const normalizedPhone = normalizePhone(phone);
 
-    console.log(`[Redeem API] Received Phone: ${phone}, Normalized: ${normalizedPhone}, Token: ${normalizedToken}`);
+    console.log(`[Redeem API] Phone: ${normalizedPhone}, Token: ${normalizedToken}`);
 
-    // --- INITIALIZE SERVICE ROLE CLIENT ---
+    // 2. Initialize Supabase Admin Client
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -38,56 +36,141 @@ export async function POST(req: NextRequest) {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // 1. VERIFY OTP
+    // 3. STEP 1: VERIFY OTP
     const otpResult = await otpService.validateOTP(normalizedPhone, otp);
-    
     if (!otpResult.valid) {
         return NextResponse.json({ error: otpResult.message || 'Invalid OTP' }, { status: 400 });
     }
 
-    // 2. CALL FINAL RPC: redeem_coupon
-    // Atomically handles: existence, status check, campaign logic, coupon generation, insertion, and update
-    const { data, error: rpcError } = await supabaseAdmin
-        .rpc('redeem_coupon', {
-            p_qr_token: normalizedToken,
-            p_phone: normalizedPhone,
-            p_name: name || 'Anonymous'
+    // 4. STEP 2: FETCH BOTTLE
+    //    Using .limit(1) and .maybeSingle() equivalent checks to avoid 0-row errors
+    const { data: bottles, error: bottleError } = await supabaseAdmin
+        .from('bottles')
+        .select('id, campaign_id, status')
+        .eq('qr_code', normalizedToken)
+        .limit(1);
+
+    if (bottleError) {
+        console.error("Bottle Lookup Error:", bottleError);
+        return NextResponse.json({ error: 'Database Error' }, { status: 500 });
+    }
+
+    if (!bottles || bottles.length === 0) {
+        return NextResponse.json({ error: 'Invalid QR Code' }, { status: 404 });
+    }
+    
+    const bottle = bottles[0];
+
+    // Check if bottle is already redeemed
+    const { data: existingBottleRedemption, error: checkError } = await supabaseAdmin
+        .from('redemptions')
+        .select('id')
+        .eq('bottle_id', bottle.id)
+        .limit(1);
+    
+    if (checkError) {
+         console.error("Bottle Check Error:", checkError);
+         return NextResponse.json({ error: 'Database Error' }, { status: 500 });
+    }
+
+    if (existingBottleRedemption && existingBottleRedemption.length > 0) {
+        return NextResponse.json({ error: 'This QR code has already been redeemed.' }, { status: 400 });
+    }
+
+    // 5. STEP 3: UPSERT USER
+    const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .upsert(
+            { phone: normalizedPhone, name: name || 'Anonymous' },
+            { onConflict: 'phone' }
+        )
+        .select('id')
+        .single();
+
+    if (userError || !userData) {
+        console.error("User Upsert Failed:", userError);
+        return NextResponse.json({ error: 'Failed to register user' }, { status: 500 });
+    }
+
+    const userId = userData.id;
+
+    // 6. STEP 4: INSERT REDEMPTION
+    const { error: redemptionError } = await supabaseAdmin
+        .from('redemptions')
+        .insert({
+            user_id: userId,
+            campaign_id: bottle.campaign_id,
+            bottle_id: bottle.id,
+            redeemed_at: new Date().toISOString()
         });
 
-    if (rpcError) {
-        console.error("Redeem RPC Error:", rpcError);
-        // Map common RPC errors to user-friendly messages if possible, or pass through
-        return NextResponse.json({ error: rpcError.message || 'Redemption failed' }, { status: 400 });
+    if (redemptionError) {
+        console.error("Redemption Insert Error:", redemptionError);
+        
+        // Handle Unique Constraint Violation (duplicate redemption for same campaign)
+        if (redemptionError.code === '23505') {
+             return NextResponse.json({ error: "Mobile already registered for this campaign" }, { status: 400 });
+        }
+        
+        return NextResponse.json({ error: 'Redemption failed' }, { status: 500 });
     }
 
-    // Helper to safely extract coupon code from various potential RPC return shapes
-    // RPC returns TABLE (coupon_code TEXT) -> typically an array of objects
-    const couponCode = data?.[0]?.coupon_code || (data as any)?.coupon_code;
+    // 7. STEP 5: SAFE COUPON GENERATION (Retry Loop)
+    // Fetch campaign prefix
+    const { data: campaign } = await supabaseAdmin
+        .from('campaigns')
+        .select('coupon_prefix')
+        .eq('id', bottle.campaign_id)
+        .single();
+        
+    const prefix = campaign?.coupon_prefix || 'OFFER';
+    
+    let couponCode = '';
+    let inserted = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
 
-    if (!couponCode) {
-        console.error("RPC Success but No Coupon Code returned:", data);
-        return NextResponse.json(
-            { error: "Coupon generation failed" },
-            { status: 500 }
-        );
+    while (!inserted && attempts < MAX_ATTEMPTS) {
+        attempts++;
+        couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        const { error: couponError } = await supabaseAdmin.from('coupons').insert({
+            code: couponCode,
+            campaign_id: bottle.campaign_id,
+            user_id: userId,
+            status: 'redeemed',
+            discount_value: 10 // Mock or fetch actual value
+        });
+
+        if (!couponError) {
+            inserted = true;
+        } else {
+            // If error is NOT uniqueness violation, abort
+            if (couponError.code !== '23505') {
+                console.error("Coupon Insert Error:", couponError);
+                // We don't fail the whole request since redemption was recorded, 
+                // but we should probably alert or handle.
+                // For now, break and return error or partial success?
+                // Returning error now is safer.
+                return NextResponse.json({ error: "Coupon generation error" }, { status: 500 });
+            }
+            // If code '23505' (Duplicate), loop continues to retry
+            console.warn(`Coupon collision for ${couponCode}, retrying... (${attempts}/${MAX_ATTEMPTS})`);
+        }
     }
 
-    console.log(`Redemption Success: ${normalizedPhone} got ${couponCode}`);
+    if (!inserted) {
+        console.error("Failed to generate unique coupon after max attempts");
+        return NextResponse.json({ error: "System busy, please try again" }, { status: 500 });
+    }
 
-    const responsePayload = { 
+    return NextResponse.json({
         success: true,
-        coupon_code: couponCode 
-    };
-
-    console.log("API RETURNING:", responsePayload);
-
-    return NextResponse.json(responsePayload);
+        coupon_code: couponCode
+    });
 
   } catch (err) {
     console.error('Unexpected error:', err);

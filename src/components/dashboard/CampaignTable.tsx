@@ -159,7 +159,7 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
                     <td className="px-6 py-4 text-center">
                        <div className="flex items-center justify-center gap-2">
                            
-                           <Link href={`/admin/campaigns/${campaign.id}`}>
+                           <Link href={`/admin/campaign/${campaign.id}`}>
                                <Button 
                                     size="icon" 
                                     variant="ghost" 
