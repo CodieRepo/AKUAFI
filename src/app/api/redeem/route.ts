@@ -137,11 +137,12 @@ export async function POST(req: NextRequest) {
         attempts++;
         couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
+        // FIX: Insert into 'coupon_code' logic and status 'claimed' logic
         const { error: couponError } = await supabaseAdmin.from('coupons').insert({
             coupon_code: couponCode,
             campaign_id: bottle.campaign_id,
             user_id: userId,
-            status: 'redeemed',
+            status: 'claimed',
             discount_value: 10 // Mock or fetch actual value
         });
 
