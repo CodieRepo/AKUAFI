@@ -257,14 +257,12 @@ function ScanContent() {
       );
   }
 
-  // Success View
-  return (
   if (view === 'success') {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center animate-in fade-in duration-500">
            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 w-full max-w-sm">
-              <h2>Success!</h2>
-              <p>Your reward is ready:</p>
+              <h2 className="text-2xl font-bold mb-4">Success!</h2>
+              <p className="mb-4">Your reward is ready:</p>
               <div style={{
                 padding: "16px",
                 border: "2px dashed #ccc",
@@ -275,7 +273,7 @@ function ScanContent() {
               }}>
                 {couponCode ? couponCode : "Coupon Missing"}
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mt-3">
                   Please screenshot this screen.
               </p>
           </div>
@@ -284,7 +282,6 @@ function ScanContent() {
   }
 
   return null;
-  );
 }
 
 export default function ScanPage() {
