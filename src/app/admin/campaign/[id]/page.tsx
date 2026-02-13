@@ -9,7 +9,7 @@ interface CampaignPageProps {
 }
 
 export default async function CampaignDetailsPage({ params }: CampaignPageProps) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +19,8 @@ export default async function CampaignDetailsPage({ params }: CampaignPageProps)
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
+        set() {},
+        remove() {},
       },
     }
   );
