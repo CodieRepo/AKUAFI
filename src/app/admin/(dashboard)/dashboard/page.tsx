@@ -1,17 +1,18 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
 
 // Function to create server client inside component
-function getSupabase() {
-    const cookieStore = cookies();
+async function getSupabase() {
+    const cookieStore = await cookies();
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
                 get(name: string) { return cookieStore.get(name)?.value; },
+                set() {},
+                remove() {},
             },
         }
     );
@@ -20,11 +21,9 @@ function getSupabase() {
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
 
   // 1. Total Redemptions
-  // Using 'redemptions' table or 'coupons' table depending on what signifies a redemption.
-  // User asked for: count exact from redemptions.
   const { count: totalRedeemed } = await supabase
     .from('redemptions')
     .select('*', { count: 'exact', head: true });
