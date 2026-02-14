@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Megaphone, ScanLine, QrCode, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Megaphone, ScanLine, QrCode, LogOut, Menu, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 const navItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
+  { name: 'Clients', href: '/admin/clients', icon: Users },
   { name: 'QR Generator', href: '/admin/qr-generator', icon: QrCode },
   { name: 'Redemptions', href: '/admin/redemptions', icon: ScanLine },
 ];

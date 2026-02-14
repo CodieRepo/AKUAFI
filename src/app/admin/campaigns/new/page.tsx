@@ -1,34 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
+interface Client {
+  id: string;
+  client_name: string;
+}
+
 export default function NewCampaignPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     start_date: '',
     end_date: '',
+    client_id: '', // New field
     coupon_type: 'alphanumeric',
     coupon_min_value: '',
     coupon_max_value: '',
     coupon_prefix: '',
     coupon_length: 6,
-    discount_type: 'fixed', // Restored field
+    discount_type: 'fixed',
   });
 
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    // 1️⃣ Fetch Clients on Mount
+    const fetchClients = async () => {
+      try {
+        const res = await fetch('/api/admin/clients');
+        if (!res.ok) throw new Error('Failed to fetch clients');
+        const data = await res.json();
+        setClients(data.clients || []);
+      } catch (err) {
+        console.error('Error fetching clients:', err);
+        setError('Failed to load clients. Please try again.');
+      } finally {
+        setLoadingClients(false);
+      }
+    };
+    fetchClients();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    // Clear error when user changes input
     if (error) setError(null);
   };
 
@@ -37,14 +62,19 @@ export default function NewCampaignPage() {
     setLoading(true);
     setError(null);
 
-    // Front-end Validation
+    // 3️⃣ Validation
+    if (!formData.client_id) {
+        setError("Please assign a client to this campaign.");
+        setLoading(false);
+        return;
+    }
+
     if (new Date(formData.end_date) < new Date(formData.start_date)) {
         setError("End date cannot be before start date.");
         setLoading(false);
         return;
     }
 
-    // Validate Percentage Logic
     if (formData.discount_type === 'percentage') {
         if (Number(formData.coupon_max_value) > 100) {
             setError("Max value cannot exceed 100% for percentage discounts.");
@@ -54,14 +84,9 @@ export default function NewCampaignPage() {
     }
 
     try {
-      // Authenticate check bypassed for local dev preview if handled by middleware/api
-      // Strict auth is handled in the API route calling verifyAdmin
-
-      // Convert to UTC ISO Strings for Storage
       const startUTC = new Date(formData.start_date).toISOString();
       const endUTC = new Date(formData.end_date).toISOString();
 
-      const supabase = createClient(); 
       const res = await fetch('/api/admin/campaigns', {
         method: 'POST',
         headers: {
@@ -71,14 +96,13 @@ export default function NewCampaignPage() {
             ...formData,
             start_date: startUTC,
             end_date: endUTC,
-            // Coupon values are sent but ignored by API for now as per schema limitations
+            client_id: formData.client_id, // 4️⃣ Send client_id
             coupon_min_value: Number(formData.coupon_min_value),
             coupon_max_value: Number(formData.coupon_max_value),
-            // New Customization Fields
             coupon_prefix: formData.coupon_prefix,
             coupon_length: Number(formData.coupon_length),
             coupon_type: formData.coupon_type,
-            discount_type: formData.discount_type, // Passing it to backend
+            discount_type: formData.discount_type,
         })
       });
 
@@ -88,7 +112,7 @@ export default function NewCampaignPage() {
       }
 
       router.push('/admin/campaigns');
-      router.refresh(); // Refresh Client Cache
+      router.refresh();
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -98,7 +122,6 @@ export default function NewCampaignPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      {/* Breadcrumb & Header */}
       <div className="mb-8">
         <nav className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
             <Link href="/admin/campaigns" className="hover:text-gray-900 dark:hover:text-white transition-colors">Campaigns</Link>
@@ -117,7 +140,6 @@ export default function NewCampaignPage() {
             </div>
         )}
         <form onSubmit={handleSubmit}>
-            {/* Section 1: Campaign Details */}
             <div className="p-8 space-y-6">
                 <div>
                     <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">Campaign Name</label>
@@ -132,6 +154,32 @@ export default function NewCampaignPage() {
                     />
                 </div>
                 
+                {/* 2️⃣ Add Client Dropdown */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">Assign to Client</label>
+                    <div className="relative">
+                        <select
+                            name="client_id"
+                            required
+                            className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none transition-all disabled:opacity-50"
+                            value={formData.client_id}
+                            onChange={handleChange}
+                            disabled={loadingClients}
+                        >
+                            <option value="">Select a Client</option>
+                            {clients.map(client => (
+                                <option key={client.id} value={client.id}>
+                                    {client.client_name}
+                                </option>
+                            ))}
+                        </select>
+                         {/* Dropdown Icon */}
+                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                         </div>
+                    </div>
+                </div>
+
                 <div>
                     <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">Description (Optional)</label>
                     <textarea 
@@ -169,9 +217,9 @@ export default function NewCampaignPage() {
                 </div>
             </div>
 
-            {/* Section 2: Coupon Rules */}
             <div className="p-8 bg-gray-50/50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-800 space-y-6">
-                <div className="flex items-center gap-2 mb-2">
+                {/* Coupon Config Code Remains Same... (Skipping some redundant lines for brevity if unchanged logic, but including for completeness) */}
+                 <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coupon Configuration</h3>
                     <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
                 </div>
@@ -215,7 +263,6 @@ export default function NewCampaignPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                     {/* Restored Discount Type Field */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Discount Type</label>
                         <select 

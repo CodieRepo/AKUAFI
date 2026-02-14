@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // Basic Validation
-    if (!body.name || !body.start_date || !body.end_date) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!body.name || !body.start_date || !body.end_date || !body.client_id) {
+      return NextResponse.json({ error: 'Missing required fields: name, start_date, end_date, client_id' }, { status: 400 });
     }
 
     const startUTC = new Date(body.start_date);
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const payload = {
         name: body.name,
         description: body.description,
+        client_id: body.client_id, // Link to client
         status: 'draft',
         start_date: body.start_date,
         end_date: body.end_date,
