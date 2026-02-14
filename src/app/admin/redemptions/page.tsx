@@ -24,19 +24,36 @@ export default function RedemptionsPage() {
 
       try {
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
         
-        const res = await fetch('/api/admin/redemptions', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
-        });
-        
-        if (res.ok) {
-            const data = await res.json();
-            setRedemptions(data);
+        // Fetch from VIEW as requested
+        const { data, error } = await supabase
+            .from('redemption_details')
+            .select('*')
+            .order('redeemed_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching redemptions:', error);
+            // Fallback to empty to avoid crash
+            setRedemptions([]);
+        } else {
+            console.log('Fetched redemptions (from view):', data?.length);
+            // Map view data to Redemption interface if needed
+            // Interface: id, qr_token, campaign_name, phone, coupon_code, redeemed_at
+            // View likely has: campaign_id (not name?), bottle_id (qr_token?), phone, etc.
+            // We map what we can.
+            const mapped = (data || []).map((row: any) => ({
+                id: row.id,
+                qr_token: row.bottle_id || row.qr_token || 'N/A',
+                campaign_name: row.campaign_name || row.campaign_id || 'Unknown',
+                phone: row.phone || 'N/A',
+                coupon_code: row.coupon_code || '-',
+                redeemed_at: row.redeemed_at,
+                user_name: row.name // if view has it
+            }));
+            setRedemptions(mapped);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Unexpected error:', err);
       } finally {
         if (!silent) setLoading(false);
         else setIsRefreshing(false);
