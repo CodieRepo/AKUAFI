@@ -10,7 +10,7 @@ export async function DELETE(
     const { id } = await context.params;
 
     // 1. Verify Authentication
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
