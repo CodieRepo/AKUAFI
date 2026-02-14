@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { qr_token } = await request.json();
@@ -9,20 +11,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'QR Token is required' }, { status: 400 });
     }
 
-    const { data, error } = await getSupabaseAdmin()
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // 1. Fetch Bottle
+    const { data: bottles, error } = await supabaseAdmin
       .from('bottles')
       .select('*')
       .eq('qr_token', qr_token)
-      .single();
+      .limit(1);
 
-    if (error || !data) {
+    if (error) {
       console.error('Bottle lookup failed:', error?.message);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (!bottles || bottles.length === 0) {
       return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
+    }
+
+    const bottle = bottles[0];
+
+    // 2. HARD CHECK: Redemption Existence
+    // Prevent form from opening if already redeemed
+    const { data: existingRedemptions, error: redemptionError } = await supabaseAdmin
+      .from('redemptions')
+      .select('id')
+      .eq('bottle_id', bottle.id)
+      .limit(1);
+
+    if (redemptionError) {
+        console.error('Redemption check failed:', redemptionError);
+        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (existingRedemptions && existingRedemptions.length > 0) {
+        // Front-end expects this exact string to show "Used" view
+        return NextResponse.json({ error: 'Coupon redeemed from this QR' }, { status: 400 });
+    }
+
+    // 3. Fallback Check: is_used flag
+    if (bottle.is_used) {
+         return NextResponse.json({ error: 'Coupon redeemed from this QR' }, { status: 400 });
     }
 
     return NextResponse.json({ 
         success: true, 
-        bottle: data 
+        bottle: bottle 
     });
 
   } catch (error) {
