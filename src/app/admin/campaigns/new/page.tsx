@@ -21,6 +21,7 @@ export default function NewCampaignPage() {
     coupon_max_value: '',
     coupon_prefix: '',
     coupon_length: 6,
+    discount_type: 'fixed', // Restored field
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +37,20 @@ export default function NewCampaignPage() {
     setLoading(true);
     setError(null);
 
-    // Frontend Validation
+    // Front-end Validation
     if (new Date(formData.end_date) < new Date(formData.start_date)) {
         setError("End date cannot be before start date.");
         setLoading(false);
         return;
+    }
+
+    // Validate Percentage Logic
+    if (formData.discount_type === 'percentage') {
+        if (Number(formData.coupon_max_value) > 100) {
+            setError("Max value cannot exceed 100% for percentage discounts.");
+            setLoading(false);
+            return;
+        }
     }
 
     try {
@@ -68,6 +78,7 @@ export default function NewCampaignPage() {
             coupon_prefix: formData.coupon_prefix,
             coupon_length: Number(formData.coupon_length),
             coupon_type: formData.coupon_type,
+            discount_type: formData.discount_type, // Passing it to backend
         })
       });
 
@@ -203,16 +214,33 @@ export default function NewCampaignPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                     {/* Restored Discount Type Field */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Discount Type</label>
+                        <select 
+                            name="discount_type"
+                            className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none"
+                            value={formData.discount_type}
+                            onChange={handleChange}
+                        >
+                            <option value="fixed">Fixed Amount (₹)</option>
+                            <option value="percentage">Percentage (%)</option>
+                        </select>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Value</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                                {formData.discount_type === 'fixed' ? '₹' : '%'}
+                            </span>
                             <input 
                                 name="coupon_min_value"
                                 type="number" 
                                 required
                                 min="0"
+                                max={formData.discount_type === 'percentage' ? "100" : undefined}
                                 className="w-full h-11 pl-8 pr-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                 placeholder="0"
                                 value={formData.coupon_min_value}
@@ -223,18 +251,24 @@ export default function NewCampaignPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Value</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                                {formData.discount_type === 'fixed' ? '₹' : '%'}
+                            </span>
                             <input 
                                 name="coupon_max_value"
                                 type="number" 
                                 required
                                 min="0"
+                                max={formData.discount_type === 'percentage' ? "100" : undefined}
                                 className="w-full h-11 pl-8 pr-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                 placeholder="100"
                                 value={formData.coupon_max_value}
                                 onChange={handleChange}
                             />
                         </div>
+                        {formData.discount_type === 'percentage' && (
+                             <p className="text-[10px] text-gray-400 mt-1 text-right">Max 100%</p>
+                        )}
                     </div>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
