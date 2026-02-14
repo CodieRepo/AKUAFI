@@ -47,6 +47,8 @@ export default function RedemptionsPage() {
                 campaign_name: row.campaign_name || row.campaign_id || 'Unknown',
                 phone: row.phone || 'N/A',
                 coupon_code: row.coupon_code || '-',
+                coupon_status: row.coupon_status || 'claimed', // Default to claimed if view has data
+                discount_value: row.discount_value,
                 redeemed_at: row.redeemed_at,
                 user_name: row.name // if view has it
             }));

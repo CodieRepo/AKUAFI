@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { StatusBadge } from '@/components/admin/ui/StatusBadge';
-import { QrCode, User, Calendar, Tag } from 'lucide-react';
+import { QrCode, User, Calendar, Tag, Ticket } from 'lucide-react';
 
 export interface Redemption {
   id: string;
@@ -10,6 +10,8 @@ export interface Redemption {
   campaign_name: string;
   phone: string;
   coupon_code: string;
+  coupon_status?: string;
+  discount_value?: number;
   redeemed_at: string;
   user_name?: string; // If available
   bottle_id?: string;
@@ -80,7 +82,6 @@ export default function RedemptionTable({ redemptions, loading }: RedemptionTabl
                         <Tag className="h-3.5 w-3.5 text-blue-500" />
                         <span className="font-medium text-gray-900 dark:text-gray-200">{r.campaign_name || "Unknown"}</span>
                     </div>
-                    {/* If we have campaign ID, maybe show it small? */}
                 </td>
                 <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -94,12 +95,30 @@ export default function RedemptionTable({ redemptions, loading }: RedemptionTabl
                     </div>
                 </td>
                 <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                        <div className="text-xs">
-                             <span className="text-gray-400">QR:</span> <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-mono">{r.qr_token.substring(0,8)}...</code>
+                    <div className="flex flex-col gap-1.5">
+                        <div className="text-xs flex items-center gap-2">
+                             <span className="text-gray-400">QR:</span> 
+                             <code className="text-gray-500 dark:text-gray-400 font-mono text-xs">{r.qr_token.substring(0,8)}...</code>
                         </div>
-                        <div className="text-xs font-bold text-green-700 dark:text-green-400">
-                            Cpn: {r.coupon_code}
+                        <div className="flex items-center gap-2">
+                            <Ticket className="h-3.5 w-3.5 text-green-500" />
+                            {r.coupon_code && r.coupon_code !== '-' ? (
+                                <span className="text-sm font-mono font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-900/30">
+                                    {r.coupon_code}
+                                    {r.discount_value ? <span className="ml-1 opacity-80 text-xs">(₹{r.discount_value})</span> : ''}
+                                </span>
+                            ) : (
+                                <span className="text-gray-400 text-sm">—</span>
+                            )}
+                            {r.coupon_status && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wide font-medium ${
+                                    r.coupon_status === 'redeemed' || r.coupon_status === 'claimed'
+                                        ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' 
+                                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                }`}>
+                                    {r.coupon_status}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </td>
