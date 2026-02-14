@@ -57,6 +57,9 @@ function ConfigItem({ label, value, icon: Icon }: any) {
 export default async function CampaignDetailsPage({ params }: PageProps) {
   const supabase = getSupabaseAdmin();
   const { id } = params;
+  const campaignId = id?.trim();
+  
+  console.log("Campaign page rendering with ID:", campaignId); // DEBUG LOG
 
   // Use Promise.all for parallel fetching
   const [
@@ -66,26 +69,24 @@ export default async function CampaignDetailsPage({ params }: PageProps) {
     uniqueUsersRes
   ] = await Promise.all([
     // 1. Campaign Details
-    supabase.from('campaigns').select('*').eq('id', id).single(),
+    supabase.from('campaigns').select('*').eq('id', campaignId).maybeSingle(),
     
     // 2. Total QR Generated (count from bottles)
-    supabase.from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', id),
+    supabase.from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId),
 
     // 3. Total Redemptions (count from redemptions)
-    supabase.from('redemptions').select('*', { count: 'exact', head: true }).eq('campaign_id', id),
+    supabase.from('redemptions').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId),
     
-    // 4. Unique Users (count distinct user_id from redemptions)
-    // Note: Supabase count with distinct requires a different approach or raw query if using simple client.
-    // However, for simplicity and since we want a quick specific count, we can use a workaround or RPC if needed.
-    // But standard postgrest doesn't do distinct count easily in one go.
-    // Let's fetch just the user_ids and count in memory if the dataset is small? 
-    // Or better, let's use the .select('user_id') and handle it.
-    // Given requirements say "Use server-side data fetching", we can process.
-    // Optimization: If many rows, RPC is better. For now, assuming reasonable scale or use head:false for Unique.
-    supabase.from('redemptions').select('user_id').eq('campaign_id', id)
+    // 4. Unique Users
+    supabase.from('redemptions').select('user_id').eq('campaign_id', campaignId)
   ]);
 
-  if (campaignRes.error || !campaignRes.data) {
+  if (campaignRes.error) {
+    console.error("Campaign fetch error:", campaignRes.error);
+  }
+
+  if (!campaignRes.data) {
+    console.error("Campaign not found for ID:", campaignId);
     return notFound();
   }
 
