@@ -38,8 +38,8 @@ export default function CampaignsPage() {
     <div className="max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-            <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage your marketing campaigns here.</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Campaigns</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your marketing campaigns here.</p>
         </div>
         <Link href="/admin/campaigns/new">
             <Button className="w-full sm:w-auto shadow-sm">

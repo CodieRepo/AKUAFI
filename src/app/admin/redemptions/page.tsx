@@ -1,123 +1,186 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2 } from 'lucide-react';
-
-interface Redemption {
-  id: string;
-  qr_token: string;
-  campaign_name: string;
-  phone: string;
-  coupon_code: string;
-  redeemed_at: string;
-}
+import { Loader2, Search, Filter, Calendar as CalendarIcon, RefreshCw, Smartphone, QrCode } from 'lucide-react';
+import RedemptionTable, { Redemption } from '@/components/admin/redemptions/RedemptionTable';
+import { StatCard } from '@/components/admin/ui/StatCard';
+import { Button } from '@/components/ui/Button';
 
 export default function RedemptionsPage() {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    async function fetchRedemptions() {
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<'all' | 'today' | '7days'>('all');
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+
+  // Fetch Data Function
+  const fetchRedemptions = async (silent = false) => {
+      if (!silent) setLoading(true);
+      else setIsRefreshing(true);
+
       try {
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
+        
         const res = await fetch('/api/admin/redemptions', {
             headers: { Authorization: `Bearer ${session.access_token}` }
         });
+        
         if (res.ok) {
-            setRedemptions(await res.json());
+            const data = await res.json();
+            setRedemptions(data);
         }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
+        else setIsRefreshing(false);
       }
-    }
+  };
+
+  // Initial Fetch & Auto Refresh
+  useEffect(() => {
     fetchRedemptions();
+
+    const interval = setInterval(() => {
+        fetchRedemptions(true);
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
-  // Calculate stats
-  const totalScans = redemptions.length;
-  const uniqueUsers = new Set(redemptions.map(r => r.phone)).size;
+  // Filter Logic
+  const filteredData = useMemo(() => {
+    let filtered = redemptions;
+
+    // 1. Search (Name, Phone, QR, Coupon)
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(r => 
+            r.phone?.includes(q) || 
+            r.campaign_name?.toLowerCase().includes(q) ||
+            r.qr_token?.toLowerCase().includes(q) ||
+            r.coupon_code?.toLowerCase().includes(q)
+        );
+    }
+
+    // 2. Campaign Filter
+    if (selectedCampaign !== 'all') {
+        filtered = filtered.filter(r => r.campaign_name === selectedCampaign);
+    }
+
+    // 3. Date Range
+    if (dateRange !== 'all') {
+        const now = new Date();
+        const todayStart = new Date(now.setHours(0,0,0,0));
+        
+        filtered = filtered.filter(r => {
+            const rDate = new Date(r.redeemed_at);
+            if (dateRange === 'today') return rDate >= todayStart;
+            if (dateRange === '7days') {
+                const sevenDaysAgo = new Date(todayStart);
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                return rDate >= sevenDaysAgo;
+            }
+            return true;
+        });
+    }
+
+    return filtered;
+  }, [redemptions, searchQuery, selectedCampaign, dateRange]);
+
+  // Derived Stats
+  const totalScans = filteredData.length;
+  const uniqueUsers = new Set(filteredData.map(r => r.phone)).size;
+  // Unique campaigns for filter dropdown
+  const campaigns = Array.from(new Set(redemptions.map(r => r.campaign_name))).filter(Boolean).sort();
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Redemptions Monitor</h1>
-        <p className="text-gray-500 mt-1">Real-time view of successful coupon claims.</p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Redemptions Monitor</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
+                Real-time view of coupon claims.
+                {isRefreshing && <span className="text-xs text-blue-500 flex items-center animate-pulse"><RefreshCw className="h-3 w-3 mr-1 animate-spin" /> Syncing...</span>}
+            </p>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => fetchRedemptions()} disabled={isRefreshing || loading} className="dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+            </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center">
-                <span className="text-gray-500 text-sm font-medium">Total Redemptions</span>
-                <span className="text-3xl font-bold text-gray-900 mt-2">{totalScans}</span>
-           </div>
-           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center">
-                <span className="text-gray-500 text-sm font-medium">Unique Users</span>
-                <span className="text-3xl font-bold text-blue-600 mt-2">{uniqueUsers}</span>
-           </div>
-           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center text-center">
-                <span className="text-gray-500 text-sm font-medium">Recent Activity</span>
-                <span className="text-sm font-medium text-green-600 mt-3 bg-green-50 px-3 py-1 rounded-full">Live Monitoring</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <StatCard label="Total Redemptions" value={totalScans} icon={<QrCode className="h-5 w-5"/>} loading={loading} />
+           <StatCard label="Unique Users" value={uniqueUsers} icon={<Smartphone className="h-5 w-5"/>} loading={loading} />
+           <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl shadow-sm border border-green-100 dark:border-green-800/30 flex flex-col items-center justify-center text-center">
+                <span className="text-green-700 dark:text-green-400 font-semibold mb-2 flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    Live System
+                </span>
+                <p className="text-xs text-green-600 dark:text-green-500">Auto-refreshing every 10s</p>
            </div>
       </div>
       
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
-        {loading ? (
-            <div className="flex flex-col items-center justify-center p-20 text-gray-500">
-                <Loader2 className="h-8 w-8 animate-spin mb-4 text-blue-500" /> 
-                <p>Syncing redemptions...</p>
+      {/* Filters Bar */}
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input 
+                    type="text" 
+                    placeholder="Search phone, campaign, code..." 
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </div>
-        ) : redemptions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
-                    <Loader2 className="h-8 w-8" />
+            
+            <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                <select 
+                    className="h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-gray-300"
+                    value={selectedCampaign}
+                    onChange={(e) => setSelectedCampaign(e.target.value)}
+                >
+                    <option value="all">All Campaigns</option>
+                    {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+
+                <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+                    <button 
+                        onClick={() => setDateRange('all')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRange === 'all' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                    >
+                        All Time
+                    </button>
+                    <button 
+                        onClick={() => setDateRange('7days')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRange === '7days' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                    >
+                        7 Days
+                    </button>
+                    <button 
+                        onClick={() => setDateRange('today')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRange === 'today' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                    >
+                        Today
+                    </button>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">No redemptions yet</h3>
-                <p className="text-gray-500 mt-2 max-w-sm">Scan a generated QR code with a phone to test the flow.</p>
             </div>
-        ) : (
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50/50 text-gray-500 border-b border-gray-100 uppercase text-xs tracking-wider">
-                        <tr>
-                            <th className="px-6 py-4 font-semibold">Time</th>
-                            <th className="px-6 py-4 font-semibold">Campaign</th>
-                            <th className="px-6 py-4 font-semibold">User</th>
-                            <th className="px-6 py-4 font-semibold">Details</th>
-                            <th className="px-6 py-4 font-semibold text-right">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {redemptions.map((r) => (
-                            <tr key={r.id + r.qr_token} className="hover:bg-blue-50/30 transition-colors">
-                                <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                                    {new Date(r.redeemed_at).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
-                                </td>
-                                <td className="px-6 py-4 font-medium text-gray-900">{r.campaign_name}</td>
-                                <td className="px-6 py-4">
-                                    <div className="font-medium text-gray-900">{r.phone}</div>
-                                    <div className="text-xs text-gray-400">Verified</div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 inline-block mb-1">QR: {r.qr_token.substring(0,8)}...</code>
-                                    <div className="text-xs font-bold text-green-700">Cpn: {r.coupon_code}</div>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                        Redeemed
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        )}
       </div>
+
+      <RedemptionTable redemptions={filteredData} loading={loading && !isRefreshing} />
     </div>
   );
 }
