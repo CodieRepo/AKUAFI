@@ -8,9 +8,7 @@ import {
 } from 'lucide-react';
 import DeleteCampaignButton from '@/components/admin/campaign/DeleteCampaignButton';
 
-interface PageProps {
-  params: { id: string };
-}
+
 
 // FORMATTER: UTC -> Update to show localized time
 function formatDate(dateStr: string | null) {
@@ -54,10 +52,12 @@ function ConfigItem({ label, value, icon: Icon }: any) {
 }
 
 // MAIN COMPONENT
-export default async function CampaignDetailsPage({ params }: PageProps) {
-  const supabase = getSupabaseAdmin();
-  const { id } = params;
+export default async function CampaignDetailsPage(
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const campaignId = id?.trim();
+  const supabase = getSupabaseAdmin();
   
   console.log("Campaign page rendering with ID:", campaignId); // DEBUG LOG
 
