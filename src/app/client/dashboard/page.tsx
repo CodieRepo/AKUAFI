@@ -13,6 +13,7 @@ import PremiumStatCard from "@/components/dashboard/PremiumStatCard";
 import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
 import MiniScanChart from "@/components/dashboard/MiniScanChart";
 import AISummaryCard from "@/components/dashboard/AISummaryCard";
+import GeneratedCouponsList from "@/components/dashboard/coupons/GeneratedCouponsList";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-IN', {
@@ -59,16 +60,24 @@ export default async function ClientDashboard() {
   const [
       { data: summaryData },
       { data: recentActivityData },
-      { data: weeklyScansData }
+      { data: weeklyScansData },
+      { data: generatedCouponsData }
   ] = await Promise.all([
       supabase.from("client_campaign_summary").select("*").eq("client_id", client.id),
       supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
-      supabase.from("client_weekly_scans").select("*").eq("client_id", client.id)
+      supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
+      supabase
+        .from("client_coupons")
+        .select("*")
+        .eq("client_id", client.id)
+        .order("generated_at", { ascending: false })
+        .limit(50)
   ]);
 
   const campaigns = summaryData || [];
   const recentActivity = recentActivityData || [];
   const weeklyScans = weeklyScansData || [];
+  const generatedCoupons = (generatedCouponsData as any[]) || [];
 
   // 3. Metrics Aggregation
   // Calculate totals from summary view
@@ -424,6 +433,9 @@ export default async function ClientDashboard() {
                             )}
                          </div>
                     </div>
+                    
+                    {/* Generated Coupons List */}
+                    <GeneratedCouponsList coupons={generatedCoupons} />
                 </div>
 
                 {/* RIGHT: Verify & Quick Insights (1 Col) */}
