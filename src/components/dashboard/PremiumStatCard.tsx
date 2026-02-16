@@ -27,15 +27,32 @@ const iconMap: Record<StatIconType, LucideIcon> = {
   revenue: IndianRupee
 };
 
+const colorMap: Record<StatIconType, string> = {
+  impressions: 'text-slate-400',
+  scans: 'text-cyan-400',
+  conversion: 'text-blue-400',
+  redemption: 'text-purple-400',
+  revenue: 'text-emerald-400'
+};
+
+const bgMap: Record<StatIconType, string> = {
+  impressions: 'bg-slate-500',
+  scans: 'bg-cyan-500',
+  conversion: 'bg-blue-500',
+  redemption: 'bg-purple-500',
+  revenue: 'bg-emerald-500'
+};
+
 interface PremiumStatCardProps {
   title: string;
   value: string | number;
   iconType: StatIconType;
   description?: string;
   trend?: string;
-  trendValue?: number; // >0 positive, <0 negative, 0 neutral
+  trendType?: 'up' | 'down' | 'neutral'; // Explicit trend type
   type?: 'default' | 'revenue';
   delay?: number; // animation delay
+  sparklineData?: number[]; // For revenue sparkline
 }
 
 export default function PremiumStatCard({
@@ -44,30 +61,25 @@ export default function PremiumStatCard({
   iconType,
   description,
   trend,
-  trendValue,
+  trendType,
   type = 'default',
   delay = 0,
+  sparklineData
 }: PremiumStatCardProps) {
   const [displayValue, setDisplayValue] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  // Animated Counter Effect
+  
+  // Animated Counter Effect - Runs only once
   useEffect(() => {
-    setMounted(true);
-    
     // Parse numeric value for animation
     const numericValue = typeof value === 'number' 
       ? value 
-      : parseFloat(value.toString().replace(/[^0-9.-]+/g, '')); // Strip currency symbols etc for counting
+      : parseFloat(value.toString().replace(/[^0-9.-]+/g, ''));
 
-    if (isNaN(numericValue)) {
-        // If not a number, just show it immediately or don't animate
-        return;
-    }
+    if (isNaN(numericValue)) return;
 
     let start = 0;
     const end = numericValue;
-    const duration = 1500; // 1.5s
+    const duration = 800; // 800ms as requested
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
@@ -83,92 +95,136 @@ export default function PremiumStatCard({
       }
     };
     
-    // Start animation after small delay
+    // Small delay to ensure smooth start after mount
     const timer = setTimeout(() => {
         requestAnimationFrame(animate);
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [value, delay]);
+  }, [value, delay]); // Added simple dependency check
 
-  const isRevenue = type === 'revenue';
   const Icon = iconMap[iconType] || Eye;
+  const accentColor = colorMap[iconType];
+  const accentBg = bgMap[iconType];
+  const isRevenue = type === 'revenue';
 
   const formattedDisplay = typeof value === 'string' && isNaN(parseFloat(value)) 
-      ? value // Non-numeric string, just return it
-      : typeof value === 'string' && value.includes('₹') // Crude currency check
+      ? value 
+      : typeof value === 'string' && value.includes('₹')
         ? `₹${displayValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
         : value.toString().includes('%') 
-            ? `${displayValue.toFixed(1)}%` // Percent check
-            : Math.floor(displayValue).toLocaleString(); // Default Integer
+            ? `${displayValue.toFixed(1)}%`
+            : Math.floor(displayValue).toLocaleString();
+            
+  // Sparkline SVG Logic
+  const renderSparkline = () => {
+      if (!sparklineData || sparklineData.length < 2) return null;
+      
+      const height = 40;
+      const width = 120;
+      const max = Math.max(...sparklineData, 1);
+      const min = Math.min(...sparklineData);
+      const range = max - min || 1;
+      
+      const points = sparklineData.map((d, i) => {
+          const x = (i / (sparklineData.length - 1)) * width;
+          const y = height - ((d - min) / range) * height;
+          return `${x},${y}`;
+      }).join(' ');
+
+      return (
+          <div className="absolute bottom-4 right-4 opacity-50 pointer-events-none">
+              <svg width={width} height={height} className="overflow-visible">
+                  <defs>
+                    <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.5"/>
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path 
+                    d={`M0,${height} ${points} L${width},${height} Z`} 
+                    fill="url(#gradient)" 
+                    stroke="none"
+                  />
+                  <polyline 
+                    points={points} 
+                    fill="none" 
+                    stroke="#34d399" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    className="drop-shadow-sm"
+                  />
+              </svg>
+          </div>
+      );
+  };
+
+  // Determine trend color
+  const trendColor = trendType === 'up' ? "text-emerald-400" 
+      : trendType === 'down' ? "text-red-400"
+      : "text-yellow-400"; // Neutral
+
+  const TrendIcon = trendType === 'up' ? TrendingUp 
+      : trendType === 'down' ? TrendingDown 
+      : Minus;
 
   return (
     <div 
       className={cn(
-        "relative overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group opacity-0 animate-in fade-in slide-in-from-bottom-4 fill-mode-forwards",
-        isRevenue 
-          ? "bg-gradient-to-br from-blue-700 via-indigo-700 to-indigo-900 text-white shadow-lg border border-white/10"
-          : "bg-white dark:bg-slate-900/80 backdrop-blur-md border border-gray-100 dark:border-white/10 shadow-sm hover:border-blue-500/20 dark:hover:border-blue-400/20"
+        "relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group",
+        "bg-slate-900/70 backdrop-blur-md border border-white/5 shadow-xl",
+        "opacity-0 animate-in fade-in slide-in-from-bottom-4 fill-mode-forwards"
       )}
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
     >
-      {/* Background Decor */}
+      {/* Top Accent Line */}
+      <div className={cn("absolute top-0 left-0 right-0 h-1 rounded-t-2xl", accentBg)} />
+      
+      {/* Background Glow */}
       <div className={cn(
-        "absolute -right-6 -top-6 h-32 w-32 rounded-full transition-transform duration-500 group-hover:scale-110",
-        isRevenue ? "bg-white/10" : "bg-blue-500/5 dark:bg-blue-400/5"
+        "absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-10 transition-transform duration-500 group-hover:scale-125",
+        accentBg
       )} />
 
-      <div className="relative z-10 flex justify-between items-start">
-        <div>
-           {/* Title */}
-           <p className={cn(
-             "text-sm font-medium mb-1",
-             isRevenue ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
-           )}>
-             {title}
-           </p>
+      <div className="relative z-10 flex flex-col h-full justify-between">
+        <div className="flex justify-between items-start mb-4">
+          <div className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+            <Icon className={cn("h-5 w-5", accentColor)} />
+          </div>
+          <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</span>
+        </div>
 
-           {/* Value */}
-           <h3 className={cn(
-             "font-bold tracking-tight",
-             isRevenue ? "text-3xl text-white" : "text-2xl text-gray-900 dark:text-white"
-           )}>
+        <div>
+           <h3 className="text-3xl font-bold text-white tracking-tight mb-1">
              {formattedDisplay}
            </h3>
            
-           {/* Description / Subtext */}
            {(description || trend) && (
-             <div className="mt-2 flex items-center gap-2 text-xs">
-                {trendValue !== undefined && (
+             <div className="flex items-center gap-2 text-xs relative z-20">
+                {trend && (
                    <span className={cn(
-                     "flex items-center gap-0.5 font-medium px-1.5 py-0.5 rounded-full",
-                     trendValue > 0 
-                        ? (isRevenue ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400")
-                        : trendValue < 0 
-                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                     "flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-slate-800/50 border border-slate-700/50",
+                     trendColor
                    )}>
-                      {trendValue > 0 ? <TrendingUp className="h-3 w-3" /> : trendValue < 0 ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-                      {trend}
+                      <TrendIcon className="h-3 w-3" />
+                      <span className="font-medium">{trend}</span>
                    </span>
                 )}
-                <span className={isRevenue ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}>
-                     {description}
-                </span>
+                {description && (
+                    <span className="text-slate-500 font-medium">
+                        {description}
+                    </span>
+                )}
              </div>
            )}
         </div>
-
-        {/* Icon */}
-        <div className={cn(
-          "p-3 rounded-xl transition-colors",
-          isRevenue 
-            ? "bg-white/20 text-white" 
-            : "bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-slate-700"
-        )}>
-          <Icon className="h-5 w-5" />
-        </div>
       </div>
+      
+      {/* Sparkline for Revenue */}
+      {isRevenue && sparklineData && renderSparkline()}
     </div>
   );
 }
+
+

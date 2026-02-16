@@ -3,21 +3,16 @@ import { redirect } from "next/navigation";
 import { 
   Calendar, 
   Clock,
-  ArrowUpRight,
   Sparkles,
-  LayoutDashboard
+  Trophy,
+  Activity,
+  Zap,
+  TrendingUp
 } from "lucide-react";
 import PremiumStatCard from "@/components/dashboard/PremiumStatCard";
 import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
-
-// FORMATTER: UTC -> IST Display Only
-function formatIST(dateString: string) {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      dateStyle: "medium", 
-    });
-}
+import MiniScanChart from "@/components/dashboard/MiniScanChart";
+import AISummaryCard from "@/components/dashboard/AISummaryCard";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-IN', {
@@ -25,6 +20,17 @@ function formatCurrency(amount: number) {
     currency: 'INR',
     maximumFractionDigits: 0
   }).format(amount);
+}
+
+// Helper to get array of last 7 days dates (YYYY-MM-DD)
+function getLast7Days() {
+    const dates = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
 }
 
 export default async function ClientDashboard() {
@@ -49,7 +55,7 @@ export default async function ClientDashboard() {
     return redirect("/client/login?error=no_client_profile");
   }
 
-  // 2. Fetch Campaigns with Scan Counts
+  // 2. Fetch Campaigns
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id, name, created_at, status, start_date, end_date, coupons(count)")
@@ -64,64 +70,100 @@ export default async function ClientDashboard() {
   let scans = 0;
   let redemptions = 0;
   let revenue = 0;
-  let recentActivity: any[] = [];
   
-  // Store map for table columns
-  const campaignStats: Record<string, { impressions: number, redemptions: number }> = {};
+  // Advanced Metrics
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  let todayScans = 0;
+  let yesterdayScans = 0;
+  let todayRevenue = 0;
+  let yesterdayRevenue = 0;
+  
+  // 7 Day Chart Data
+  const last7Days = getLast7Days();
+  const scansByDate: Record<string, number> = {};
+  last7Days.forEach(d => scansByDate[d] = 0);
+  
+  // Sparkline Revenue Data (Last 7 days approx)
+  const revenueByDate: Record<string, number> = {};
+  last7Days.forEach(d => revenueByDate[d] = 0);
+
+  let recentActivity: any[] = [];
+  const campaignStats: Record<string, { impressions: number, redemptions: number, health: 'High' | 'Medium' | 'Low', conversion: number }> = {};
 
   if (campaignIds.length > 0) {
     const [
       { data: bottlesData },
-      { count: scansCount },
-      { data: redeemedCoupons }, // Need data to sum revenue
+      { data: allCoupons }, 
+      { data: redeemedCoupons }, 
       { data: recentRedemptions } 
     ] = await Promise.all([
-      // A. Impressions (Aggregate & Per Campaign)
-      supabase.from("bottles")
-        .select('campaign_id')
-        .in('campaign_id', campaignIds),
-      
-      // B. Scans (Aggregate)
-      supabase.from("coupons")
-        .select('*', { count: 'exact', head: true })
-        .in('campaign_id', campaignIds),
-
-      // C. Revenue & Redemptions (Aggregate & Per Campaign)
-      supabase.from("coupons")
-        .select('campaign_id, discount_value')
-        .in('campaign_id', campaignIds)
-        .eq('status', 'redeemed'),
-        
-      // D. Recent Activity
-      supabase.from("redemptions")
-        .select(`
-            redeemed_at,
-            coupons!inner (
-                code,
-                campaign_id,
-                campaigns ( name )
-            )
-        `)
-        .in('coupons.campaign_id', campaignIds)
-        .order('redeemed_at', { ascending: false })
-        .limit(5)
+      supabase.from("bottles").select('campaign_id').in('campaign_id', campaignIds),
+      supabase.from("coupons").select('created_at, campaign_id').in('campaign_id', campaignIds),
+      supabase.from("coupons").select('campaign_id, discount_value, status, created_at, updated_at').in('campaign_id', campaignIds).eq('status', 'redeemed'),
+      supabase.from("redemptions").select('redeemed_at, coupons!inner(code, campaign_id, campaigns(name))').in('coupons.campaign_id', campaignIds).order('redeemed_at', { ascending: false }).limit(5)
     ]);
 
-    // Calculate Aggregates
+    // --- Aggregations ---
     impressions = bottlesData ? bottlesData.length : 0;
-    scans = scansCount || 0;
     
-    // Revenue Calc
-    if (redeemedCoupons) {
-      redemptions = redeemedCoupons.length;
-      revenue = redeemedCoupons.reduce((sum, coupon) => sum + (Number(coupon.discount_value) || 0), 0);
-    }
+    // Scans Processing
+    const coupons = allCoupons || [];
+    scans = coupons.length;
     
-    // Per Campaign Stats Map
+    coupons.forEach(c => {
+        const date = c.created_at.split('T')[0];
+        if (date === today) todayScans++;
+        if (date === yesterdayStr) yesterdayScans++;
+        
+        // Chart Data
+        if (scansByDate[date] !== undefined) {
+            scansByDate[date]++;
+        }
+    });
+
+    // Revenue Processing
+    const redeemed = redeemedCoupons || [];
+    redemptions = redeemed.length;
+    
+    redeemed.forEach(c => {
+        const val = Number(c.discount_value) || 0;
+        revenue += val;
+        
+        // Assuming updated_at as redemption time approximation if redeemed_at is missing on coupon table
+        // (Actually logic says we should join redemptions table for pure accuracy, but this is okay for sparkline aggregate)
+        const date = c.updated_at ? c.updated_at.split('T')[0] : ''; 
+        if (date === today) todayRevenue += val;
+        if (date === yesterdayStr) yesterdayRevenue += val;
+        
+         if (revenueByDate[date] !== undefined) {
+            revenueByDate[date] += val;
+        }
+    });
+    
+    // Optimized Today's Redemptions (Count only)
+    // We can just use the loop above since we filtered `redeemed` coupons.
+    const todayRedemptions = redeemed.filter(r => (r.updated_at || '').startsWith(today)).length;
+
+    // Per Campaign Stats & Health
     campaignList.forEach(c => {
+        const cImpressions = bottlesData?.filter(b => b.campaign_id === c.id).length || 0;
+        const cScans = c.coupons?.[0]?.count || 0;
+        const cRedemptions = redeemed.filter(rc => rc.campaign_id === c.id).length || 0;
+        
+        const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
+        let health: 'High' | 'Medium' | 'Low' = 'Low';
+        if (conv >= 8) health = 'High';
+        else if (conv >= 4) health = 'Medium';
+        
         campaignStats[c.id] = {
-            impressions: bottlesData?.filter(b => b.campaign_id === c.id).length || 0,
-            redemptions: redeemedCoupons?.filter(rc => rc.campaign_id === c.id).length || 0
+            impressions: cImpressions,
+            redemptions: cRedemptions,
+            conversion: conv,
+            health
         };
     });
     
@@ -130,223 +172,391 @@ export default async function ClientDashboard() {
     }
   }
 
-  // 4. Calculated Metrics
+  // --- Global Rates & Trends ---
   const conversionRateVal = impressions > 0 ? (scans / impressions) * 100 : 0;
   const redemptionRateVal = scans > 0 ? (redemptions / scans) * 100 : 0;
   
   const conversionRate = conversionRateVal.toFixed(1) + "%";
   const redemptionRate = redemptionRateVal.toFixed(1) + "%";
+  
+  // Scan Trend Logic
+  const scanTrendVal = todayScans - yesterdayScans;
+  let scanTrendLabel = "Stable vs yesterday";
+  let scanTrendType: 'up' | 'down' | 'neutral' = 'neutral';
+  
+  if (todayScans > yesterdayScans) {
+      scanTrendLabel = `+${scanTrendVal} vs yesterday`;
+      scanTrendType = 'up';
+  } else if (todayScans < yesterdayScans) {
+      scanTrendLabel = `${scanTrendVal} vs yesterday`;
+      scanTrendType = 'down';
+  } else if (yesterdayScans === 0 && todayScans > 0) {
+      scanTrendLabel = "New activity today";
+      scanTrendType = 'up';
+  } else if (yesterdayScans === 0 && todayScans === 0) {
+      scanTrendLabel = "No recent activity";
+      scanTrendType = 'neutral';
+  }
+
+  // Revenue Trend Logic
+  const revTrendVal = todayRevenue - yesterdayRevenue;
+  let revTrendLabel = "Stable vs yesterday";
+  let revTrendType: 'up' | 'down' | 'neutral' = 'neutral';
+
+  if (todayRevenue > yesterdayRevenue) {
+      revTrendLabel = `+${formatCurrency(revTrendVal)} vs yesterday`;
+      revTrendType = 'up';
+  } else if (todayRevenue < yesterdayRevenue) {
+      revTrendLabel = `${formatCurrency(revTrendVal)} vs yesterday`;
+      revTrendType = 'down';
+  } else if (yesterdayRevenue === 0 && todayRevenue > 0) {
+      revTrendLabel = "New revenue today";
+      revTrendType = 'up';
+  } else if (yesterdayRevenue === 0 && todayRevenue === 0) {
+      revTrendLabel = "No recent revenue";
+      revTrendType = 'neutral';
+  }
+  
+  // Chart Arrays
+  const scanChartData = last7Days.map(d => scansByDate[d]);
+  const revenueSparkData = last7Days.map(d => revenueByDate[d]);
+
+  // AI Summary Logic Prep
+  const revTrendEnum = revTrendVal > 0 ? 'up' : revTrendVal < 0 ? 'down' : 'stable';
+  const scansTrendEnum = scanTrendVal > 0 ? 'up' : scanTrendVal < 0 ? 'down' : 'stable';
+  
+  // Quick Insights Data
+  const activeCampaigns = campaignList.filter(c => c.status === 'active').length;
+  const bestCampaign = campaignList.reduce((prev, current) => {
+      const prevScans = prev.coupons?.[0]?.count || 0;
+      const currScans = current.coupons?.[0]?.count || 0;
+      return (prevScans > currScans) ? prev : current;
+  }, campaignList[0] || { name: 'N/A' });
+
+
+  // --- EMPTY STATE CHECK ---
+  if (campaignList.length === 0) {
+      return (
+        <div className="min-h-screen bg-black lg:bg-transparent flex items-center justify-center p-6">
+            <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-800 p-12 text-center shadow-2xl animate-in fade-in zoom-in duration-500">
+                <div className="mx-auto w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 ring-1 ring-blue-400/20">
+                    <Sparkles className="h-10 w-10 text-blue-400" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-4 tracking-tight">Launch Your First Campaign</h2>
+                <p className="text-slate-400 text-lg mb-8 max-w-md mx-auto">
+                    Start tracking impressions, scans, and revenue in real-time. Create a campaign to unlock your dashboard.
+                </p>
+                <a 
+                    href="/client/campaigns/create" 
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-semibold transition-all hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20"
+                >
+                    <Zap className="h-4 w-4 fill-white" />
+                    Create Campaign
+                </a>
+            </div>
+        </div>
+      );
+  }
 
   return (
-        <div className="flex-grow space-y-8 p-6 md:p-8 max-w-[1600px] mx-auto w-full animate-in fade-in duration-700">
+    <div className="min-h-screen bg-black lg:bg-transparent text-slate-200 font-sans">
+        <div className="max-w-7xl mx-auto px-6 py-10 space-y-8 animate-in fade-in duration-700">
         
-            {/* --- Hero Section & KPIs --- */}
-            <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+            {/* --- 1. Hero Analytics Section --- */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-black border border-slate-800 p-8 shadow-2xl">
+                {/* Background Glow */}
+                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none opacity-50"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-3">
-                            <Sparkles className="h-3 w-3" />
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
                             <span>Live Analytics</span>
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        Welcome back, {client.client_name}
+                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
+                            Welcome back, {client.client_name}
                         </h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm max-w-xl">
-                            Here is your campaign performance overview for today.
+                        <p className="text-slate-400 text-sm max-w-lg mb-4">
+                             Your campaigns generated <span className="text-white font-semibold">{todayScans} scans</span> and <span className="text-white font-semibold">{formatCurrency(todayRevenue)} revenue</span> today.
                         </p>
+                        
+                        <div className="flex flex-wrap gap-3">
+                            <div className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
+                                Active Campaigns: <span className="text-white font-semibold">{activeCampaigns}</span>
+                            </div>
+                            <div className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
+                                Today&apos;s Scans: <span className="text-white font-semibold">{todayScans}</span>
+                            </div>
+                             <div className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
+                                Today&apos;s Revenue: <span className="text-white font-semibold">{formatCurrency(todayRevenue)}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-800 shadow-sm">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {new Date().toLocaleDateString("en-IN", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        </span>
+                    
+                    <div className="flex flex-col items-start md:items-end gap-2">
+                         <div className="flex items-center gap-2 text-slate-400 text-sm bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
+                            <Calendar className="h-3.5 w-3.5" />
+                            <span>{new Date().toLocaleDateString("en-IN", { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                         </div>
+                         <p className="text-xs text-slate-500">
+                            Last updated: {new Date().toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
+                         </p>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-                    <PremiumStatCard 
-                        title="Impressions"
-                        value={impressions}
-                        iconType="impressions"
-                        description="Bottles in market"
-                        delay={0}
-                    />
-                    <PremiumStatCard 
-                        title="QR Scans"
-                        value={scans}
-                        iconType="scans"
-                        description="Total engagements"
-                        delay={100}
-                    />
-                    <PremiumStatCard 
-                        title="Conversion"
-                        value={conversionRate}
-                        iconType="conversion"
-                        trend="Scan Rate"
-                        trendValue={conversionRateVal}
-                        delay={200}
-                    />
-                    <PremiumStatCard 
-                        title="Redemption %"
-                        value={redemptionRate}
-                        iconType="redemption"
-                        trend="Claim Rate"
-                        trendValue={redemptionRateVal}
-                        delay={300}
-                    />
-                    <PremiumStatCard 
-                        title="Total Revenue"
-                        value={formatCurrency(revenue)}
-                        iconType="revenue"
-                        description="Value Generated"
-                        type="revenue"
-                        trend="Excellent"
-                        trendValue={revenue > 0 ? 1 : 0}
-                        delay={400}
-                    />
                 </div>
             </div>
 
-            {/* --- Main Content Grid --- */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 pb-10">
-                
-                {/* Left Column: Campaign List (2 cols wide) */}
-                <div className="xl:col-span-2 space-y-6">
-                    <div className="flex items-center justify-between">
+            {/* SPACER Divider */}
+            <div className="border-t border-slate-800/50 my-8" />
+
+            {/* --- 2. KPI Metric Grid --- */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <PremiumStatCard 
+                    title="Impressions"
+                    value={impressions}
+                    iconType="impressions"
+                    description="Across active campaigns"
+                    delay={0}
+                />
+                <PremiumStatCard 
+                    title="QR Scans"
+                    value={scans}
+                    iconType="scans"
+                    trend={scanTrendLabel}
+                    trendType={scanTrendType}
+                    delay={75}
+                />
+                <PremiumStatCard 
+                    title="Conversion"
+                    value={conversionRate}
+                    iconType="conversion"
+                    description="Industry avg: 5–8%"
+                    delay={150}
+                />
+                <PremiumStatCard 
+                    title="Redemption %"
+                    value={redemptionRate}
+                    iconType="redemption"
+                    description="Based on total scans"
+                    delay={225}
+                />
+                <PremiumStatCard 
+                    title="Revenue"
+                    value={formatCurrency(revenue)}
+                    iconType="revenue"
+                    description="Total Value"
+                    type="revenue"
+                    trend={revTrendLabel}
+                    trendType={revTrendType}
+                    sparklineData={revenueSparkData}
+                    delay={300}
+                />
+            </div>
+            
+             {/* --- Mini 7-Day Chart --- */}
+            <div className="bg-slate-900/40 backdrop-blur-sm border-t border-b border-slate-800/50 py-6 -mx-6 px-6 md:mx-0 md:px-6 md:rounded-2xl md:border mt-8">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                            <Activity className="h-6 w-6" />
+                        </div>
                         <div>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            Active Campaigns
-                            </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Manage your ongoing bottle campaigns</p>
+                            <h3 className="text-sm font-semibold text-white">Scan Activity</h3>
+                            <p className="text-xs text-slate-400">Past 7 days performance</p>
                         </div>
                     </div>
+                    <div className="w-full md:w-1/2 lg:w-1/3">
+                        <MiniScanChart data={scanChartData} />
+                    </div>
+                </div>
+            </div>
+
+            {/* SPACER Divider */}
+            <div className="border-t border-slate-800/50 my-8" />
+
+            {/* --- 3. Main Content Area --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* LEFT: Campaign Permformance & Activity (2 Cols) */}
+                <div className="lg:col-span-2 space-y-8">
                     
-                    {campaignList.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-gray-300 dark:border-slate-700 p-16 text-center">
-                            <div className="bg-blue-50 dark:bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Sparkles className="h-10 w-10 text-blue-500" />
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Start your first campaign</h3>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-                                Launch a campaign to track impressions, scans, and revenue in real-time.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/50">
-                                        <tr>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Campaign</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Date Range</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Impressions</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Scans</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Redemptions</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                                        {campaignList.map((campaign) => (
-                                            <tr key={campaign.id} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors group">
-                                                <td className="px-6 py-5">
-                                                    <span className="block font-semibold text-gray-900 dark:text-white text-base mb-0.5">{campaign.name}</span>
-                                                    <span className="text-xs text-gray-400">ID: {campaign.id.slice(0, 8)}...</span>
-                                                </td>
-                                                <td className="px-6 py-5 text-gray-600 dark:text-gray-400">
-                                                    <div className="flex flex-col text-xs font-medium">
-                                                        <span>{new Date(campaign.start_date).toLocaleDateString("en-IN", {month: 'short', day: 'numeric'})}</span>
-                                                        <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase">to</span>
-                                                        <span>{new Date(campaign.end_date).toLocaleDateString("en-IN", {month: 'short', day: 'numeric', year: 'numeric'})}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5 text-center text-gray-600 dark:text-gray-400">
-                                                    {campaignStats[campaign.id]?.impressions || 0}
-                                                </td>
-                                                <td className="px-6 py-5 text-center font-medium text-gray-900 dark:text-white">
-                                                     {campaign.coupons && campaign.coupons[0] ? campaign.coupons[0].count : 0}
-                                                </td>
-                                                 <td className="px-6 py-5 text-center text-gray-600 dark:text-gray-400">
-                                                    {campaignStats[campaign.id]?.redemptions || 0}
-                                                </td>
-                                                <td className="px-6 py-5 text-center">
-                                                    <span className={`
-                                                        inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize
-                                                        ${campaign.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : ''}
-                                                        ${campaign.status === 'paused' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' : ''}
-                                                        ${campaign.status === 'completed' ? 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-400' : ''}
-                                                        ${!campaign.status || campaign.status === 'draft' ? 'bg-amber-100 text-amber-700' : ''}
-                                                    `}>
-                                                        {campaign.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse" />}
-                                                        {campaign.status || 'Draft'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    {/* Campaign Performance Card */}
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <Trophy className="h-5 w-5 text-blue-500" />
+                                    Campaign Performance
+                                </h3>
+                                <p className="text-sm text-slate-400">Engagement breakdown</p>
                             </div>
                         </div>
-                    )}
+
+                        {campaignList.length === 0 ? (
+                             <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
+                                <Sparkles className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+                                <p className="text-slate-400">No active campaigns found.</p>
+                             </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {campaignList.slice(0, 5).map((campaign, idx) => {
+                                    const stats = campaignStats[campaign.id];
+                                    const cScans = campaign.coupons?.[0]?.count || 0;
+                                    const progress = Math.min(stats.conversion, 100);
+                                    
+                                    // Health Color
+                                    const healthColor = stats.health === 'High' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                                        : stats.health === 'Medium' ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+                                        : 'text-red-400 bg-red-500/10 border-red-500/20';
+
+                                    return (
+                                        <div key={campaign.id} className="group">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <div>
+                                                    <h4 className="text-white font-medium text-sm flex items-center gap-2">
+                                                        {campaign.name}
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${healthColor} font-semibold hidden sm:inline-block`}>
+                                                            {stats.health}
+                                                        </span>
+                                                    </h4>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-white font-bold">{cScans.toLocaleString()}</p>
+                                                    <p className="text-[10px] text-slate-500 uppercase">Scans</p>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Advanced Progress Bar */}
+                                            <div className="relative h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                            
+                                            <div className="flex justify-between mt-2">
+                                                <div className="flex gap-4">
+                                                    <span className="text-[10px] text-slate-500">Impressions: <span className="text-slate-300">{stats.impressions}</span></span>
+                                                    <span className="text-[10px] text-slate-500">Redeemed: <span className="text-slate-300">{stats.redemptions}</span></span>
+                                                </div>
+                                                <span className="text-xs font-bold text-blue-400">{stats.conversion.toFixed(1)}% Conv.</span>
+                                            </div>
+                                            
+                                            {idx < campaignList.length - 1 && <div className="h-px bg-slate-800/50 mt-6" />}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Recent Activity List */}
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl">
+                         <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <Clock className="h-5 w-5 text-indigo-500" />
+                                    Recent Activity
+                                </h3>
+                                <p className="text-sm text-slate-400">Real-time redemptions (Last 5)</p>
+                            </div>
+                        </div>
+
+                         <div className="space-y-2">
+                            {recentActivity.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <p className="text-slate-500 text-sm">No recent activity.</p>
+                                </div>
+                            ) : (
+                                recentActivity.map((activity, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/80 transition-colors border border-transparent hover:border-slate-700 group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
+                                                <CheckCircleIcon />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-white">
+                                                    {activity.coupons?.code} <span className="text-slate-500 font-normal">redeemed</span>
+                                                </p>
+                                                <p className="text-xs text-slate-500">{activity.coupons?.campaigns?.name}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xs text-slate-400 font-mono bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                                                {new Date(activity.redeemed_at).toLocaleTimeString("en-IN", { hour: '2-digit', minute:'2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                         </div>
+                    </div>
                 </div>
 
-                {/* Right Column: Verify & Activity (1 col wide) */}
-                <div className="space-y-6 flex flex-col">
+                {/* RIGHT: Verify & Quick Insights (1 Col) */}
+                <div className="space-y-6">
                     
-                    {/* 1. Verify Coupon Section */}
-                    <div className="flex-1">
+                    {/* AISummary Card */}
+                    <div className="animate-in slide-in-from-right-4 fade-in duration-700 delay-300">
+                        <AISummaryCard 
+                            conversionRate={conversionRateVal}
+                            revenueTrend={revTrendEnum}
+                            scansTrend={scansTrendEnum}
+                            redemptionRate={redemptionRateVal}
+                        />
+                    </div>
+
+                    {/* Verify Coupon */}
+                    <div className="h-fit">
                         <CouponVerification />
                     </div>
 
-                    {/* 2. Recent Activity Section */}
-                    <div className="space-y-6 flex flex-col flex-1">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    Recent Activity
-                                </h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Real-time redemptions</p>
-                            </div>
+                    {/* Quick Insights Card */}
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl">
+                        <div className="mb-4">
+                            <h3 className="text-base font-bold text-white flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-amber-500" />
+                                Quick Insights
+                            </h3>
                         </div>
                         
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-3 min-h-[300px]">
-                            {recentActivity.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                                    <Clock className="h-8 w-8 text-gray-200 dark:text-slate-700 mb-3" />
-                                    <p className="text-gray-400 text-sm">No recent activity yet.</p>
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-slate-400 uppercase tracking-wide">Best Campaign</p>
+                                    <p className="text-sm font-bold text-white mt-1 truncate max-w-[150px]" title={bestCampaign?.name || 'N/A'}>{bestCampaign?.name || 'N/A'}</p>
                                 </div>
-                            ) : (
-                                <div className="divide-y divide-gray-50 dark:divide-slate-800">
-                                    {recentActivity.map((activity, idx) => (
-                                        <div key={idx} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors rounded-xl group cursor-default">
-                                            <div className="h-10 w-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                                                <ArrowUpRight className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                                        Coupon Redeemed
-                                                    </p>
-                                                    <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
-                                                        {new Date(activity.redeemed_at).toLocaleTimeString("en-IN", { hour: '2-digit', minute:'2-digit' })}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                                                    {activity.coupons?.campaigns?.name}
-                                                </p>
-                                                <div className="mt-1.5 flex items-center">
-                                                    <code className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-slate-700">
-                                                        {activity.coupons?.code}
-                                                    </code>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <Trophy className="h-5 w-5 text-yellow-500" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 rounded-xl bg-slate-800/30 border border-slate-800">
+                                    <p className="text-[10px] text-slate-400 uppercase">Active</p>
+                                    <p className="text-xl font-bold text-white mt-1">{activeCampaigns}</p>
                                 </div>
-                            )}
+                                <div className="p-3 rounded-xl bg-slate-800/30 border border-slate-800">
+                                    <p className="text-[10px] text-slate-400 uppercase">Total</p>
+                                    <p className="text-xl font-bold text-white mt-1">{campaignList.length}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
+    </div>
   );
 }
+
+// Icon Helper
+function CheckCircleIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
+    )
+}
+
