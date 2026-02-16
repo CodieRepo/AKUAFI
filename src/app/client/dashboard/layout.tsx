@@ -25,12 +25,4 @@ export default async function ClientDashboardLayout({
         {children}
     </>
   );
-
-  return (
-    <>
-        {/* Placeholder for Client Sidebar/Topbar if we had them separate, 
-            or just render children if they are included in the pages */}
-        {children}
-    </>
-  );
 }
