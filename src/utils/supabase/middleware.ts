@@ -56,6 +56,8 @@ export async function updateSession(request: NextRequest) {
     }
 
     // 2. Logged In -> Check Admin Role
+    // We KEEP the admin role check here because the Admin Layout might not enforce it strictly enough
+    // or to prevent "flicker" of admin dashboard for non-admins.
     const { data: adminUser } = await supabase
       .from('admins')
       .select('id')
@@ -77,10 +79,7 @@ export async function updateSession(request: NextRequest) {
         await supabase.auth.signOut(); // Force signout to prevent loop
         return NextResponse.redirect(url);
       }
-      // If already on login page (likely redirected), allow it to show error
-      if (request.nextUrl.searchParams.get('error') === 'unauthorized') {
-          return response;
-      }
+      return response;
     }
 
     // 3. Logged In & Is Admin -> Redirect Login to Dashboard
@@ -90,40 +89,33 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
     
-    // Allow access to other admin routes
     return response;
   }
   
-  // Explicitly protect /api/admin if not caught above (though startsWith /admin covers it)
-  // This is a failsafe if routing logic changes
+  // Explicitly protect /api/admin for non-admin users (redundant but safe)
   if (path.startsWith('/api/admin')) {
       if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      // We already checked admin role above if it fell into /admin block, 
-      // but if we had separate logic, we'd check it here too.
+      // Role check happens in Branch 1 or via RLS/API logic if not caught there.
+      // But strictly speaking, if we are here, we are NOT in /admin path??
+      // Wait, path.startsWith('/admin') covers /api/admin??
+      // NO. /api/admin DOES NOT start with /admin. It starts with /api.
+      // So checking /api/admin here is ESSENTIAL.
+      
+      // Check Admin Role for API access outside of /admin route block
+      const { data: adminUser } = await supabase
+        .from('admins')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+        
+       if (!adminUser) {
+           return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+       }
   }
 
   // --- BRANCH 2: CLIENT/PROTECTED ROUTES ---
-  // Assuming strict separation: anything NOT /admin is Client territory.
-  // We explicitly protect "/client" routes.
-  // Public routes (/, /about, /login, etc.) are implicitly allowed unless matched here.
+  // Allow /client/*, Layout will handle role checks.
+  // Allow /login, Page will handle session guard.
   
-  if (path.startsWith('/client')) {
-    // 1. Not Logged In -> Redirect to /login
-    if (!user) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/login';
-        return NextResponse.redirect(url);
-    }
-
-    // 2. Logged In -> Allow access
-    // Note: We don't check 'users' table here strictly because any valid auth user is a client 
-    // unless you want to block admins from client routes.
-    // Ideally, admins shouldn't use client routes, but if they do, they are just "users".
-    
-    return response;
-  }
-
-  // --- BRANCH 3: PUBLIC ROUTES ---
-  // Allow everything else
   return response;
 }

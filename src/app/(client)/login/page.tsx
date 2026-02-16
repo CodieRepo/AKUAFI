@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,28 @@ export default function LoginPage() {
   const router = useRouter();
 
   const supabase = createClient();
+
+  // 0. Session Guard: Prevent logged-in users from seeing login page
+  // This interacts with the Layout/Middleware logic to ensure smoothly handling
+  // users who are already authenticated.
+  useEffect(() => {
+      const checkSession = async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+              // If already logged in, determine where to go based on role
+              // Since we can't easily check role client-side without a query, 
+              // we can try a default redirect and let Middleware/Layout handle the rest,
+              // or better yet, just go to the dashboard and let Layout redirect to / if not client.
+              // But to be safe and avoid loops if this page IS the redirect target, checking role helps.
+              
+              // For now, simpler approach: Just go to /client/dashboard. 
+              // If they are admin, Client Layout will kick them to /.
+              // If they are client, they get in.
+              router.replace('/client/dashboard');
+          }
+      };
+      checkSession();
+  }, [supabase, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +54,7 @@ export default function LoginPage() {
       }
 
       // 2. Refresh router to ensure next steps have valid session cookies
+      // This is CRITICAL for Next.js App Router to pick up the new cookie
       router.refresh();
 
       // 3. User is logged in, redirect to Client Dashboard
