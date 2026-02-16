@@ -17,15 +17,8 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.replace('/client/dashboard');
-      }
-    };
-    checkUser();
-  }, [router, supabase]);
+  // Removed auto-redirect on load to prevent loops
+  // Only redirect on explicit user action (login success)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
