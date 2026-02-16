@@ -10,8 +10,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("CLIENT LAYOUT: No user, redirecting to /login");
-    return redirect("/login");
+    console.log("CLIENT LAYOUT: No user, redirecting to /client/login");
+    return redirect("/client/login");
   }
 
   console.log("CLIENT LAYOUT: Checking role for user", user.id);
