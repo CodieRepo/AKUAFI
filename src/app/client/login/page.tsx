@@ -19,22 +19,29 @@ export default function LoginPage() {
   // This interacts with the Layout/Middleware logic to ensure smoothly handling
   // users who are already authenticated.
   useEffect(() => {
-      const checkSession = async () => {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-              // If already logged in, determine where to go based on role
-              // Since we can't easily check role client-side without a query, 
-              // we can try a default redirect and let Middleware/Layout handle the rest,
-              // or better yet, just go to the dashboard and let Layout redirect to / if not client.
-              // But to be safe and avoid loops if this page IS the redirect target, checking role helps.
-              
-              // For now, simpler approach: Just go to /client/dashboard. 
-              // If they are admin, Client Layout will kick them to /.
-              // If they are client, they get in.
-              router.replace('/client/dashboard');
-          }
-      };
-      checkSession();
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        // Check role before redirecting to prevent loops
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (roleData?.role === "client") {
+          router.replace("/client/dashboard");
+        } else if (roleData?.role === "admin") {
+          router.replace("/admin/dashboard");
+        } else {
+            // If logged in user is neither (e.g. strict mismatch), force signout so they can log in correctly
+            await supabase.auth.signOut();
+        }
+      }
+    };
+    checkSession();
   }, [supabase, router]);
 
   const handleLogin = async (e: React.FormEvent) => {

@@ -35,8 +35,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     // If user is logged in but not a client (e.g. admin trying to access client area),
     // redirect to home or their appropriate dashboard.
     // For now, redirect to root to match requirements.
-    console.log("Redirecting non-client user to root");
-    return redirect("/");
+    console.log("Redirecting non-client user to client login");
+    return redirect("/client/login?error=access_denied");
   }
 
   return (
