@@ -41,26 +41,20 @@ export default function CouponVerification() {
         }
 
         // 2. Fetch coupon with Strict Client Scoping
+        // Use client_coupons view for safe read validation
+        
+        // Normalize Code (Handle Unicode Dash)
+        const cleanCode = code.trim().replace(/[–—]/g, "-");
+
         const { data, error } = await supabase
-            .from('coupons')
-            .select(`
-                *,
-                campaigns!inner ( 
-                    name, 
-                    client_id 
-                ),
-                redemptions (
-                    redeemed_at,
-                    customer_phone
-                )
-            `)
-            .eq('code', code) 
-            .eq('campaigns.client_id', client.id) // Critical Scoping
+            .from('client_coupons')
+            .select('*')
+            .eq('client_id', client.id) 
+            .ilike('coupon_code', cleanCode) 
             .maybeSingle();
 
         if (error || !data) {
              console.error('Error verifying coupon:', error);
-             // If data is null, it might exist but belong to another client (RLS or filter would hide it)
              setStatus('invalid');
         } else {
             console.log("Coupon Data:", data);
@@ -128,7 +122,7 @@ export default function CouponVerification() {
                       <div className="space-y-1 min-w-0">
                           <p className="font-bold text-emerald-900 dark:text-emerald-100">Valid Coupon</p>
                           <div className="text-sm text-emerald-800 dark:text-emerald-300 space-y-1 mt-2">
-                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaigns?.name}</span></p>
+                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaign_name}</span></p>
                               {couponData?.discount_value && (
                                    <p><span className="opacity-70">Value:</span> <span className="font-medium">₹{couponData.discount_value}</span></p>
                               )}
@@ -145,12 +139,9 @@ export default function CouponVerification() {
                       <div className="space-y-1 min-w-0">
                           <p className="font-bold text-blue-900 dark:text-blue-100">Already Redeemed</p>
                           <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1 mt-2">
-                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaigns?.name}</span></p>
-                              {couponData?.redemptions?.[0]?.redeemed_at && (
-                                  <p><span className="opacity-70">Date:</span> <span className="font-medium">{new Date(couponData.redemptions[0].redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'short' })}</span></p>
-                              )}
-                               {couponData?.redemptions?.[0]?.customer_phone && (
-                                  <p><span className="opacity-70">Phone:</span> <span className="font-medium">{couponData.redemptions[0].customer_phone}</span></p>
+                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaign_name}</span></p>
+                              {couponData?.redeemed_at && (
+                                  <p><span className="opacity-70">Date:</span> <span className="font-medium">{new Date(couponData.redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'short' })}</span></p>
                               )}
                           </div>
                       </div>
@@ -166,7 +157,7 @@ export default function CouponVerification() {
                           <p className="font-bold text-amber-900 dark:text-amber-100">Coupon Expired</p>
                            <div className="text-sm text-amber-800 dark:text-amber-300 space-y-1 mt-2">
                               <p>This coupon is no longer active.</p>
-                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium">{couponData?.campaigns?.name}</span></p>
+                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium">{couponData?.campaign_name}</span></p>
                           </div>
                       </div>
                   </div>
