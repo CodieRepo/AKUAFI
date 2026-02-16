@@ -20,7 +20,7 @@ export default async function ClientDashboard() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return redirect("/login");
+    return redirect("/client/login");
   }
 
   // 1. Fetch Client Details

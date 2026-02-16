@@ -1,8 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { ReactNode } from "react";
 
-export default async function ClientLayout({ children }: { children: ReactNode }) {
+export default async function ClientDashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supabase = await createClient();
 
   const {
@@ -10,45 +13,33 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("CLIENT LAYOUT: No user, redirecting to /client/login");
     return redirect("/client/login");
   }
 
-  console.log("CLIENT LAYOUT: Checking role for user", user.id);
-
-  // Strict Role Check: Must be in 'user_roles' with role 'client'
-  // Note: We use the normal authenticated client, respecting RLS (if enabled)
-  // but here we are checking a specific role table content.
+  // Strict Role Check
   const { data: roleData } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
     .single();
 
-  // Temporary Debug Logging
-  console.log("CLIENT USER:", user?.id, user?.email);
-  console.log("CLIENT ROLE:", roleData);
-
-  const isClient = roleData?.role === "client";
-
-  if (!isClient) {
-    // If user is logged in but not a client (e.g. admin trying to access client area),
-    // redirect to home or their appropriate dashboard.
-    // For now, redirect to root to match requirements.
-    console.log("Redirecting non-client user to client login");
-    return redirect("/client/login?error=access_denied");
+  if (!roleData || roleData.role !== "client") {
+    // If they are an admin trying to access client area, or just a random user
+    // We redirect them to login (or maybe signout and login)
+    // To be safe and avoid infinite loops if they are admin, we simply redirect to client login.
+    // The client login page should handle "Already logged in as Admin" cases if we want to be fancy,
+    // but for now, strict isolation means we just deny access.
+    
+    // Ideally we should sign them out if they are wrong role, but server-side signout is tricky.
+    // Let's just redirect to login.
+    return redirect("/client/login?error=unauthorized");
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 
-          We might want a Sidebar or Navbar here in the future.
-          For now, keeping it minimal as per "Clean SaaS" requirement.
-          Maybe just a simple wrapper.
-      */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <>
+        {/* Placeholder for Client Sidebar/Topbar if we had them separate, 
+            or just render children if they are included in the pages */}
         {children}
-      </main>
-    </div>
+    </>
   );
 }
