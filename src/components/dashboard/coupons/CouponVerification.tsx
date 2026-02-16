@@ -62,11 +62,11 @@ export default function CouponVerification() {
         }
 
         // 2. Fetch coupon with Strict Client Scoping
-        // Use client_coupons view for safe read validation
+        // Use client_coupons view for safe read validation, but join campaigns for name if missing
         
         const { data, error } = await supabase
             .from('client_coupons')
-            .select('*')
+            .select('*, campaigns(name)')
             .eq('client_id', client.id) 
             .ilike('coupon_code', cleanCode) 
             .maybeSingle();
@@ -75,13 +75,19 @@ export default function CouponVerification() {
              console.error('Error verifying coupon:', error);
              setStatus('invalid');
         } else {
-            console.log("Coupon Data:", data);
-            setCouponData(data);
+            // Flatten campaign name if present
+            const enhancedData = {
+                ...data,
+                campaign_name: data.campaigns?.name || data.campaign_name || 'Unknown Campaign'
+            };
+
+            console.log("Coupon Data:", enhancedData);
+            setCouponData(enhancedData);
             
             // Status Logic
-            if (data.status === 'claimed') {
+            if (enhancedData.status === 'claimed') {
                 setStatus('redeemed');
-            } else if (data.status !== 'active') {
+            } else if (enhancedData.status !== 'active') {
                 setStatus('expired');
             } else {
                 setStatus('valid');
@@ -90,6 +96,38 @@ export default function CouponVerification() {
     } catch (err) {
         console.error(err);
         setStatus('invalid');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!couponData) return;
+    if (!confirm(`Are you sure you want to mark coupon ${couponData.coupon_code} as claimed?`)) return;
+
+    setLoading(true);
+    try {
+        const res = await fetch('/api/coupons/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ coupon_code: couponData.coupon_code })
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || 'Failed to claim');
+
+        // Optimistic Update
+        setCouponData({
+            ...couponData,
+            status: 'claimed',
+            redeemed_at: new Date().toISOString() // Approximate local
+        });
+        setStatus('redeemed');
+        alert("Coupon successfully marked as claimed!");
+
+    } catch (err: any) {
+        alert(err.message);
     } finally {
         setLoading(false);
     }
@@ -147,35 +185,69 @@ export default function CouponVerification() {
 
       <div className="flex-grow">
           {status === 'valid' && (
-              <div className="h-full p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-start gap-3">
-                      <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                      <div className="space-y-1 min-w-0">
-                          <p className="font-bold text-emerald-900 dark:text-emerald-100">Valid Coupon</p>
-                          <div className="text-sm text-emerald-800 dark:text-emerald-300 space-y-1 mt-2">
-                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaign_name}</span></p>
-                              {couponData?.discount_value && (
-                                   <p><span className="opacity-70">Value:</span> <span className="font-medium">₹{couponData.discount_value}</span></p>
-                              )}
-                          </div>
-                      </div>
+              <div className="h-full p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 animate-in fade-in slide-in-from-top-2 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start gap-3 mb-3">
+                        <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <div className="space-y-1 min-w-0">
+                            <p className="font-bold text-emerald-900 dark:text-emerald-100">Valid Coupon</p>
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide font-medium">Status: Active</p>
+                        </div>
+                    </div>
+                    
+                    <div className="text-sm text-emerald-800 dark:text-emerald-300 space-y-2 border-t border-emerald-200 dark:border-emerald-800/30 pt-3">
+                        <div className="flex justify-between">
+                            <span className="opacity-70">Campaign:</span> 
+                            <span className="font-medium text-right">{couponData?.campaign_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="opacity-70">Generated:</span> 
+                            <span className="font-medium text-right">{new Date(couponData.generated_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="opacity-70">Expires:</span> 
+                            <span className="font-medium text-right">{couponData.expires_at ? new Date(couponData.expires_at).toLocaleDateString() : 'Never'}</span>
+                        </div>
+                         {couponData?.discount_value > 0 && (
+                            <div className="flex justify-between">
+                                <span className="opacity-70">Value:</span> 
+                                <span className="font-medium text-right">₹{couponData.discount_value}</span>
+                            </div>
+                        )}
+                    </div>
                   </div>
+
+                  <button 
+                    onClick={handleClaim}
+                    disabled={loading}
+                    className="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+                  >
+                    {loading ? 'Processing...' : 'Mark as Claimed'}
+                  </button>
               </div>
           )}
 
           {status === 'redeemed' && (
               <div className="h-full p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 animate-in fade-in slide-in-from-top-2">
-                   <div className="flex items-start gap-3">
+                   <div className="flex items-start gap-3 mb-3">
                       <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                       <div className="space-y-1 min-w-0">
                           <p className="font-bold text-blue-900 dark:text-blue-100">Already Redeemed</p>
-                          <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1 mt-2">
-                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaign_name}</span></p>
-                              {couponData?.redeemed_at && (
-                                  <p><span className="opacity-70">Date:</span> <span className="font-medium">{new Date(couponData.redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'short' })}</span></p>
-                              )}
-                          </div>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide font-medium">Status: Claimed</p>
                       </div>
+                  </div>
+                  
+                  <div className="text-sm text-blue-800 dark:text-blue-300 space-y-2 border-t border-blue-200 dark:border-blue-800/30 pt-3">
+                        <div className="flex justify-between">
+                            <span className="opacity-70">Campaign:</span> 
+                            <span className="font-medium text-right">{couponData?.campaign_name}</span>
+                        </div>
+                        {couponData?.redeemed_at && (
+                           <div className="flex justify-between">
+                                <span className="opacity-70">Redeemed:</span> 
+                                <span className="font-medium text-right">{new Date(couponData.redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'medium' })}</span>
+                            </div>
+                        )}
                   </div>
               </div>
           )}
