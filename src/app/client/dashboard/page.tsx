@@ -2,12 +2,14 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { 
   Calendar, 
-  TrendingUp, 
   Clock,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  LayoutDashboard
 } from "lucide-react";
 import PremiumStatCard from "@/components/dashboard/PremiumStatCard";
+import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
+import SignOutButton from "@/components/dashboard/SignOutButton";
 
 // FORMATTER: UTC -> IST Display Only
 function formatIST(dateString: string) {
@@ -45,17 +47,7 @@ export default async function ClientDashboard() {
     .single();
 
   if (clientError || !client) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-gray-50 dark:bg-black">
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-full mb-6">
-            <TrendingUp className="h-10 w-10 text-yellow-600 dark:text-yellow-400" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Account Not Linked</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
-          Your account is active, but it hasn't been linked to a client profile yet. Please contact your administrator for access.
-        </p>
-      </div>
-    );
+    return redirect("/client/login?error=no_client_profile");
   }
 
   // 2. Fetch Campaigns
@@ -136,20 +128,34 @@ export default async function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-black/95">
+        
+        {/* --- Header Bar --- */}
+        <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-30">
+             <div className="max-w-[1600px] mx-auto px-6 md:px-8 h-16 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                       <div className="bg-blue-600 rounded-lg p-1.5">
+                          <LayoutDashboard className="h-5 w-5 text-white" />
+                       </div>
+                       <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">Akuafi</span>
+                  </div>
+                  <SignOutButton clientName={client.client_name} />
+             </div>
+        </div>
+
         <div className="space-y-8 p-6 md:p-8 max-w-[1600px] mx-auto animate-in fade-in duration-700">
         
-        {/* --- Top Section --- */}
+        {/* --- Welcome Section --- */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
             <div>
                 <p className="text-gray-500 dark:text-gray-400 font-medium mb-1 flex items-center gap-2">
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
                     Live Overview
                 </p>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
-                   Welcome back, {client.client_name}
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
+                   Dashboard
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm max-w-xl">
-                    Here's what's happening with your campaigns today.
+                    Track campaigns, verifying coupons, and monitor revenue in real-time.
                 </p>
             </div>
             <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-800 shadow-sm">
@@ -279,52 +285,59 @@ export default async function ClientDashboard() {
                  )}
             </div>
 
-            {/* Right Column: Recent Activity (1 col wide) */}
-            <div className="space-y-6 flex flex-col h-full">
-                <div className="flex items-center justify-between">
-                    <div>
-                         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                             Activity
-                         </h2>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Latest redemptions</p>
-                    </div>
-                </div>
+            {/* Right Column: Verify & Activity (1 col wide) */}
+            <div className="space-y-6 flex flex-col">
                 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-2 flex-grow">
-                    {recentActivity.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-center">
-                            <Clock className="h-8 w-8 text-gray-200 dark:text-slate-700 mb-3" />
-                            <p className="text-gray-400 text-sm">No recent activity found.</p>
+                {/* 1. Verify Coupon Section */}
+                <CouponVerification />
+
+                {/* 2. Recent Activity Section */}
+                <div className="space-y-6 flex flex-col flex-1">
+                    <div className="flex items-center justify-between">
+                        <div>
+                             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                 Activity
+                             </h2>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">Latest redemptions</p>
                         </div>
-                    ) : (
-                        <div className="divide-y divide-gray-50 dark:divide-slate-800">
-                            {recentActivity.map((activity, idx) => (
-                                <div key={idx} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors rounded-xl group cursor-default">
-                                    <div className="h-10 w-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                        <ArrowUpRight className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                                Coupon Redeemed
-                                            </p>
-                                            <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
-                                                {new Date(activity.redeemed_at).toLocaleTimeString("en-IN", { hour: '2-digit', minute:'2-digit' })}
-                                            </span>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-2 flex-grow min-h-[300px]">
+                        {recentActivity.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center">
+                                <Clock className="h-8 w-8 text-gray-200 dark:text-slate-700 mb-3" />
+                                <p className="text-gray-400 text-sm">No recent activity found.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-50 dark:divide-slate-800">
+                                {recentActivity.map((activity, idx) => (
+                                    <div key={idx} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors rounded-xl group cursor-default">
+                                        <div className="h-10 w-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                            <ArrowUpRight className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                                         </div>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                                            {activity.coupons?.campaigns?.name}
-                                        </p>
-                                         <div className="mt-1.5 flex items-center">
-                                            <code className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-slate-700">
-                                                {activity.coupons?.code}
-                                            </code>
-                                         </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                                    Coupon Redeemed
+                                                </p>
+                                                <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
+                                                    {new Date(activity.redeemed_at).toLocaleTimeString("en-IN", { hour: '2-digit', minute:'2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                {activity.coupons?.campaigns?.name}
+                                            </p>
+                                             <div className="mt-1.5 flex items-center">
+                                                <code className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-slate-700">
+                                                    {activity.coupons?.code}
+                                                </code>
+                                             </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
