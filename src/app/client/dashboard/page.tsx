@@ -164,9 +164,10 @@ export default async function ClientDashboard() {
         const cRedemptions = redeemed.filter(rc => rc.campaign_id === c.id).length || 0;
         
         const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
+        const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
         let health: 'High' | 'Medium' | 'Low' = 'Low';
-        if (conv >= 8) health = 'High';
-        else if (conv >= 4) health = 'Medium';
+        if (conv >= 25) health = 'High';
+        else if (conv >= 10) health = 'Medium';
         
         campaignStats[c.id] = {
             impressions: cImpressions,

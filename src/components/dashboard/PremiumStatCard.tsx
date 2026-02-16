@@ -29,17 +29,17 @@ const iconMap: Record<StatIconType, LucideIcon> = {
 
 const colorMap: Record<StatIconType, string> = {
   impressions: 'text-slate-400',
-  scans: 'text-cyan-400',
-  conversion: 'text-blue-400',
-  redemption: 'text-purple-400',
+  scans: 'text-blue-400',
+  conversion: 'text-purple-400',
+  redemption: 'text-cyan-400',
   revenue: 'text-emerald-400'
 };
 
 const bgMap: Record<StatIconType, string> = {
   impressions: 'bg-slate-500',
-  scans: 'bg-cyan-500',
-  conversion: 'bg-blue-500',
-  redemption: 'bg-purple-500',
+  scans: 'bg-blue-500',
+  conversion: 'bg-purple-500',
+  redemption: 'bg-cyan-500',
   revenue: 'bg-emerald-500'
 };
 
