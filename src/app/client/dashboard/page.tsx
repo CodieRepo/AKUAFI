@@ -2,12 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { 
   Calendar, 
-  QrCode, 
   TrendingUp, 
-  Eye, 
-  Percent, 
-  CheckCircle, 
-  IndianRupee, 
   Clock,
   ArrowUpRight,
   Sparkles
@@ -171,7 +166,7 @@ export default async function ClientDashboard() {
             <PremiumStatCard 
                 title="Impressions"
                 value={impressions}
-                icon={Eye}
+                iconType="impressions"
                 description="Bottles in market"
                 delay={0}
             />
@@ -179,7 +174,7 @@ export default async function ClientDashboard() {
             <PremiumStatCard 
                 title="QR Scans"
                 value={scans}
-                icon={QrCode}
+                iconType="scans"
                 description="Total engagements"
                 delay={100}
             />
@@ -187,7 +182,7 @@ export default async function ClientDashboard() {
             <PremiumStatCard 
                 title="Conversion"
                 value={conversionRate}
-                icon={Percent}
+                iconType="conversion"
                 trend="Scan Rate"
                 trendValue={conversionRateVal}
                 delay={200}
@@ -196,7 +191,7 @@ export default async function ClientDashboard() {
             <PremiumStatCard 
                 title="Redemption %"
                 value={redemptionRate}
-                icon={CheckCircle}
+                iconType="redemption"
                 trend="Claim Rate"
                 trendValue={redemptionRateVal}
                 delay={300}
@@ -205,7 +200,7 @@ export default async function ClientDashboard() {
             <PremiumStatCard 
                 title="Total Revenue"
                 value={formatCurrency(revenue)}
-                icon={IndianRupee}
+                iconType="revenue"
                 description="Value Generated"
                 type="revenue"
                 trend="Excellent"

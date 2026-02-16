@@ -1,18 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { 
+  LucideIcon, 
+  TrendingUp, 
+  TrendingDown, 
+  Minus,
+  Eye, 
+  QrCode, 
+  Percent, 
+  CheckCircle, 
+  IndianRupee 
+} from 'lucide-react';
 
 function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
+export type StatIconType = 'impressions' | 'scans' | 'conversion' | 'redemption' | 'revenue';
 
+const iconMap: Record<StatIconType, LucideIcon> = {
+  impressions: Eye,
+  scans: QrCode,
+  conversion: Percent,
+  redemption: CheckCircle,
+  revenue: IndianRupee
+};
 
 interface PremiumStatCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  iconType: StatIconType;
   description?: string;
   trend?: string;
   trendValue?: number; // >0 positive, <0 negative, 0 neutral
@@ -23,7 +41,7 @@ interface PremiumStatCardProps {
 export default function PremiumStatCard({
   title,
   value,
-  icon: Icon,
+  iconType,
   description,
   trend,
   trendValue,
@@ -74,6 +92,7 @@ export default function PremiumStatCard({
   }, [value, delay]);
 
   const isRevenue = type === 'revenue';
+  const Icon = iconMap[iconType] || Eye;
 
   const formattedDisplay = typeof value === 'string' && isNaN(parseFloat(value)) 
       ? value // Non-numeric string, just return it
