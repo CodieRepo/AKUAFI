@@ -1,30 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
-export default function LoginPage() {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
-  const supabase = createClient();
-
-  // 0. Session Guard: Prevent logged-in users from seeing login page
-  // This interacts with the Layout/Middleware logic to ensure smoothly handling
-  // users who are already authenticated.
   useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'unauthorized') {
+      setError("Please login to access the client dashboard.");
+    }
+  }, [searchParams]);
+
+  // Session Guard
+  useEffect(() => {
+    const supabase = createClient();
     const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // Check role before redirecting to prevent loops
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
@@ -34,110 +37,123 @@ export default function LoginPage() {
         if (roleData?.role === "client") {
           router.replace("/client/dashboard");
         } else if (roleData?.role === "admin") {
+          // If admin, maybe redirect to admin or just stay here?
+          // Let's redirect to admin to be helpful, or sign out.
+          // For now, let's just let the logic below handle it if they try to login again,
+          // but for UX, if they are ALREADY admin, send them to admin.
           router.replace("/admin/dashboard");
-        } else {
-            // If logged in user is neither (e.g. strict mismatch), force signout so they can log in correctly
-            await supabase.auth.signOut();
         }
       }
     };
     checkSession();
-  }, [supabase, router]);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    const supabase = createClient();
+
     try {
-      // 1. Authenticate user
-      const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError || !user) {
+      if (authError || !data.user) {
         throw new Error(authError?.message || 'Authentication failed');
       }
 
-      // 2. Fetch User Role
+      // Check Role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
+        .eq("user_id", data.user.id)
         .single();
       
       if (roleError || !roleData) {
-        // Fallback or specific error handling
-        console.error("Role fetch error:", roleError);
-        throw new Error("User role not found. Please contact support.");
+        throw new Error("User role not found.");
       }
 
-      // 3. Refresh router to ensure next steps have valid session cookies
+      if (roleData.role !== 'client') {
+         // If they are admin trying to login here, we should probably warn them or redirect them.
+         // If they are admin, they can technically "login", but the Client Dashboard Layout will kick them out.
+         // So better to block here.
+         await supabase.auth.signOut();
+         throw new Error("Access denied. This portal is for Clients only.");
+      }
+
       router.refresh();
-
-      // 4. Redirect based on role
-      if (roleData.role === 'admin') {
-        router.replace('/admin/dashboard');
-      } else if (roleData.role === 'client') {
-        router.replace('/client/dashboard');
-      } else {
-        // Unknown role - Show error instead of redirecting to "/"
-        console.warn("Unknown role:", roleData.role);
-        setError("Access denied: Unknown user role.");
-        setLoading(false);
-      }
+      router.replace('/client/dashboard');
 
     } catch (err: any) {
-        console.error('Login error:', err);
-        setError(err.message);
-        setLoading(false);
+      console.error('Login error:', err);
+      setError(err.message);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-900">Sign In</h1>
-        
+    <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <Image 
+              src="/logo/akuafi-logo.png" 
+              alt="Akuafi" 
+              width={200} 
+              height={72} 
+              priority
+              className="h-16 w-auto object-contain" 
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Client Login</h1>
+          <p className="text-sm text-gray-500 mt-2">Access your campaign analytics dashboard</p>
+        </div>
+
         {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm text-center">
-                {error}
-            </div>
+          <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 text-center">
+            {error}
+          </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input 
-                    type="email" 
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
-            </div>
-            
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input 
-                    type="password" 
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Email</label>
+            <input
+              type="email"
+              required
+              className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Password</label>
+            <input
+              type="password"
+              required
+              className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-            <Button 
-                type="submit" 
-                disabled={loading}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
-            >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Log In'}
-            </Button>
+          <Button type="submit" className="w-full mt-2" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Log In'}
+          </Button>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ClientLoginForm() {
+  return (
+    <Suspense>
+        <LoginForm />
+    </Suspense>
   );
 }
