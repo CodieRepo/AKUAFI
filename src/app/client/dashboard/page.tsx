@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import PremiumStatCard from "@/components/dashboard/PremiumStatCard";
 import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
-import SignOutButton from "@/components/dashboard/SignOutButton";
+import ClientNavbar from "@/components/client/layout/ClientNavbar";
 
 // FORMATTER: UTC -> IST Display Only
 function formatIST(dateString: string) {
@@ -50,10 +50,11 @@ export default async function ClientDashboard() {
     return redirect("/client/login?error=no_client_profile");
   }
 
-  // 2. Fetch Campaigns
+  // 2. Fetch Campaigns with Scan Counts
+  // Trying to get coupon count (Scans) per campaign
   const { data: campaigns } = await supabase
     .from("campaigns")
-    .select("id, name, created_at, status, start_date, end_date")
+    .select("id, name, created_at, status, start_date, end_date, coupons(count)")
     .eq("client_id", client.id)
     .order("created_at", { ascending: false });
 
@@ -130,17 +131,7 @@ export default async function ClientDashboard() {
     <div className="min-h-screen bg-gray-50/50 dark:bg-black/95">
         
         {/* --- Header Bar --- */}
-        <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-30">
-             <div className="max-w-[1600px] mx-auto px-6 md:px-8 h-16 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                       <div className="bg-blue-600 rounded-lg p-1.5">
-                          <LayoutDashboard className="h-5 w-5 text-white" />
-                       </div>
-                       <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">Akuafi</span>
-                  </div>
-                  <SignOutButton clientName={client.client_name} />
-             </div>
-        </div>
+        <ClientNavbar clientName={client.client_name} />
 
         <div className="space-y-8 p-6 md:p-8 max-w-[1600px] mx-auto animate-in fade-in duration-700">
         
@@ -246,7 +237,8 @@ export default async function ClientDashboard() {
                                  <thead className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/50">
                                      <tr>
                                          <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Campaign</th>
-                                         <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Date Range</th>
+                                         <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Engagements</th>
+                                          <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Date Range</th>
                                          <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Status</th>
                                      </tr>
                                  </thead>
@@ -256,6 +248,14 @@ export default async function ClientDashboard() {
                                              <td className="px-6 py-5">
                                                  <span className="block font-semibold text-gray-900 dark:text-white text-base mb-0.5">{campaign.name}</span>
                                                  <span className="text-xs text-gray-400">ID: {campaign.id.slice(0, 8)}...</span>
+                                             </td>
+                                             <td className="px-6 py-5">
+                                                  <div className="flex items-center gap-2">
+                                                     <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                         {campaign.coupons && campaign.coupons[0] ? campaign.coupons[0].count : 0}
+                                                     </div>
+                                                     <span className="text-xs text-gray-500">Scans</span>
+                                                  </div>
                                              </td>
                                               <td className="px-6 py-5 text-gray-600 dark:text-gray-400">
                                                  <div className="flex flex-col text-xs font-medium bg-gray-100 dark:bg-slate-800 w-fit px-3 py-1.5 rounded-lg">
