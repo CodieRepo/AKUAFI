@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import PremiumStatCard from "@/components/dashboard/PremiumStatCard";
 import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
-import ClientNavbar from "@/components/client/layout/ClientNavbar";
 
 // FORMATTER: UTC -> IST Display Only
 function formatIST(dateString: string) {
@@ -66,27 +65,30 @@ export default async function ClientDashboard() {
   let redemptions = 0;
   let revenue = 0;
   let recentActivity: any[] = [];
+  
+  // Store map for table columns
+  const campaignStats: Record<string, { impressions: number, redemptions: number }> = {};
 
   if (campaignIds.length > 0) {
     const [
-      { count: bottlesCount },
+      { data: bottlesData },
       { count: scansCount },
       { data: redeemedCoupons }, // Need data to sum revenue
       { data: recentRedemptions } 
     ] = await Promise.all([
-      // A. Impressions
+      // A. Impressions (Aggregate & Per Campaign)
       supabase.from("bottles")
-        .select('*', { count: 'exact', head: true })
+        .select('campaign_id')
         .in('campaign_id', campaignIds),
       
-      // B. Scans
+      // B. Scans (Aggregate)
       supabase.from("coupons")
         .select('*', { count: 'exact', head: true })
         .in('campaign_id', campaignIds),
 
-      // C. Revenue & Redemptions
+      // C. Revenue & Redemptions (Aggregate & Per Campaign)
       supabase.from("coupons")
-        .select('discount_value')
+        .select('campaign_id, discount_value')
         .in('campaign_id', campaignIds)
         .eq('status', 'redeemed'),
         
@@ -105,7 +107,8 @@ export default async function ClientDashboard() {
         .limit(5)
     ]);
 
-    impressions = bottlesCount || 0;
+    // Calculate Aggregates
+    impressions = bottlesData ? bottlesData.length : 0;
     scans = scansCount || 0;
     
     // Revenue Calc
@@ -113,6 +116,14 @@ export default async function ClientDashboard() {
       redemptions = redeemedCoupons.length;
       revenue = redeemedCoupons.reduce((sum, coupon) => sum + (Number(coupon.discount_value) || 0), 0);
     }
+    
+    // Per Campaign Stats Map
+    campaignList.forEach(c => {
+        campaignStats[c.id] = {
+            impressions: bottlesData?.filter(b => b.campaign_id === c.id).length || 0,
+            redemptions: redeemedCoupons?.filter(rc => rc.campaign_id === c.id).length || 0
+        };
+    });
     
     if (recentRedemptions) {
         recentActivity = recentRedemptions;
@@ -127,11 +138,6 @@ export default async function ClientDashboard() {
   const redemptionRate = redemptionRateVal.toFixed(1) + "%";
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-black/95 flex flex-col">
-        
-        {/* --- Header Bar --- */}
-        <ClientNavbar clientName={client.client_name} />
-
         <div className="flex-grow space-y-8 p-6 md:p-8 max-w-[1600px] mx-auto w-full animate-in fade-in duration-700">
         
             {/* --- Hero Section & KPIs --- */}
@@ -232,8 +238,10 @@ export default async function ClientDashboard() {
                                     <thead className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/50">
                                         <tr>
                                             <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Campaign</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Engagements</th>
                                             <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400">Date Range</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Impressions</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Scans</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Redemptions</th>
                                             <th className="px-6 py-4 font-semibold text-gray-500 dark:text-gray-400 text-center">Status</th>
                                         </tr>
                                     </thead>
@@ -244,21 +252,21 @@ export default async function ClientDashboard() {
                                                     <span className="block font-semibold text-gray-900 dark:text-white text-base mb-0.5">{campaign.name}</span>
                                                     <span className="text-xs text-gray-400">ID: {campaign.id.slice(0, 8)}...</span>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                            {campaign.coupons && campaign.coupons[0] ? campaign.coupons[0].count : 0}
-                                                        </div>
-                                                        <span className="text-xs text-gray-500">Scans</span>
-                                                    </div>
-                                                </td>
                                                 <td className="px-6 py-5 text-gray-600 dark:text-gray-400">
-                                                    <div className="flex flex-col text-xs font-medium bg-gray-100 dark:bg-slate-800 w-fit px-3 py-1.5 rounded-lg border border-transparent group-hover:border-gray-200 dark:group-hover:border-slate-700 transition-colors">
+                                                    <div className="flex flex-col text-xs font-medium">
                                                         <span>{new Date(campaign.start_date).toLocaleDateString("en-IN", {month: 'short', day: 'numeric'})}</span>
                                                         <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase">to</span>
                                                         <span>{new Date(campaign.end_date).toLocaleDateString("en-IN", {month: 'short', day: 'numeric', year: 'numeric'})}</span>
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-5 text-center text-gray-600 dark:text-gray-400">
+                                                    {campaignStats[campaign.id]?.impressions || 0}
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-medium text-gray-900 dark:text-white">
+                                                     {campaign.coupons && campaign.coupons[0] ? campaign.coupons[0].count : 0}
+                                                </td>
+                                                 <td className="px-6 py-5 text-center text-gray-600 dark:text-gray-400">
+                                                    {campaignStats[campaign.id]?.redemptions || 0}
                                                 </td>
                                                 <td className="px-6 py-5 text-center">
                                                     <span className={`
@@ -266,7 +274,7 @@ export default async function ClientDashboard() {
                                                         ${campaign.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : ''}
                                                         ${campaign.status === 'paused' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' : ''}
                                                         ${campaign.status === 'completed' ? 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-400' : ''}
-                                                        ${!campaign.status || campaign.status === 'draft' ? 'bg-gray-100 text-gray-600' : ''}
+                                                        ${!campaign.status || campaign.status === 'draft' ? 'bg-amber-100 text-amber-700' : ''}
                                                     `}>
                                                         {campaign.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse" />}
                                                         {campaign.status || 'Draft'}
@@ -340,6 +348,5 @@ export default async function ClientDashboard() {
                 </div>
             </div>
         </div>
-    </div>
   );
 }
