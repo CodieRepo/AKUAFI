@@ -64,24 +64,34 @@ export default function CouponVerification() {
         // 2. Fetch coupon with Strict Client Scoping
         // Use client_coupons view for safe read validation, but join campaigns for name if missing
         
+        // Normalize: trimming and uppercase are handled in input, but ensuring here for query safety
+        const cleanCode = code.trim().toUpperCase().replace(/[–—]/g, "-");
+
+        console.log(`[Verify Coupon] Verifying: ${cleanCode}`);
+
         const { data, error } = await supabase
             .from('client_coupons')
             .select('*, campaigns(name)')
             .eq('client_id', client.id) 
-            .ilike('coupon_code', cleanCode) 
+            .eq('coupon_code', cleanCode) // STRICT MATCH
             .maybeSingle();
 
-        if (error || !data) {
-             console.error('Error verifying coupon:', error);
+        if (error) {
+             console.error('[Verify Coupon] DB Error:', error);
+             setStatus('invalid');
+        } else if (!data) {
+             console.log('[Verify Coupon] No record found for:', cleanCode);
              setStatus('invalid');
         } else {
+            console.log("[Verify Coupon] Record Found:", data);
+            
             // Flatten campaign name if present
             const enhancedData = {
                 ...data,
                 campaign_name: data.campaigns?.name || data.campaign_name || 'Unknown Campaign'
             };
 
-            console.log("Coupon Data:", enhancedData);
+            console.log("[Verify Coupon] Enhanced Data:", enhancedData);
             setCouponData(enhancedData);
             
             // Status Logic
