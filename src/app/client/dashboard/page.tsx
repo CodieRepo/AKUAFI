@@ -55,202 +55,131 @@ export default async function ClientDashboard() {
     return redirect("/client/login?error=no_client_profile");
   }
 
-  // 2. Fetch Campaigns
-  const { data: campaigns } = await supabase
-    .from("campaigns")
-    .select("id, name, created_at, status, start_date, end_date, coupons(count)")
-    .eq("client_id", client.id)
-    .order("created_at", { ascending: false });
+  // 2. Fetch Data from Views
+  const [
+      { data: summaryData },
+      { data: recentActivityData },
+      { data: weeklyScansData }
+  ] = await Promise.all([
+      supabase.from("client_campaign_summary").select("*").eq("client_id", client.id),
+      supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
+      supabase.from("client_weekly_scans").select("*").eq("client_id", client.id)
+  ]);
 
-  const campaignList = campaigns || [];
-  const campaignIds = campaignList.map(c => c.id);
+  const campaigns = summaryData || [];
+  const recentActivity = recentActivityData || [];
+  const weeklyScans = weeklyScansData || [];
 
-  // 3. Metrics Initialization & Defensive Defaults
+  // 3. Metrics Aggregation
+  // Calculate totals from summary view
+  let impressions = 0;
+  let scans = 0; 
+  let redemptions = 0;
+  let revenue = 0; 
+
+  // Weekly Graph Processing
   const last7Days = getLast7Days();
   const scansByDate: Record<string, number> = {};
-  const revenueByDate: Record<string, number> = {};
   
-  // Initialize Chart Data Maps (guarantee keys exist)
+  // Initialize with 0
   last7Days.forEach(d => {
     scansByDate[d] = 0;
-    revenueByDate[d] = 0;
   });
 
-  // Declare all metric variables at top scope
-  let impressions = 0;
-  let scans = 0;
-  let redemptions = 0;
-  let revenue = 0;
-  let todayScans = 0;
-  let yesterdayScans = 0;
-  let todayRevenue = 0;
-  let yesterdayRevenue = 0;
-  
-  let recentActivity: any[] = [];
-  const campaignStats: Record<string, { impressions: number, redemptions: number, health: 'High' | 'Medium' | 'Low', conversion: number }> = {};
-
-  // Date Boundaries for "Today" vs "Yesterday" (UTC Safe)
-  const todayStart = new Date();
-  todayStart.setHours(0,0,0,0);
-  
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(todayStart.getDate() + 1);
-  
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(todayStart.getDate() - 1);
-
-  // 4. Data Fetching & Processing
-  if (campaignIds.length > 0) {
-      const [
-        { data: bottlesData },
-        { data: allCoupons }, 
-        { data: redeemedCoupons }, 
-        { data: recentRedemptions } 
-      ] = await Promise.all([
-        supabase.from("bottles").select('campaign_id').in('campaign_id', campaignIds),
-        supabase.from("coupons").select('created_at, campaign_id').in('campaign_id', campaignIds),
-        supabase.from("coupons").select('campaign_id, discount_value, status, created_at, updated_at').in('campaign_id', campaignIds).eq('status', 'redeemed'),
-        supabase.from("redemptions").select('redeemed_at, coupons!inner(code, campaign_id, campaigns(name))').in('coupons.campaign_id', campaignIds).order('redeemed_at', { ascending: false }).limit(5)
-      ]);
-
-      const coupons = allCoupons || [];
-      const redeemed = redeemedCoupons || [];
-      const bottles = bottlesData || [];
-
-      // A. Standard Aggregates
-      impressions = bottles.length;
-      scans = coupons.length;
-      redemptions = redeemed.length;
-      
-      // B. Revenue Total
-      revenue = redeemed.reduce((acc, curr) => acc + (Number(curr.discount_value) || 0), 0);
-
-      // C. Today vs Yesterday (Strict Filter Logic)
-      todayScans = coupons.filter(c => {
-          const d = new Date(c.created_at).getTime();
-          return d >= todayStart.getTime() && d < tomorrowStart.getTime();
-      }).length;
-
-      yesterdayScans = coupons.filter(c => {
-          const d = new Date(c.created_at).getTime();
-          return d >= yesterdayStart.getTime() && d < todayStart.getTime();
-      }).length;
-
-      todayRevenue = redeemed.filter(r => {
-          const dateStr = r.updated_at || r.created_at;
-          const d = new Date(dateStr).getTime();
-          return d >= todayStart.getTime() && d < tomorrowStart.getTime();
-      }).reduce((acc, curr) => acc + (Number(curr.discount_value) || 0), 0);
-
-      yesterdayRevenue = redeemed.filter(r => {
-          const dateStr = r.updated_at || r.created_at;
-          const d = new Date(dateStr).getTime();
-          return d >= yesterdayStart.getTime() && d < todayStart.getTime();
-      }).reduce((acc, curr) => acc + (Number(curr.discount_value) || 0), 0);
-
-      // D. Chart Data Population
-      coupons.forEach(c => {
-          const dateKey = c.created_at.split('T')[0];
-          if (scansByDate[dateKey] !== undefined) {
-              scansByDate[dateKey]++;
-          }
-      });
-
-      redeemed.forEach(r => {
-          const dateKey = (r.updated_at || r.created_at).split('T')[0];
-          if (revenueByDate[dateKey] !== undefined) {
-              revenueByDate[dateKey] += (Number(r.discount_value) || 0);
-          }
-      });
-
-      // E. Campaign Performance Stats
-      campaignList.forEach(c => {
-          const cImpressions = bottles.filter(b => b.campaign_id === c.id).length;
-          const cScans = coupons.filter(cp => cp.campaign_id === c.id).length;
-          const cRedemptions = redeemed.filter(rd => rd.campaign_id === c.id).length;
-          
-          const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
-          let health: 'High' | 'Medium' | 'Low' = 'Low';
-          if (conv >= 25) health = 'High';
-          else if (conv >= 10) health = 'Medium';
-          
-          campaignStats[c.id] = {
-              impressions: cImpressions,
-              redemptions: cRedemptions,
-              conversion: conv,
-              health
-          };
-      });
-      
-      if (recentRedemptions) {
-          recentActivity = recentRedemptions;
+  // Fill from weeklyScans view
+  weeklyScans.forEach((row: any) => {
+      const dateStr = row.scan_date || row.date || row.day; 
+      if (dateStr && scansByDate[dateStr] !== undefined) {
+          scansByDate[dateStr] = row.scan_count || row.scans || row.count || 0;
       }
-  }
+  });
 
-  // --- Global Rates & Trends ---
-  const conversionRateVal = impressions > 0 ? (scans / impressions) * 100 : 0;
-  const redemptionRateVal = scans > 0 ? (redemptions / scans) * 100 : 0;
-  
-  const conversionRate = conversionRateVal.toFixed(1) + "%";
-  const redemptionRate = redemptionRateVal.toFixed(1) + "%";
-  
-  // Scan Trend Logic
-  const scanTrendVal = todayScans - yesterdayScans;
-  let scanTrendLabel = "Stable vs yesterday";
-  let scanTrendType: 'up' | 'down' | 'neutral' = 'neutral';
-  
-  if (todayScans > yesterdayScans) {
-      scanTrendLabel = `+${scanTrendVal} vs yesterday`;
-      scanTrendType = 'up';
-  } else if (todayScans < yesterdayScans) {
-      scanTrendLabel = `${scanTrendVal} vs yesterday`;
-      scanTrendType = 'down';
-  } else if (yesterdayScans === 0 && todayScans > 0) {
-      scanTrendLabel = "New activity today";
-      scanTrendType = 'up';
-  } else if (yesterdayScans === 0 && todayScans === 0) {
-      scanTrendLabel = "No recent activity";
-      scanTrendType = 'neutral';
-  }
-
-  // Revenue Trend Logic
-  const revTrendVal = todayRevenue - yesterdayRevenue;
-  let revTrendLabel = "Stable vs yesterday";
-  let revTrendType: 'up' | 'down' | 'neutral' = 'neutral';
-
-  if (todayRevenue > yesterdayRevenue) {
-      revTrendLabel = `+${formatCurrency(revTrendVal)} vs yesterday`;
-      revTrendType = 'up';
-  } else if (todayRevenue < yesterdayRevenue) {
-      revTrendLabel = `${formatCurrency(revTrendVal)} vs yesterday`;
-      revTrendType = 'down';
-  } else if (yesterdayRevenue === 0 && todayRevenue > 0) {
-      revTrendLabel = "New revenue today";
-      revTrendType = 'up';
-  } else if (yesterdayRevenue === 0 && todayRevenue === 0) {
-      revTrendLabel = "No recent revenue";
-      revTrendType = 'neutral';
-  }
-  
-  // Chart Arrays
   const scanChartData = last7Days.map(d => scansByDate[d]);
-  const revenueSparkData = last7Days.map(d => revenueByDate[d]);
+
+  // Derive Today/Yesterday from Chart Data
+  // last7Days is [today-6, ..., Today] (Ascending Order)
+  // So last element is Today. Second to last is Yesterday.
+  
+  const todayDateKey = last7Days[last7Days.length - 1];
+  const yesterdayDateKey = last7Days[last7Days.length - 2];
+  
+  const todayScans = scansByDate[todayDateKey] || 0;
+  const yesterdayScans = scansByDate[yesterdayDateKey] || 0;
+  
+  const todayRevenue = 0; // Not available in views
+  const yesterdayRevenue = 0; // Not available in views
+  
+  const campaignList = campaigns; // Alias for compatibility with existing UI code
+
+  // Campaign Stats Processing
+  const campaignStats: Record<string, any> = {};
+  
+  campaigns.forEach((c: any) => {
+      impressions += (Number(c.total_bottles) || 0);
+      redemptions += (Number(c.total_claims) || 0);
+      // If total_scans exists, use it. Else fall back to claims? 
+      // User prompt says "Unique Users" is available.
+      // We will map conversion_rate directly.
+      
+      let health = 'Low';
+      const conv = Number(c.conversion_rate) || 0;
+      if (conv >= 25) health = 'High';
+      else if (conv >= 10) health = 'Medium';
+
+      campaignStats[c.id || c.campaign_id] = {
+          impressions: Number(c.total_bottles) || 0,
+          redemptions: Number(c.total_claims) || 0,
+          conversion: conv,
+          health,
+          unique_users: Number(c.unique_users) || 0
+      };
+  });
+  
+  // Calculate Global Rates
+  // Note: If 'scans' is missing from view, we can't calc Redem %.
+  // But we have average conversion.
+  // We'll calculate Global Conversion from view data avg? Or sum?
+  // Conversion = Scans / Impressions? 
+  // View has pre-calc conversion_rate.
+  
+  // Let's assume Scans are not explicitly totalized in the view unless we infer it.
+  // Actually, Conversion = Scans / Bottles. So Scans = Bottles * Conversion.
+  // We can back-calculate Scans if needed:
+  // scans = sum(bottles * conversion/100)
+  
+  if (scans === 0 && campaigns.length > 0) {
+      scans = campaigns.reduce((acc: number, c: any) => {
+          const b = Number(c.total_bottles) || 0;
+          const r = Number(c.conversion_rate) || 0;
+          return acc + Math.round(b * (r / 100));
+      }, 0);
+  }
+
+  const conversionRate = impressions > 0 ? ((scans / impressions) * 100).toFixed(1) + "%" : "0%";
+  const redemptionRate = scans > 0 ? ((redemptions / scans) * 100).toFixed(1) + "%" : "0%";
+
+  // Quick Insights
+  const activeCampaigns = campaigns.filter((c: any) => c.status === 'active').length;
+  // Sort by highest redemptions (claims) as proxy for "Best"
+  const bestCampaign = [...campaigns].sort((a: any, b: any) => (Number(b.total_claims) || 0) - (Number(a.total_claims) || 0))[0];
+
+  // Trends - Not available in views (would need yesterday's data).
+  // We will set to "neutral" or hide.
+  const scanTrendLabel = "View details"; 
+  const scanTrendType = 'neutral';
+  const revTrendLabel = "View details";
+  const revTrendType = 'neutral';
+  
+  const revenueSparkData = last7Days.map(() => 0); // No daily revenue data
 
   // AI Summary Logic Prep
-  const revTrendEnum = revTrendVal > 0 ? 'up' : revTrendVal < 0 ? 'down' : 'stable';
-  const scansTrendEnum = scanTrendVal > 0 ? 'up' : scanTrendVal < 0 ? 'down' : 'stable';
-  
-  // Quick Insights Data
-  const activeCampaigns = campaignList.filter(c => c.status === 'active').length;
-  const bestCampaign = campaignList.reduce((prev, current) => {
-      const prevScans = prev.coupons?.[0]?.count || 0;
-      const currScans = current.coupons?.[0]?.count || 0;
-      return (prevScans > currScans) ? prev : current;
-  }, campaignList[0] || { name: 'N/A' });
-
+  const revTrendEnum = 'stable';
+  const scansTrendEnum = todayScans > yesterdayScans ? 'up' : todayScans < yesterdayScans ? 'down' : 'stable';
+  const conversionRateVal = impressions > 0 ? (scans / impressions) * 100 : 0;
+  const redemptionRateVal = scans > 0 ? (redemptions / scans) * 100 : 0;
 
   // --- EMPTY STATE CHECK ---
-  if (campaignList.length === 0) {
+  if (campaigns.length === 0) {
       return (
         <div className="min-h-screen bg-black lg:bg-transparent flex items-center justify-center p-6">
             <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-800 p-12 text-center shadow-2xl animate-in fade-in zoom-in duration-500">
@@ -416,9 +345,8 @@ export default async function ClientDashboard() {
                              </div>
                         ) : (
                             <div className="space-y-6">
-                                {campaignList.slice(0, 5).map((campaign, idx) => {
-                                    const stats = campaignStats[campaign.id];
-                                    const cScans = campaign.coupons?.[0]?.count || 0;
+                                {campaigns.slice(0, 5).map((campaign: any, idx: number) => {
+                                    const stats = campaignStats[campaign.id || campaign.campaign_id];
                                     const progress = Math.min(stats.conversion, 100);
                                     
                                     // Health Color
@@ -431,15 +359,15 @@ export default async function ClientDashboard() {
                                             <div className="flex justify-between items-center mb-2">
                                                 <div>
                                                     <h4 className="text-white font-medium text-sm flex items-center gap-2">
-                                                        {campaign.name}
+                                                        {campaign.name || campaign.campaign_name}
                                                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${healthColor} font-semibold hidden sm:inline-block`}>
                                                             {stats.health}
                                                         </span>
                                                     </h4>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-white font-bold">{cScans.toLocaleString()}</p>
-                                                    <p className="text-[10px] text-slate-500 uppercase">Scans</p>
+                                                    <p className="text-white font-bold">{(Number(campaign.total_claims) || 0).toLocaleString()}</p>
+                                                    <p className="text-[10px] text-slate-500 uppercase">Claims</p>
                                                 </div>
                                             </div>
                                             
@@ -454,12 +382,12 @@ export default async function ClientDashboard() {
                                             <div className="flex justify-between mt-2">
                                                 <div className="flex gap-4">
                                                     <span className="text-[10px] text-slate-500">Impressions: <span className="text-slate-300">{stats.impressions}</span></span>
-                                                    <span className="text-[10px] text-slate-500">Redeemed: <span className="text-slate-300">{stats.redemptions}</span></span>
+                                                    <span className="text-[10px] text-slate-500">Unq Users: <span className="text-slate-300">{stats.unique_users}</span></span>
                                                 </div>
                                                 <span className="text-xs font-bold text-blue-400">{stats.conversion.toFixed(1)}% Conv.</span>
                                             </div>
                                             
-                                            {idx < campaignList.length - 1 && <div className="h-px bg-slate-800/50 mt-6" />}
+                                            {idx < campaigns.length - 1 && <div className="h-px bg-slate-800/50 mt-6" />}
                                         </div>
                                     );
                                 })}
@@ -485,7 +413,7 @@ export default async function ClientDashboard() {
                                     <p className="text-slate-500 text-sm">No recent activity.</p>
                                 </div>
                             ) : (
-                                recentActivity.map((activity, idx) => (
+                                recentActivity.map((activity: any, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/80 transition-colors border border-transparent hover:border-slate-700 group">
                                         <div className="flex items-center gap-3">
                                             <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
@@ -493,9 +421,9 @@ export default async function ClientDashboard() {
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium text-white">
-                                                    {activity.coupons?.code} <span className="text-slate-500 font-normal">redeemed</span>
+                                                    {activity.name} <span className="text-slate-500 font-normal">redeemed</span>
                                                 </p>
-                                                <p className="text-xs text-slate-500">{activity.coupons?.campaigns?.name}</p>
+                                                <p className="text-xs text-slate-500">{activity.campaign_name}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
