@@ -2,31 +2,33 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Button } from '@/components/ui/Button';
-import { Loader2, Save, Lock, User, Building, Smartphone, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+// import { Button } from '@/components/ui/Button'; // Swapping for raw button as requested for specific styling
+import { Save, Lock, User, Building, Smartphone, Mail, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-// Production Ready Input with strict dark mode contrast
+// Production Ready Input with strict dark mode contrast (User Requirement 2)
 function SimpleInput({ label, icon: Icon, type = "text", error, ...props }: any) {
     return (
         <div className="space-y-1.5">
              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
              <div className="relative group">
-                 {Icon && <Icon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />}
+                 {Icon && <Icon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />}
                  <input 
                     type={type}
                     className={`
-                        flex h-10 w-full rounded-lg border 
-                        bg-white dark:bg-slate-950 
-                        text-gray-900 dark:text-white 
-                        placeholder:text-gray-400 dark:placeholder:text-gray-500
-                        px-3 py-2 pl-10 text-sm 
-                        ring-offset-white dark:ring-offset-slate-950
-                        file:border-0 file:bg-transparent file:text-sm file:font-medium 
-                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 
-                        disabled:cursor-not-allowed disabled:opacity-50
+                        bg-slate-900
+                        text-white
+                        placeholder:text-slate-400
+                        border border-slate-700
+                        focus:border-blue-500
+                        focus:ring-1 focus:ring-blue-500
+                        px-4 py-2 ${Icon ? 'pl-10' : ''}
+                        rounded-lg
+                        w-full
                         transition-all duration-200
-                        ${error ? 'border-red-500 focus-visible:ring-red-500' : 'border-gray-200 dark:border-slate-800'}
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                        ${props.className || ''}
                     `}
                     {...props}
                  />
@@ -47,8 +49,7 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
     
     // Profile State
     const [companyName, setCompanyName] = useState(client?.client_name || '');
-    // Using company name as username for now as requested, or just editable name
-    const [email] = useState(user?.email || ''); 
+    // Email is derived from user prop directly now
     const [phone, setPhone] = useState(user?.phone || ''); 
 
     // Password State
@@ -165,13 +166,16 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
                         icon={Building}
                         placeholder="Your Company Name"
                       />
+                      
+                      {/* User Requirement 1: Email Field */}
                       <SimpleInput 
                         label="Email Address" 
-                        value={email} 
-                        disabled 
-                        className="opacity-70 cursor-not-allowed bg-gray-50 dark:bg-slate-900"
+                        value={user?.email ?? ""} 
+                        readOnly
+                        // Overriding any default opacity logic from SimpleInput if needed, though SimpleInput style looks clean now
                         icon={Mail}
                       />
+                      
                       <SimpleInput 
                         label="Phone Number" 
                         value={phone} 
@@ -182,10 +186,24 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
                       />
                  </div>
                  <div className="mt-8 flex justify-end border-t border-gray-100 dark:border-slate-800 pt-6">
-                     <Button onClick={handleProfileUpdate} disabled={loading} className="px-6">
+                     <button 
+                        onClick={handleProfileUpdate} 
+                        disabled={loading} 
+                        className="
+                            bg-blue-600 
+                            hover:bg-blue-700 
+                            text-white 
+                            font-semibold 
+                            px-6 py-2 
+                            rounded-lg 
+                            transition
+                            flex items-center
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                        "
+                     >
                          {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                          Save Profile
-                     </Button>
+                     </button>
                  </div>
             </div>
 
@@ -210,7 +228,6 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
                             onChange={(e: any) => setCurrentPassword(e.target.value)}
                             icon={Lock}
                             placeholder="Required to set new password"
-                            className="bg-white dark:bg-slate-950"
                           />
                     </div>
 
@@ -234,9 +251,24 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
                      </div>
                  </div>
                  <div className="mt-8 flex justify-end border-t border-gray-100 dark:border-slate-800 pt-6">
-                     <Button variant="outline" onClick={handlePasswordUpdate} disabled={loading || !currentPassword || !newPassword} className="px-6">
-                         Update Password
-                     </Button>
+                     {/* User Requirement 3: Update Password Button Visibility */}
+                     <button
+                      onClick={handlePasswordUpdate}
+                      disabled={loading || !currentPassword || !newPassword}
+                      className="
+                        mt-4
+                        bg-blue-600
+                        hover:bg-blue-700
+                        text-white
+                        font-semibold
+                        px-6 py-2
+                        rounded-lg
+                        transition
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                      "
+                    >
+                      {loading ? 'Updating...' : 'Update Password'}
+                    </button>
                  </div>
             </div>
 
