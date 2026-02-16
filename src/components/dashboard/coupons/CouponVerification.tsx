@@ -11,8 +11,29 @@ export default function CouponVerification() {
   const [status, setStatus] = useState<'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired'>('idle');
   const [couponData, setCouponData] = useState<any>(null);
 
+  const MAX_LENGTH = 25;
+  const MIN_LENGTH = 5;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let value = e.target.value.toUpperCase();
+      
+      // 1. Replace Unicode Dashes
+      value = value.replace(/[–—]/g, "-");
+
+      // 2. Remove invalid characters (Keep A-Z, 0-9, -)
+      // Also prevents spaces
+      value = value.replace(/[^A-Z0-9-]/g, "");
+
+      setCode(value);
+  };
+
   const handleVerify = async () => {
-    if (!code) return;
+    if (!code || code.length < MIN_LENGTH) return;
+    
+    // Final Trim before sending
+    const cleanCode = code.trim();
+    console.log("[Verify Coupon] Normalizing Input:", cleanCode);
+    
     setLoading(true);
     setStatus('idle');
     setCouponData(null);
@@ -43,9 +64,6 @@ export default function CouponVerification() {
         // 2. Fetch coupon with Strict Client Scoping
         // Use client_coupons view for safe read validation
         
-        // Normalize Code (Handle Unicode Dash)
-        const cleanCode = code.trim().replace(/[–—]/g, "-");
-
         const { data, error } = await supabase
             .from('client_coupons')
             .select('*')
@@ -61,7 +79,7 @@ export default function CouponVerification() {
             setCouponData(data);
             
             // Status Logic
-            if (data.status === 'redeemed') {
+            if (data.status === 'claimed') {
                 setStatus('redeemed');
             } else if (data.status !== 'active') {
                 setStatus('expired');
@@ -88,26 +106,39 @@ export default function CouponVerification() {
         <div className="relative group">
             <input 
                 type="text" 
-                placeholder="Enter 8-digit code..." 
-                className="
+                placeholder="PROMO-CODE-123" 
+                className={`
                     w-full rounded-xl border 
                     bg-gray-50 dark:bg-slate-950 
                     text-gray-900 dark:text-white 
-                    border-gray-200 dark:border-slate-700 
                     pl-4 py-3 text-sm font-mono 
                     outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 
                     transition-all uppercase placeholder:normal-case placeholder:font-sans placeholder:text-gray-400 dark:placeholder:text-gray-500
-                "
+                    ${code.length > 0 && code.length < MIN_LENGTH ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 dark:border-slate-700'}
+                `}
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
-                maxLength={12}
+                onChange={handleInputChange}
+                onKeyDown={(e) => e.key === 'Enter' && code.length >= MIN_LENGTH && handleVerify()}
+                maxLength={MAX_LENGTH}
+                autoComplete="off"
             />
+            {/* Character Counter */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-mono pointer-events-none">
+                {code.length} / {MAX_LENGTH}
+            </div>
         </div>
+        
+        {/* Validation Message */}
+        {code.length > 0 && code.length < MIN_LENGTH && (
+            <p className="text-[10px] text-red-500 pl-1">
+                Code must be at least {MIN_LENGTH} characters.
+            </p>
+        )}
+
         <Button 
             onClick={handleVerify} 
-            disabled={!code || loading}
-            className="w-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 h-11"
+            disabled={!code || code.length < MIN_LENGTH || loading}
+            className="w-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 h-11 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {loading ? 'Checking...' : 'Verify Status'}
