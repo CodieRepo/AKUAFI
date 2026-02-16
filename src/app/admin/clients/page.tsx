@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Users, Plus, Calendar, Search } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 import CreateClientModal from '@/components/admin/clients/CreateClientModal';
 
 interface Client {
@@ -19,13 +20,16 @@ export default function ClientsPage() {
   const fetchClients = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/clients');
-      if (!response.ok) {
-        if (response.status === 403) throw new Error('Unauthorized');
-        throw new Error('Failed to fetch clients');
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
       }
-      const data = await response.json();
-      setClients(data.clients || []);
+      setClients(data || []);
     } catch (err) {
       setError('Failed to load clients');
       console.error(err);

@@ -71,36 +71,33 @@ export default async function ClientDashboard() {
   let redemptions = 0;
   let revenue = 0;
   
-  // Advanced Metrics
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+    // Advanced Metrics - Date Boundaries
+    const now = new Date();
+    // Start of Today (local assumption or UTC? User said "Today Metrics... use proper ISO boundaries").
+    // Best practice for consistency:
+    const todayStart = new Date();
+    todayStart.setHours(0,0,0,0);
+    const todayIso = todayStart.toISOString();
 
-  let todayScans = 0;
-  let yesterdayScans = 0;
-  let todayRevenue = 0;
-  let yesterdayRevenue = 0;
-  
-  // 7 Day Chart Data
-  const last7Days = getLast7Days();
-  const scansByDate: Record<string, number> = {};
-  last7Days.forEach(d => scansByDate[d] = 0);
-  
-  // Sparkline Revenue Data (Last 7 days approx)
-  const revenueByDate: Record<string, number> = {};
-  last7Days.forEach(d => revenueByDate[d] = 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+    const tomorrowIso = tomorrowStart.toISOString();
 
-  let recentActivity: any[] = [];
-  const campaignStats: Record<string, { impressions: number, redemptions: number, health: 'High' | 'Medium' | 'Low', conversion: number }> = {};
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(todayStart.getDate() - 1);
+    const yesterdayIso = yesterdayStart.toISOString();
 
-  if (campaignIds.length > 0) {
+    // Chart logic needs simple YYYY-MM-DD for key mapping
+    const todayStr = now.toISOString().split('T')[0];
+    const yesterdayStr = yesterdayStart.toISOString().split('T')[0];
+
     const [
       { data: bottlesData },
       { data: allCoupons }, 
       { data: redeemedCoupons }, 
       { data: recentRedemptions } 
     ] = await Promise.all([
+      // Scoped by campaign_id
       supabase.from("bottles").select('campaign_id').in('campaign_id', campaignIds),
       supabase.from("coupons").select('created_at, campaign_id').in('campaign_id', campaignIds),
       supabase.from("coupons").select('campaign_id, discount_value, status, created_at, updated_at').in('campaign_id', campaignIds).eq('status', 'redeemed'),
@@ -115,13 +112,21 @@ export default async function ClientDashboard() {
     scans = coupons.length;
     
     coupons.forEach(c => {
-        const date = c.created_at.split('T')[0];
-        if (date === today) todayScans++;
-        if (date === yesterdayStr) yesterdayScans++;
+        const createdTime = new Date(c.created_at).getTime();
+        const dateKey = c.created_at.split('T')[0];
         
-        // Chart Data
-        if (scansByDate[date] !== undefined) {
-            scansByDate[date]++;
+        // Exact range check for Today
+        if (createdTime >= todayStart.getTime() && createdTime < tomorrowStart.getTime()) {
+            todayScans++;
+        }
+        // Exact range check for Yesterday
+        if (createdTime >= yesterdayStart.getTime() && createdTime < todayStart.getTime()) {
+            yesterdayScans++;
+        }
+        
+        // Chart Data (using simple date key)
+        if (scansByDate[dateKey] !== undefined) {
+            scansByDate[dateKey]++;
         }
     });
 
@@ -133,20 +138,24 @@ export default async function ClientDashboard() {
         const val = Number(c.discount_value) || 0;
         revenue += val;
         
-        // Assuming updated_at as redemption time approximation if redeemed_at is missing on coupon table
-        // (Actually logic says we should join redemptions table for pure accuracy, but this is okay for sparkline aggregate)
-        const date = c.updated_at ? c.updated_at.split('T')[0] : ''; 
-        if (date === today) todayRevenue += val;
-        if (date === yesterdayStr) yesterdayRevenue += val;
+        // Use updated_at for redemption time if available, or fall back to created_at (less accurate but fallback)
+        // Ideally we should join with 'redemptions' table for 'redeemed_at', but for 'revenue' aggregate this is often 'updated_at' of coupon.
+        const redemptionTimeStr = c.updated_at || c.created_at; 
+        const redemptionTime = new Date(redemptionTimeStr).getTime();
+        const dateKey = redemptionTimeStr.split('T')[0];
+
+        if (redemptionTime >= todayStart.getTime() && redemptionTime < tomorrowStart.getTime()) {
+            todayRevenue += val;
+        }
+        if (redemptionTime >= yesterdayStart.getTime() && redemptionTime < todayStart.getTime()) {
+            yesterdayRevenue += val;
+        }
         
-         if (revenueByDate[date] !== undefined) {
-            revenueByDate[date] += val;
+         if (revenueByDate[dateKey] !== undefined) {
+            revenueByDate[dateKey] += val;
         }
     });
-    
-    // Optimized Today's Redemptions (Count only)
-    // We can just use the loop above since we filtered `redeemed` coupons.
-    const todayRedemptions = redeemed.filter(r => (r.updated_at || '').startsWith(today)).length;
+
 
     // Per Campaign Stats & Health
     campaignList.forEach(c => {

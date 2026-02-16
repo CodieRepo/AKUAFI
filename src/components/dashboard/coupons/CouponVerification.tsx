@@ -20,22 +20,47 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // Fetch coupon with relations
+        // 1. Get Current Client ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setStatus('invalid'); // Or unauthorized
+            setLoading(false);
+            return;
+        }
+        
+        const { data: client } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+            
+        if (!client) {
+             setStatus('invalid');
+             setLoading(false);
+             return;
+        }
+
+        // 2. Fetch coupon with Strict Client Scoping
         const { data, error } = await supabase
             .from('coupons')
             .select(`
                 *,
-                campaigns ( name ),
+                campaigns!inner ( 
+                    name, 
+                    client_id 
+                ),
                 redemptions (
                     redeemed_at,
                     customer_phone
                 )
             `)
             .eq('code', code) 
+            .eq('campaigns.client_id', client.id) // Critical Scoping
             .maybeSingle();
 
         if (error || !data) {
              console.error('Error verifying coupon:', error);
+             // If data is null, it might exist but belong to another client (RLS or filter would hide it)
              setStatus('invalid');
         } else {
             console.log("Coupon Data:", data);

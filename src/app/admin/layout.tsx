@@ -1,22 +1,26 @@
-
-'use client';
-
-import { usePathname } from 'next/navigation';
+import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
 import AdminTopbar from '@/components/admin/layout/AdminTopbar';
 import AdminSidebar from '@/components/admin/layout/AdminSidebar';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isLoginPage = pathname === '/admin/login';
+  const supabase = await createClient();
+  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (isLoginPage) {
-      return <>{children}</>;
+  if (!user) {
+    redirect("/admin/login");
   }
 
+  // Optional: Check if user is actually an admin
+  // For now, we enforce login. Role check can be added here if 'admins' table is populated.
+  
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <AdminSidebar />
