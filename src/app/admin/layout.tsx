@@ -8,15 +8,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Removed server-side auth check to prevent redirect loop on /admin/login
+  // The middleware handles route protection.
 
-  if (!user) {
-    redirect("/admin/login");
-  }
 
   // Optional: Check if user is actually an admin
   // For now, we enforce login. Role check can be added here if 'admins' table is populated.
