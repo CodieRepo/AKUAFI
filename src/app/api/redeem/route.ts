@@ -185,8 +185,9 @@ export async function POST(req: NextRequest) {
             campaign_id: bottle.campaign_id,
             user_id: userId,
             bottle_id: bottle.id, // Linking bottle for tracking
-            status: 'claimed',
-            discount_value: discountValue
+            status: 'active',
+            discount_value: discountValue,
+            generated_at: new Date().toISOString()
         });
 
         if (!couponError) {
