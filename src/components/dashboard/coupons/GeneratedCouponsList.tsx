@@ -15,7 +15,7 @@ import {
 export interface CouponData {
   id: string;
   coupon_code: string;
-  status: 'active' | 'redeemed' | 'expired';
+  status: 'active' | 'redeemed' | 'expired' | 'claimed';
   generated_at: string;
   redeemed_at?: string | null;
   expires_at?: string | null;
@@ -30,13 +30,14 @@ interface GeneratedCouponsListProps {
 export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsListProps) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'redeemed' | 'expired'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [claimingId, setClaimingId] = useState<string | null>(null);
 
   // 1. Summary Metrics
   const summary = useMemo(() => {
     return {
       total: coupons.length,
       active: coupons.filter(c => c.status === 'active').length,
-      redeemed: coupons.filter(c => c.status === 'redeemed').length,
+      redeemed: coupons.filter(c => c.status === 'redeemed' || c.status === 'claimed').length,
       expired: coupons.filter(c => c.status === 'expired').length
     };
   }, [coupons]);
@@ -45,7 +46,13 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
   const filteredCoupons = useMemo(() => {
     return coupons.filter(coupon => {
       // Status Filter
-      if (filterStatus !== 'all' && coupon.status !== filterStatus) return false;
+      if (filterStatus !== 'all') {
+          if (filterStatus === 'redeemed') {
+              if (coupon.status !== 'redeemed' && coupon.status !== 'claimed') return false;
+          } else {
+              if (coupon.status !== filterStatus) return false;
+          }
+      }
       
       // Search Filter
       if (searchQuery && !coupon.coupon_code.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -53,6 +60,31 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
       return true;
     });
   }, [coupons, filterStatus, searchQuery]);
+
+  const handleClaim = async (coupon: CouponData) => {
+    if (!confirm(`Are you sure you want to mark coupon ${coupon.coupon_code} as claimed?`)) return;
+
+    setClaimingId(coupon.id);
+    try {
+        const res = await fetch('/api/coupons/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ coupon_code: coupon.coupon_code })
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || 'Failed to claim');
+
+        alert("Coupon successfully marked as claimed!");
+        window.location.reload(); 
+
+    } catch (err: any) {
+        alert(err.message);
+    } finally {
+        setClaimingId(null);
+    }
+  };
 
   return (
     <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -138,15 +170,33 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Generated</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Redeemed</th>
-                                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Expires</th>
+                                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/50">
                             {filteredCoupons.map((coupon) => {
-                                const statusColor = 
-                                    coupon.status === 'active' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
-                                    coupon.status === 'redeemed' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                                    'text-red-400 bg-red-500/10 border-red-500/20';
+                                // Status Badging Logic
+                                let statusBadgex;
+                                if (coupon.status === 'active') {
+                                    statusBadgex = (
+                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider text-blue-400 bg-blue-500/10 border-blue-500/20">
+                                            Active
+                                         </span>
+                                    );
+                                } else if (coupon.status === 'claimed' || coupon.status === 'redeemed') {
+                                     // Handle both claimed/redeemed as semantic 'redeemed'
+                                     statusBadgex = (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
+                                            Claimed
+                                        </span>
+                                    );
+                                } else {
+                                     statusBadgex = (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider text-red-400 bg-red-500/10 border-red-500/20">
+                                            {coupon.status}
+                                        </span>
+                                    );
+                                }
                                 
                                 return (
                                     <tr key={coupon.id} className="group hover:bg-slate-900/50 transition-colors">
@@ -163,9 +213,7 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                             </div>
                                         </td>
                                         <td className="px-6 py-3">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${statusColor}`}>
-                                                {coupon.status}
-                                            </span>
+                                            {statusBadgex}
                                         </td>
                                         <td className="px-6 py-3 text-slate-400 text-xs">
                                             {new Date(coupon.generated_at).toLocaleDateString()}
@@ -174,7 +222,21 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                             {coupon.redeemed_at ? new Date(coupon.redeemed_at).toLocaleDateString() : '-'}
                                         </td>
                                         <td className="px-6 py-3 text-slate-400 text-xs">
-                                             {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : 'Never'}
+                                            {coupon.status === 'active' ? (
+                                                <button 
+                                                    onClick={() => handleClaim(coupon)}
+                                                    disabled={claimingId === coupon.id}
+                                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                                >
+                                                    {claimingId === coupon.id ? (
+                                                        <>Processing...</>
+                                                    ) : (
+                                                        <>Mark as Claimed</>
+                                                    )}
+                                                </button>
+                                            ) : (
+                                                <span className="text-slate-600 text-[10px]">-</span>
+                                            )}
                                         </td>
                                     </tr>
                                 )
