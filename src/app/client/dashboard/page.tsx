@@ -65,121 +65,126 @@ export default async function ClientDashboard() {
   const campaignList = campaigns || [];
   const campaignIds = campaignList.map(c => c.id);
 
-  // 3. Parallel Metrics Fetching
+  // 3. Metrics Initialization & Defensive Defaults
+  const last7Days = getLast7Days();
+  const scansByDate: Record<string, number> = {};
+  const revenueByDate: Record<string, number> = {};
+  
+  // Initialize Chart Data Maps (guarantee keys exist)
+  last7Days.forEach(d => {
+    scansByDate[d] = 0;
+    revenueByDate[d] = 0;
+  });
+
+  // Declare all metric variables at top scope
   let impressions = 0;
   let scans = 0;
   let redemptions = 0;
   let revenue = 0;
+  let todayScans = 0;
+  let yesterdayScans = 0;
+  let todayRevenue = 0;
+  let yesterdayRevenue = 0;
   
-    // Advanced Metrics - Date Boundaries
-    const now = new Date();
-    // Start of Today (local assumption or UTC? User said "Today Metrics... use proper ISO boundaries").
-    // Best practice for consistency:
-    const todayStart = new Date();
-    todayStart.setHours(0,0,0,0);
-    const todayIso = todayStart.toISOString();
+  let recentActivity: any[] = [];
+  const campaignStats: Record<string, { impressions: number, redemptions: number, health: 'High' | 'Medium' | 'Low', conversion: number }> = {};
 
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setDate(todayStart.getDate() + 1);
-    const tomorrowIso = tomorrowStart.toISOString();
+  // Date Boundaries for "Today" vs "Yesterday" (UTC Safe)
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(todayStart.getDate() + 1);
+  
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(todayStart.getDate() - 1);
 
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(todayStart.getDate() - 1);
-    const yesterdayIso = yesterdayStart.toISOString();
+  // 4. Data Fetching & Processing
+  if (campaignIds.length > 0) {
+      const [
+        { data: bottlesData },
+        { data: allCoupons }, 
+        { data: redeemedCoupons }, 
+        { data: recentRedemptions } 
+      ] = await Promise.all([
+        supabase.from("bottles").select('campaign_id').in('campaign_id', campaignIds),
+        supabase.from("coupons").select('created_at, campaign_id').in('campaign_id', campaignIds),
+        supabase.from("coupons").select('campaign_id, discount_value, status, created_at, updated_at').in('campaign_id', campaignIds).eq('status', 'redeemed'),
+        supabase.from("redemptions").select('redeemed_at, coupons!inner(code, campaign_id, campaigns(name))').in('coupons.campaign_id', campaignIds).order('redeemed_at', { ascending: false }).limit(5)
+      ]);
 
-    // Chart logic needs simple YYYY-MM-DD for key mapping
-    const todayStr = now.toISOString().split('T')[0];
-    const yesterdayStr = yesterdayStart.toISOString().split('T')[0];
+      const coupons = allCoupons || [];
+      const redeemed = redeemedCoupons || [];
+      const bottles = bottlesData || [];
 
-    const [
-      { data: bottlesData },
-      { data: allCoupons }, 
-      { data: redeemedCoupons }, 
-      { data: recentRedemptions } 
-    ] = await Promise.all([
-      // Scoped by campaign_id
-      supabase.from("bottles").select('campaign_id').in('campaign_id', campaignIds),
-      supabase.from("coupons").select('created_at, campaign_id').in('campaign_id', campaignIds),
-      supabase.from("coupons").select('campaign_id, discount_value, status, created_at, updated_at').in('campaign_id', campaignIds).eq('status', 'redeemed'),
-      supabase.from("redemptions").select('redeemed_at, coupons!inner(code, campaign_id, campaigns(name))').in('coupons.campaign_id', campaignIds).order('redeemed_at', { ascending: false }).limit(5)
-    ]);
+      // A. Standard Aggregates
+      impressions = bottles.length;
+      scans = coupons.length;
+      redemptions = redeemed.length;
+      
+      // B. Revenue Total
+      revenue = redeemed.reduce((acc, curr) => acc + (Number(curr.discount_value) || 0), 0);
 
-    // --- Aggregations ---
-    impressions = bottlesData ? bottlesData.length : 0;
-    
-    // Scans Processing
-    const coupons = allCoupons || [];
-    scans = coupons.length;
-    
-    coupons.forEach(c => {
-        const createdTime = new Date(c.created_at).getTime();
-        const dateKey = c.created_at.split('T')[0];
-        
-        // Exact range check for Today
-        if (createdTime >= todayStart.getTime() && createdTime < tomorrowStart.getTime()) {
-            todayScans++;
-        }
-        // Exact range check for Yesterday
-        if (createdTime >= yesterdayStart.getTime() && createdTime < todayStart.getTime()) {
-            yesterdayScans++;
-        }
-        
-        // Chart Data (using simple date key)
-        if (scansByDate[dateKey] !== undefined) {
-            scansByDate[dateKey]++;
-        }
-    });
+      // C. Today vs Yesterday (Strict Filter Logic)
+      todayScans = coupons.filter(c => {
+          const d = new Date(c.created_at).getTime();
+          return d >= todayStart.getTime() && d < tomorrowStart.getTime();
+      }).length;
 
-    // Revenue Processing
-    const redeemed = redeemedCoupons || [];
-    redemptions = redeemed.length;
-    
-    redeemed.forEach(c => {
-        const val = Number(c.discount_value) || 0;
-        revenue += val;
-        
-        // Use updated_at for redemption time if available, or fall back to created_at (less accurate but fallback)
-        // Ideally we should join with 'redemptions' table for 'redeemed_at', but for 'revenue' aggregate this is often 'updated_at' of coupon.
-        const redemptionTimeStr = c.updated_at || c.created_at; 
-        const redemptionTime = new Date(redemptionTimeStr).getTime();
-        const dateKey = redemptionTimeStr.split('T')[0];
+      yesterdayScans = coupons.filter(c => {
+          const d = new Date(c.created_at).getTime();
+          return d >= yesterdayStart.getTime() && d < todayStart.getTime();
+      }).length;
 
-        if (redemptionTime >= todayStart.getTime() && redemptionTime < tomorrowStart.getTime()) {
-            todayRevenue += val;
-        }
-        if (redemptionTime >= yesterdayStart.getTime() && redemptionTime < todayStart.getTime()) {
-            yesterdayRevenue += val;
-        }
-        
-         if (revenueByDate[dateKey] !== undefined) {
-            revenueByDate[dateKey] += val;
-        }
-    });
+      todayRevenue = redeemed.filter(r => {
+          const dateStr = r.updated_at || r.created_at;
+          const d = new Date(dateStr).getTime();
+          return d >= todayStart.getTime() && d < tomorrowStart.getTime();
+      }).reduce((acc, curr) => acc + (Number(curr.discount_value) || 0), 0);
 
+      yesterdayRevenue = redeemed.filter(r => {
+          const dateStr = r.updated_at || r.created_at;
+          const d = new Date(dateStr).getTime();
+          return d >= yesterdayStart.getTime() && d < todayStart.getTime();
+      }).reduce((acc, curr) => acc + (Number(curr.discount_value) || 0), 0);
 
-    // Per Campaign Stats & Health
-    campaignList.forEach(c => {
-        const cImpressions = bottlesData?.filter(b => b.campaign_id === c.id).length || 0;
-        const cScans = c.coupons?.[0]?.count || 0;
-        const cRedemptions = redeemed.filter(rc => rc.campaign_id === c.id).length || 0;
-        
-        const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
-        const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
-        let health: 'High' | 'Medium' | 'Low' = 'Low';
-        if (conv >= 25) health = 'High';
-        else if (conv >= 10) health = 'Medium';
-        
-        campaignStats[c.id] = {
-            impressions: cImpressions,
-            redemptions: cRedemptions,
-            conversion: conv,
-            health
-        };
-    });
-    
-    if (recentRedemptions) {
-        recentActivity = recentRedemptions;
-    }
+      // D. Chart Data Population
+      coupons.forEach(c => {
+          const dateKey = c.created_at.split('T')[0];
+          if (scansByDate[dateKey] !== undefined) {
+              scansByDate[dateKey]++;
+          }
+      });
+
+      redeemed.forEach(r => {
+          const dateKey = (r.updated_at || r.created_at).split('T')[0];
+          if (revenueByDate[dateKey] !== undefined) {
+              revenueByDate[dateKey] += (Number(r.discount_value) || 0);
+          }
+      });
+
+      // E. Campaign Performance Stats
+      campaignList.forEach(c => {
+          const cImpressions = bottles.filter(b => b.campaign_id === c.id).length;
+          const cScans = coupons.filter(cp => cp.campaign_id === c.id).length;
+          const cRedemptions = redeemed.filter(rd => rd.campaign_id === c.id).length;
+          
+          const conv = cImpressions > 0 ? (cScans / cImpressions) * 100 : 0;
+          let health: 'High' | 'Medium' | 'Low' = 'Low';
+          if (conv >= 25) health = 'High';
+          else if (conv >= 10) health = 'Medium';
+          
+          campaignStats[c.id] = {
+              impressions: cImpressions,
+              redemptions: cRedemptions,
+              conversion: conv,
+              health
+          };
+      });
+      
+      if (recentRedemptions) {
+          recentActivity = recentRedemptions;
+      }
   }
 
   // --- Global Rates & Trends ---
