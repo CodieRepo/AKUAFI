@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const { data, error } = await getSupabaseAdmin()
       .from('coupons')
       .update({
-        status: 'redeemed',
+        status: 'claimed',
         redeemed_at: new Date().toISOString(),
       })
       .eq('coupon_code', coupon_code) // Use coupon_code as the lookup

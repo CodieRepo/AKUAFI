@@ -190,6 +190,8 @@ export async function POST(req: NextRequest) {
             generated_at: new Date().toISOString()
         });
 
+        console.log(`[Redeem API] Inserted coupon ${couponCode} with status: active`);
+
         if (!couponError) {
             couponInserted = true;
         } else {
