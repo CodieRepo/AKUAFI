@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { Loader2, Lock, LayoutDashboard } from 'lucide-react';
+import { Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,7 +17,6 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
-  // Redirect if already logged in
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -62,10 +62,16 @@ export default function LoginPage() {
         
         {/* Header */}
         <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 mb-6">
-                <LayoutDashboard className="h-6 w-6 text-white" />
+            <div className="relative w-48 h-12 mx-auto mb-6">
+                <Image 
+                    src="/logo/akuafi-logo.png" 
+                    alt="Akuafi Logo" 
+                    fill
+                    className="object-contain" // Use object-contain to ensure logo fits well without distortion
+                    priority
+                />
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Client Portal
             </h2>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -99,9 +105,11 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Password
-                    </label>
+                    <div className="flex items-center justify-between">
+                        <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Password
+                        </label>
+                    </div>
                     <input
                         id="password"
                         name="password"

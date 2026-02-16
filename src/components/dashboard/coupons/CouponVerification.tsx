@@ -31,13 +31,11 @@ export default function CouponVerification() {
                     customer_phone
                 )
             `)
-            .eq('code', code) // Changed 'coupon_code' to 'code' as per common schema seen in other files (adjust if needed)
+            .eq('code', code) 
             .maybeSingle();
 
-        if (error) {
+        if (error || !data) {
              console.error('Error verifying coupon:', error);
-             setStatus('invalid');
-        } else if (!data) {
              setStatus('invalid');
         } else {
             console.log("Coupon Data:", data);
@@ -61,17 +59,17 @@ export default function CouponVerification() {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+    <div className="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
           <ScanLine className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Verify Coupon</h3>
       </div>
       
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 mb-4">
         <div className="relative">
             <input 
                 type="text" 
-                placeholder="Enter 8-digit code..." 
+                placeholder="Enter code..." 
                 className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 pl-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase placeholder:normal-case placeholder:font-sans"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -89,75 +87,79 @@ export default function CouponVerification() {
         </Button>
       </div>
 
-      {status === 'valid' && (
-          <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
-                  <div className="space-y-1">
-                      <p className="font-semibold text-emerald-900 dark:text-emerald-100">Valid Coupon</p>
-                      <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                          Campaign: <span className="font-medium">{couponData?.campaigns?.name}</span>
-                      </p>
-                      {couponData?.discount_value && (
-                           <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                               Value: <span className="font-medium">₹{couponData.discount_value}</span>
-                           </p>
-                      )}
+      <div className="flex-grow">
+          {status === 'valid' && (
+              <div className="h-full p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3">
+                      <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      <div className="space-y-1 min-w-0">
+                          <p className="font-bold text-emerald-900 dark:text-emerald-100">Valid Coupon</p>
+                          <div className="text-sm text-emerald-800 dark:text-emerald-300 space-y-1 mt-2">
+                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaigns?.name}</span></p>
+                              {couponData?.discount_value && (
+                                   <p><span className="opacity-70">Value:</span> <span className="font-medium">₹{couponData.discount_value}</span></p>
+                              )}
+                          </div>
+                      </div>
                   </div>
               </div>
-          </div>
-      )}
+          )}
 
-      {status === 'redeemed' && (
-          <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 animate-in fade-in slide-in-from-top-2">
-               <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="space-y-1">
-                      <p className="font-semibold text-blue-900 dark:text-blue-100">Already Redeemed</p>
-                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                          Campaign: <span className="font-medium">{couponData?.campaigns?.name}</span>
-                      </p>
-                      {couponData?.redemptions?.[0]?.redeemed_at && (
-                          <p className="text-xs text-blue-700 dark:text-blue-300">
-                              Date: {new Date(couponData.redemptions[0].redeemed_at).toLocaleString("en-IN")}
+          {status === 'redeemed' && (
+              <div className="h-full p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 animate-in fade-in slide-in-from-top-2">
+                   <div className="flex items-start gap-3">
+                      <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                      <div className="space-y-1 min-w-0">
+                          <p className="font-bold text-blue-900 dark:text-blue-100">Already Redeemed</p>
+                          <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1 mt-2">
+                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium block sm:inline">{couponData?.campaigns?.name}</span></p>
+                              {couponData?.redemptions?.[0]?.redeemed_at && (
+                                  <p><span className="opacity-70">Date:</span> <span className="font-medium">{new Date(couponData.redemptions[0].redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'short' })}</span></p>
+                              )}
+                               {couponData?.redemptions?.[0]?.customer_phone && (
+                                  <p><span className="opacity-70">Phone:</span> <span className="font-medium">{couponData.redemptions[0].customer_phone}</span></p>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {status === 'expired' && (
+              <div className="h-full p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3">
+                      <AlertCircle className="h-6 w-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                       <div className="space-y-1 min-w-0">
+                          <p className="font-bold text-amber-900 dark:text-amber-100">Coupon Expired</p>
+                           <div className="text-sm text-amber-800 dark:text-amber-300 space-y-1 mt-2">
+                              <p>This coupon is no longer active.</p>
+                              <p><span className="opacity-70">Campaign:</span> <span className="font-medium">{couponData?.campaigns?.name}</span></p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {status === 'invalid' && (
+              <div className="h-full p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3">
+                      <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+                      <div className="space-y-1">
+                          <p className="font-bold text-red-900 dark:text-red-100">Invalid Coupon</p>
+                          <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                              The code <span className="font-mono font-medium">{code}</span> does not exist or is invalid.
                           </p>
-                      )}
-                       {couponData?.redemptions?.[0]?.customer_phone && (
-                          <p className="text-xs text-blue-700 dark:text-blue-300">
-                              Phone: {couponData.redemptions[0].customer_phone}
-                          </p>
-                      )}
+                      </div>
                   </div>
               </div>
-          </div>
-      )}
-
-      {status === 'expired' && (
-          <div className="mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                   <div className="space-y-1">
-                      <p className="font-semibold text-amber-900 dark:text-amber-100">Coupon Expired</p>
-                      <p className="text-xs text-amber-700 dark:text-amber-300">This coupon is no longer active.</p>
-                       <p className="text-xs text-amber-700 dark:text-blue-300">
-                          Campaign: <span className="font-medium">{couponData?.campaigns?.name}</span>
-                      </p>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {status === 'invalid' && (
-          <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-start gap-3">
-                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
-                  <div className="space-y-1">
-                      <p className="font-semibold text-red-900 dark:text-red-100">Invalid Coupon</p>
-                      <p className="text-xs text-red-700 dark:text-red-300">This code does not exist or is invalid.</p>
-                  </div>
-              </div>
-          </div>
-      )}
+          )}
+          
+          {status === 'idle' && (
+             <div className="h-full flex items-center justify-center p-4 text-center rounded-xl border border-dashed border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
+                 <p className="text-sm text-gray-400">Enter a coupon code above to verify its status.</p>
+             </div>
+          )}
+      </div>
     </div>
   );
 }
