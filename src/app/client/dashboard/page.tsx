@@ -110,16 +110,21 @@ export default async function ClientDashboard() {
   const yesterdayRevenue = 0; // Not available in views
   
   const campaignList = campaigns; // Alias for compatibility with existing UI code
+  
+  // Weekly Labels (e.g., "Mon", "Tue")
+  const weeklyLabels = last7Days.map(dateStr => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-IN', { weekday: 'short' });
+  });
 
   // Campaign Stats Processing
   const campaignStats: Record<string, any> = {};
-  
+  let uniqueUsers = 0;
+
   campaigns.forEach((c: any) => {
       impressions += (Number(c.total_bottles) || 0);
       redemptions += (Number(c.total_claims) || 0);
-      // If total_scans exists, use it. Else fall back to claims? 
-      // User prompt says "Unique Users" is available.
-      // We will map conversion_rate directly.
+      uniqueUsers += (Number(c.unique_users) || 0);
       
       let health = 'Low';
       const conv = Number(c.conversion_rate) || 0;
@@ -136,17 +141,6 @@ export default async function ClientDashboard() {
   });
   
   // Calculate Global Rates
-  // Note: If 'scans' is missing from view, we can't calc Redem %.
-  // But we have average conversion.
-  // We'll calculate Global Conversion from view data avg? Or sum?
-  // Conversion = Scans / Impressions? 
-  // View has pre-calc conversion_rate.
-  
-  // Let's assume Scans are not explicitly totalized in the view unless we infer it.
-  // Actually, Conversion = Scans / Bottles. So Scans = Bottles * Conversion.
-  // We can back-calculate Scans if needed:
-  // scans = sum(bottles * conversion/100)
-  
   if (scans === 0 && campaigns.length > 0) {
       scans = campaigns.reduce((acc: number, c: any) => {
           const b = Number(c.total_bottles) || 0;
@@ -256,63 +250,58 @@ export default async function ClientDashboard() {
             <div className="border-t border-slate-800/50 my-8" />
 
             {/* --- 2. KPI Metric Grid --- */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <PremiumStatCard 
                     title="Impressions"
                     value={impressions}
                     iconType="impressions"
-                    description="Across active campaigns"
+                    description="Total bottles generated"
                     delay={0}
                 />
                 <PremiumStatCard 
                     title="QR Scans"
                     value={scans}
                     iconType="scans"
-                    trend={scanTrendLabel}
-                    trendType={scanTrendType}
+                    description="Total redemptions"
                     delay={75}
                 />
                 <PremiumStatCard 
-                    title="Conversion"
-                    value={conversionRate}
-                    iconType="conversion"
-                    description="Industry avg: 5–8%"
+                    title="Unique Users"
+                    value={uniqueUsers}
+                    iconType="users"
+                    description="Total customers"
                     delay={150}
                 />
-                <PremiumStatCard 
-                    title="Redemption %"
-                    value={redemptionRate}
-                    iconType="redemption"
-                    description="Based on total scans"
+                 <PremiumStatCard 
+                    title="Conversion Rate"
+                    value={conversionRate}
+                    iconType="conversion"
+                    description="Redemption efficiency"
                     delay={225}
                 />
                 <PremiumStatCard 
-                    title="Revenue"
+                    title="Revenue Generated"
                     value={formatCurrency(revenue)}
                     iconType="revenue"
-                    description="Total Value"
+                    description="Revenue tracking soon"
                     type="revenue"
-                    trend={revTrendLabel}
-                    trendType={revTrendType}
-                    sparklineData={revenueSparkData}
                     delay={300}
                 />
             </div>
             
-             {/* --- Mini 7-Day Chart --- */}
+             {/* --- Weekly Scan Chart --- */}
             <div className="bg-slate-900/40 backdrop-blur-sm border-t border-b border-slate-800/50 py-6 -mx-6 px-6 md:mx-0 md:px-6 md:rounded-2xl md:border mt-8">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                            <Activity className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-semibold text-white">Scan Activity</h3>
-                            <p className="text-xs text-slate-400">Past 7 days performance</p>
+                <div className="flex flex-col items-center justify-center gap-6">
+                     <div className="flex flex-col items-center text-center">
+                        <div className="inline-flex items-center gap-2 mb-2">
+                             <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
+                                <Activity className="h-4 w-4" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white">Scan Activity (Past 7 days)</h3>
                         </div>
                     </div>
-                    <div className="w-full md:w-1/2 lg:w-1/3">
-                        <MiniScanChart data={scanChartData} />
+                    <div className="w-full max-w-lg">
+                        <MiniScanChart data={scanChartData} labels={weeklyLabels} />
                     </div>
                 </div>
             </div>
@@ -327,7 +316,7 @@ export default async function ClientDashboard() {
                 <div className="lg:col-span-2 space-y-8">
                     
                     {/* Campaign Performance Card */}
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl">
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl leading-relaxed">
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -350,41 +339,40 @@ export default async function ClientDashboard() {
                                     const progress = Math.min(stats.conversion, 100);
                                     
                                     // Health Color
-                                    const healthColor = stats.health === 'High' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
-                                        : stats.health === 'Medium' ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
-                                        : 'text-red-400 bg-red-500/10 border-red-500/20';
+                                    const healthColor = stats.health === 'High' ? 'text-emerald-400' 
+                                        : stats.health === 'Medium' ? 'text-yellow-400'
+                                        : 'text-red-400';
 
                                     return (
                                         <div key={campaign.id} className="group">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <div>
-                                                    <h4 className="text-white font-medium text-sm flex items-center gap-2">
+                                            <div className="mb-3">
+                                                <div className="flex justify-between items-center mb-1">
+                                                     <h4 className="text-white font-semibold text-base flex items-center gap-2">
                                                         {campaign.name || campaign.campaign_name}
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${healthColor} font-semibold hidden sm:inline-block`}>
-                                                            {stats.health}
-                                                        </span>
                                                     </h4>
+                                                     <span className={`text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-800/50 font-bold ${healthColor}`}>
+                                                            {stats.health} Health
+                                                    </span>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-white font-bold">{(Number(campaign.total_claims) || 0).toLocaleString()}</p>
-                                                    <p className="text-[10px] text-slate-500 uppercase">Claims</p>
+                                                
+                                                {/* Inline Metrics */}
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                                                    <span>Impressions: <span className="text-slate-200 font-mono">{stats.impressions}</span></span>
+                                                    <span className="text-slate-700">|</span>
+                                                    <span>Scans: <span className="text-slate-200 font-mono">{Number(campaign.total_claims) || 0}</span></span>
+                                                    <span className="text-slate-700">|</span>
+                                                    <span>Conversion: <span className="text-slate-200 font-mono">{stats.conversion.toFixed(1)}%</span></span>
+                                                    <span className="text-slate-700">|</span>
+                                                    <span>Users: <span className="text-slate-200 font-mono">{stats.unique_users}</span></span>
                                                 </div>
                                             </div>
                                             
                                             {/* Advanced Progress Bar */}
-                                            <div className="relative h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                            <div className="relative h-1.5 w-full bg-slate-800 rounded-full overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
                                                 <div 
-                                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"
                                                     style={{ width: `${progress}%` }}
                                                 />
-                                            </div>
-                                            
-                                            <div className="flex justify-between mt-2">
-                                                <div className="flex gap-4">
-                                                    <span className="text-[10px] text-slate-500">Impressions: <span className="text-slate-300">{stats.impressions}</span></span>
-                                                    <span className="text-[10px] text-slate-500">Unq Users: <span className="text-slate-300">{stats.unique_users}</span></span>
-                                                </div>
-                                                <span className="text-xs font-bold text-blue-400">{stats.conversion.toFixed(1)}% Conv.</span>
                                             </div>
                                             
                                             {idx < campaigns.length - 1 && <div className="h-px bg-slate-800/50 mt-6" />}

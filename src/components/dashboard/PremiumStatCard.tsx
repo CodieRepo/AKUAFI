@@ -10,21 +10,23 @@ import {
   QrCode, 
   Percent, 
   CheckCircle, 
-  IndianRupee 
+  IndianRupee,
+  Users
 } from 'lucide-react';
 
 function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export type StatIconType = 'impressions' | 'scans' | 'conversion' | 'redemption' | 'revenue';
+export type StatIconType = 'impressions' | 'scans' | 'conversion' | 'redemption' | 'revenue' | 'users';
 
 const iconMap: Record<StatIconType, LucideIcon> = {
   impressions: Eye,
   scans: QrCode,
   conversion: Percent,
   redemption: CheckCircle,
-  revenue: IndianRupee
+  revenue: IndianRupee,
+  users: Users
 };
 
 const colorMap: Record<StatIconType, string> = {
@@ -32,7 +34,8 @@ const colorMap: Record<StatIconType, string> = {
   scans: 'text-blue-400',
   conversion: 'text-purple-400',
   redemption: 'text-cyan-400',
-  revenue: 'text-emerald-400'
+  revenue: 'text-emerald-400',
+  users: 'text-indigo-400'
 };
 
 const bgMap: Record<StatIconType, string> = {
@@ -40,7 +43,8 @@ const bgMap: Record<StatIconType, string> = {
   scans: 'bg-blue-500',
   conversion: 'bg-purple-500',
   redemption: 'bg-cyan-500',
-  revenue: 'bg-emerald-500'
+  revenue: 'bg-emerald-500',
+  users: 'bg-indigo-500'
 };
 
 interface PremiumStatCardProps {
