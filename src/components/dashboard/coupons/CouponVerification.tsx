@@ -66,11 +66,19 @@ export default function CouponVerification() {
       </div>
       
       <div className="flex flex-col gap-3 mb-4">
-        <div className="relative">
+        <div className="relative group">
             <input 
                 type="text" 
-                placeholder="Enter code..." 
-                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 pl-4 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase placeholder:normal-case placeholder:font-sans"
+                placeholder="Enter 8-digit code..." 
+                className="
+                    w-full rounded-xl border 
+                    bg-gray-50 dark:bg-slate-950 
+                    text-gray-900 dark:text-white 
+                    border-gray-200 dark:border-slate-700 
+                    pl-4 py-3 text-sm font-mono 
+                    outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 
+                    transition-all uppercase placeholder:normal-case placeholder:font-sans placeholder:text-gray-400 dark:placeholder:text-gray-500
+                "
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
@@ -80,7 +88,7 @@ export default function CouponVerification() {
         <Button 
             onClick={handleVerify} 
             disabled={!code || loading}
-            className="w-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
+            className="w-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 h-11"
         >
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {loading ? 'Checking...' : 'Verify Status'}

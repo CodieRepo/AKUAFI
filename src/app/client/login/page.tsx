@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -53,12 +53,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-gray-50 dark:bg-black p-4 relative overflow-hidden">
+    <div className="min-h-screen grid place-items-center bg-gray-50 dark:bg-black p-4 relative overflow-hidden font-sans">
       
       {/* Background Decor */}
       <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-blue-50 to-transparent dark:from-blue-900/10 pointer-events-none" />
 
-      <div className="w-full max-w-md space-y-8 relative z-10">
+      <div className="w-full max-w-md space-y-8 relative z-10 animate-in fade-in zoom-in-95 duration-500">
         
         {/* Header */}
         <div className="text-center">
@@ -67,7 +67,7 @@ export default function LoginPage() {
                     src="/logo/akuafi-logo.png" 
                     alt="Akuafi Logo" 
                     fill
-                    className="object-contain" // Use object-contain to ensure logo fits well without distortion
+                    className="object-contain"
                     priority
                 />
             </div>
@@ -88,43 +88,72 @@ export default function LoginPage() {
                     </div>
                 )}
                 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Email Address
                     </label>
-                    <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        placeholder="name@company.com"
-                    />
+                    <div className="relative group">
+                         <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                         <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            // Same premium input classes as Settings for consistency
+                            className="
+                                flex h-10 w-full rounded-lg border 
+                                bg-white dark:bg-slate-950 
+                                text-gray-900 dark:text-white 
+                                placeholder:text-gray-400 dark:placeholder:text-gray-500
+                                px-3 py-2 pl-10 text-sm 
+                                ring-offset-white dark:ring-offset-slate-950
+                                file:border-0 file:bg-transparent file:text-sm file:font-medium 
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 
+                                border-gray-300 dark:border-slate-700
+                                transition-all duration-200
+                            "
+                            placeholder="name@company.com"
+                        />
+                    </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                         <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Password
                         </label>
                     </div>
-                    <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        placeholder="••••••••"
-                    />
+                    <div className="relative group">
+                         <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                         <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="
+                                flex h-10 w-full rounded-lg border 
+                                bg-white dark:bg-slate-950 
+                                text-gray-900 dark:text-white 
+                                placeholder:text-gray-400 dark:placeholder:text-gray-500
+                                px-3 py-2 pl-10 text-sm 
+                                ring-offset-white dark:ring-offset-slate-950
+                                file:border-0 file:bg-transparent file:text-sm file:font-medium 
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 
+                                border-gray-300 dark:border-slate-700
+                                transition-all duration-200
+                            "
+                            placeholder="••••••••"
+                        />
+                    </div>
                 </div>
 
                 <Button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 py-5"
                     disabled={loading}
                 >
                     {loading ? (
@@ -134,7 +163,6 @@ export default function LoginPage() {
                         </>
                     ) : (
                         <>
-                            <Lock className="mr-2 h-4 w-4" />
                             Sign in to Dashboard
                         </>
                     )}
