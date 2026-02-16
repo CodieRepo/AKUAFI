@@ -53,13 +53,32 @@ export default function LoginPage() {
         throw new Error(authError?.message || 'Authentication failed');
       }
 
-      // 2. Refresh router to ensure next steps have valid session cookies
-      // This is CRITICAL for Next.js App Router to pick up the new cookie
+      // 2. Fetch User Role
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (roleError || !roleData) {
+        // Fallback or specific error handling
+        console.error("Role fetch error:", roleError);
+        throw new Error("User role not found. Please contact support.");
+      }
+
+      // 3. Refresh router to ensure next steps have valid session cookies
       router.refresh();
 
-      // 3. User is logged in, redirect to Client Dashboard
-      // Middleware will handle role protection if they try to access something they shouldn't
-      router.replace('/client/dashboard');
+      // 4. Redirect based on role
+      if (roleData.role === 'admin') {
+        router.replace('/admin/dashboard');
+      } else if (roleData.role === 'client') {
+        router.replace('/client/dashboard');
+      } else {
+        // Unknown role
+        console.warn("Unknown role:", roleData.role);
+        router.replace('/'); 
+      }
 
     } catch (err: any) {
         console.error('Login error:', err);

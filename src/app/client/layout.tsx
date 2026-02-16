@@ -19,21 +19,23 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   // Strict Role Check: Must be in 'user_roles' with role 'client'
   // Note: We use the normal authenticated client, respecting RLS (if enabled)
   // but here we are checking a specific role table content.
-  const { data: userRole } = await supabase
+  const { data: roleData } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
     .single();
 
-  console.log("CLIENT LAYOUT: User role data:", userRole);
+  // Temporary Debug Logging
+  console.log("CLIENT USER:", user?.id, user?.email);
+  console.log("CLIENT ROLE:", roleData);
 
-  const isClient = userRole?.role === "client";
+  const isClient = roleData?.role === "client";
 
   if (!isClient) {
-    console.log("CLIENT LAYOUT: User is NOT client (Role: " + userRole?.role + "), redirecting to /");
     // If user is logged in but not a client (e.g. admin trying to access client area),
     // redirect to home or their appropriate dashboard.
     // For now, redirect to root to match requirements.
+    console.log("Redirecting non-client user to root");
     return redirect("/");
   }
 
