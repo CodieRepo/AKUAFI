@@ -75,9 +75,10 @@ export default function LoginPage() {
       } else if (roleData.role === 'client') {
         router.replace('/client/dashboard');
       } else {
-        // Unknown role
+        // Unknown role - Show error instead of redirecting to "/"
         console.warn("Unknown role:", roleData.role);
-        router.replace('/'); 
+        setError("Access denied: Unknown user role.");
+        setLoading(false);
       }
 
     } catch (err: any) {
