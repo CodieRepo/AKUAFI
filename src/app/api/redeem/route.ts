@@ -123,94 +123,44 @@ export async function POST(req: NextRequest) {
     }
 
     // -------------------------------------------------------
-    // STEP 6: INSERT REDEMPTION
+    // STEP 6: ATOMIC REDEMPTION & COUPON GENERATION (RPC)
     // -------------------------------------------------------
-    // Catch 23505 here for final safety
-    const { data: redemption, error: insertError } = await supabaseAdmin
-        .from('redemptions')
-        .insert({
-            user_id: userId,
-            campaign_id: bottle.campaign_id,
-            bottle_id: bottle.id,
-            redeemed_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-    if (insertError) {
-        console.error("Redemption Insert Error:", insertError);
-        
-        if (insertError.code === '23505') {
-            const msg = insertError.message || '';
-            const details = insertError.details || '';
-            
-            // Inspect constraint name or details
-            if (msg.includes('unique_bottle_redemption') || details.includes('bottle_id')) {
-                return NextResponse.json({ error: "Coupon redeemed from this QR" }, { status: 400 });
-            }
-            if (msg.includes('unique_user_campaign') || (details.includes('user_id') && details.includes('campaign_id'))) {
-                return NextResponse.json({ error: "Mobile already registered for this campaign" }, { status: 400 });
-            }
-            
-            // Fallback for generic unique violation
-            return NextResponse.json({ error: "Request processed already" }, { status: 400 });
-        }
-        
-        return NextResponse.json({ error: 'Redemption failed' }, { status: 500 });
-    }
-
-    // -------------------------------------------------------
-    // STEP 7: GENERATE COUPON
-    // -------------------------------------------------------
-    const { data: campaign } = await supabaseAdmin
+    
+    // Fetch Campaign Details (client_id & rules)
+    const { data: campaign, error: campaignError } = await supabaseAdmin
         .from('campaigns')
-        .select('coupon_prefix, coupon_min_value')
+        .select('id, client_id, coupon_prefix, coupon_min_value')
         .eq('id', bottle.campaign_id)
         .single();
+
+    if (campaignError || !campaign || !campaign.client_id) {
+        console.error("Campaign Fetch Error or Missing Client ID:", campaignError);
+        throw new Error("Campaign missing client_id. Cannot generate coupon.");
+    }
         
-    const prefix = campaign?.coupon_prefix || 'OFFER';
-    const discountValue = campaign?.coupon_min_value || 0; // Using min_value as fixed or base
+    const prefix = campaign.coupon_prefix || 'OFFER';
+    const discountValue = campaign.coupon_min_value || 0;
     
-    let couponCode = '';
-    let couponInserted = false;
-    let attempts = 0;
-    const MAX_ATTEMPTS = 5;
+    // Generate Single Coupon Code for RPC
+    const couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    while (!couponInserted && attempts < MAX_ATTEMPTS) {
-        attempts++;
-        couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Execute Atomic RPC
+    const { error: rpcError } = await supabaseAdmin.rpc('redeem_coupon_atomic', {
+        p_user_id: userId,
+        p_campaign_id: bottle.campaign_id,
+        p_bottle_id: bottle.id,
+        p_client_id: campaign.client_id,
+        p_phone: normalizedPhone,
+        p_coupon_code: couponCode,
+        p_discount: discountValue
+    });
 
-        const { error: couponError } = await supabaseAdmin.from('coupons').insert({
-            coupon_code: couponCode,
-            campaign_id: bottle.campaign_id,
-            user_id: userId,
-            bottle_id: bottle.id, // Linking bottle for tracking
-            status: 'active',
-            discount_value: discountValue,
-            generated_at: new Date().toISOString()
-        });
-
-        console.log(`[Redeem API] Inserted coupon ${couponCode} with status: active`);
-
-        if (!couponError) {
-            couponInserted = true;
-        } else {
-            // Only retry on duplicate coupon code
-            if (couponError.code === '23505') {
-                 console.warn(`Coupon collision for ${couponCode}, retrying... (${attempts}/${MAX_ATTEMPTS})`);
-            } else {
-                 console.error("Coupon Insert Error:", couponError);
-                 // We generated a redemption record but failed to give a coupon.
-                 // This is a critical edge case. 
-                 return NextResponse.json({ error: "Coupon generation error" }, { status: 500 });
-            }
-        }
+    if (rpcError) {
+        console.error("Atomic Redemption RPC Error:", rpcError);
+        return NextResponse.json({ error: "Coupon generation error" }, { status: 500 });
     }
 
-    if (!couponInserted) {
-        console.error("Failed to generate unique coupon after max attempts");
-        return NextResponse.json({ error: "System busy, please try again" }, { status: 500 });
-    }
+    console.log(`[Redeem API] Atomic redeem success for coupon: ${couponCode}`);
 
     return NextResponse.json({
         success: true,
