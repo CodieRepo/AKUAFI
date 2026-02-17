@@ -141,23 +141,47 @@ export async function POST(req: NextRequest) {
     const prefix = campaign.coupon_prefix || 'OFFER';
     const discountValue = campaign.coupon_min_value || 0;
     
-    // Generate Single Coupon Code for RPC
-    const couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Generate Coupon Code inside a Loop for Collision Safety
+    const MAX_ATTEMPTS = 5;
+    let attempts = 0;
+    let couponCode = '';
+    let rpcError = null;
 
-    // Execute Atomic RPC
-    const { error: rpcError } = await supabaseAdmin.rpc('redeem_coupon_atomic', {
-        p_user_id: userId,
-        p_campaign_id: bottle.campaign_id,
-        p_bottle_id: bottle.id,
-        p_client_id: campaign.client_id,
-        p_phone: normalizedPhone,
-        p_coupon_code: couponCode,
-        p_discount: discountValue
-    });
+    while (attempts < MAX_ATTEMPTS) {
+        attempts++;
+        couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        // Execute Atomic RPC
+        const { error } = await supabaseAdmin.rpc('redeem_coupon_atomic', {
+            p_user_id: userId,
+            p_campaign_id: bottle.campaign_id,
+            p_bottle_id: bottle.id,
+            p_client_id: campaign.client_id,
+            p_phone: normalizedPhone,
+            p_coupon_code: couponCode,
+            p_discount: discountValue
+        });
+
+        if (!error) {
+            rpcError = null;
+            break; // Success!
+        }
+
+        rpcError = error;
+
+        // If error is UNIQUE constraint violation (23505), retry.
+        // Otherwise, break and return 500.
+        if (error.code === '23505') {
+            console.warn(`[Redeem API] Coupon collision for ${couponCode}, retrying (${attempts}/${MAX_ATTEMPTS})...`);
+        } else {
+            console.error("Atomic Redemption RPC Error (Non-Retriable):", error);
+            break;
+        }
+    }
 
     if (rpcError) {
-        console.error("Atomic Redemption RPC Error:", rpcError);
-        return NextResponse.json({ error: "Coupon generation error" }, { status: 500 });
+        console.error("Failed to redeem token after max attempts or critical error:", rpcError);
+        return NextResponse.json({ error: "System busy, please try again" }, { status: 500 });
     }
 
     console.log(`[Redeem API] Atomic redeem success for coupon: ${couponCode}`);
