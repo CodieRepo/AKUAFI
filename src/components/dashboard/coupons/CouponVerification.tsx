@@ -48,12 +48,11 @@ export default function CouponVerification() {
         console.log(`[Verify Coupon] Verifying: ${cleanCode}`);
 
         // DEBUG: Check Auth Session
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("SESSION:", sessionData);
+
         const { data: authData } = await supabase.auth.getUser();
         console.log("AUTH UID:", authData?.user?.id);
-        
-        if (!authData?.user) {
-             console.log("Current Session:", await supabase.auth.getSession());
-        }
 
         const { data, error } = await supabase
             .from('coupons')
@@ -64,10 +63,13 @@ export default function CouponVerification() {
                 redeemed_at,
                 expiry_date,
                 discount_value,
-                campaigns(name)
+                client_id,
+                campaign_id
             `)
             .eq('coupon_code', cleanCode) 
             .maybeSingle();
+
+        console.log("Verify result:", data, error);
 
         if (error) {
              console.error('[Verify Coupon] DB Error:', error);
@@ -79,10 +81,25 @@ export default function CouponVerification() {
         } else {
             console.log("[Verify Coupon] Record Found:", data);
             
-            // Flatten campaign name if present
+            let campaignName = 'Unknown Campaign';
+
+            // Fetch Campaign Name Separately
+            if (data.campaign_id) {
+                const { data: campaign } = await supabase
+                    .from('campaigns')
+                    .select('name')
+                    .eq('id', data.campaign_id)
+                    .single();
+                
+                if (campaign) {
+                    campaignName = campaign.name;
+                }
+            }
+            
+            // Construct Enhanced Data
             const enhancedData = {
                 ...data,
-                campaign_name: data.campaigns?.name || data.campaign_name || 'Unknown Campaign'
+                campaign_name: campaignName
             };
 
             console.log("[Verify Coupon] Enhanced Data:", enhancedData);
