@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SignOutButton from '@/components/dashboard/SignOutButton';
 import Image from 'next/image';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ClientNavbarProps {
   clientName: string;
@@ -13,6 +14,7 @@ interface ClientNavbarProps {
 
 export default function ClientNavbar({ clientName }: ClientNavbarProps) {
   const pathname = usePathname();
+  const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     {
@@ -66,7 +68,20 @@ export default function ClientNavbar({ clientName }: ClientNavbarProps) {
         </div>
 
         {/* Right Action */}
-        <SignOutButton clientName={clientName} />
+        <div className="flex items-center gap-3">
+             <button
+               onClick={toggleTheme}
+               className="p-2 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 transition shadow-sm"
+               title="Toggle theme"
+             >
+               {theme === 'dark' ? (
+                 <Sun className="w-4 h-4 text-yellow-500" />
+               ) : (
+                 <Moon className="w-4 h-4 text-gray-700" />
+               )}
+             </button>
+             <SignOutButton clientName={clientName} />
+        </div>
       </div>
     </div>
   );

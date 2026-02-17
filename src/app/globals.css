@@ -25,6 +25,19 @@
   --color-border: #E2E8F0;
 }
 
+.dark {
+  --color-primary: #3b82f6; /* Blue 500 */
+  --color-primary-dark: #1d4ed8;
+  --color-primary-light: #1e293b;
+
+  --color-surface: #0F172A; /* Slate 900 */
+  --color-background: #020617; /* Slate 950 */
+  --color-foreground: #F8FAFC; /* Slate 50 */
+  --color-text-muted: #94A3B8; /* Slate 400 */
+  
+  --color-border: #1E293B; /* Slate 800 */
+}
+
 @theme {
   /* Font Mapping */
   --font-sans: var(--font-inter);

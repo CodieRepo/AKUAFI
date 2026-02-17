@@ -15,7 +15,7 @@ export default async function ClientSettingsPage() {
 
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("id, client_name")
+    .select("id, client_name, phone")
     .eq("user_id", user.id)
     .single();
 

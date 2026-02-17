@@ -49,8 +49,8 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
     
     // Profile State
     const [companyName, setCompanyName] = useState(client?.client_name || '');
-    // Email is derived from user prop directly now
-    const [phone, setPhone] = useState(user?.phone || ''); 
+    // Phone is primarily from client profile now, fallback to auth phone for legacy
+    const [phone, setPhone] = useState(client?.phone || user?.phone || ''); 
 
     // Password State
     const [currentPassword, setCurrentPassword] = useState('');
@@ -59,27 +59,48 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
     
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+    // Phone Helper: Normalize to 10 digits with prefix if needed
+    const normalizePhone = (p: string) => {
+        // 1. Remove non-digits
+        let n = p.replace(/\D/g, "");
+        
+        // 2. If 10 digits, add '91' prefix (assuming India based on context)
+        if (n.length === 10) {
+            n = "91" + n;
+        }
+        
+        return n;
+    };
+
     const handleProfileUpdate = async () => {
         setLoading(true);
         setMessage(null);
         const supabase = createClient();
 
         try {
-            // Update Client Table
+            // Validate Phone
+            const cleanPhone = normalizePhone(phone);
+            
+            // Basic length check (10-12 digits allowed)
+            if (cleanPhone.length < 10 || cleanPhone.length > 12) {
+                throw new Error("Phone number must be valid (10-12 digits)");
+            }
+
+            // Update Client Table (Name + Phone)
+            // CRITICAL: We are NOT using supabase.auth.updateUser for phone anymore.
+            // Phone is stored as a profile field in 'clients' table.
             const { error: clientError } = await supabase
                 .from('clients')
-                .update({ client_name: companyName })
+                .update({ 
+                    client_name: companyName,
+                    phone: cleanPhone 
+                })
                 .eq('id', client.id);
 
             if (clientError) throw clientError;
 
-            // Update Auth Metadata (Phone)
-            if (phone !== user.phone) {
-                 const { error: authError } = await supabase.auth.updateUser({
-                     phone: phone
-                 });
-                 if (authError) throw authError;
-            }
+            // Optional: If we want to keep Auth email in sync (we are not changing email here)
+            // But phone in Auth is now ignored/legacy.
 
             setMessage({ type: 'success', text: 'Profile updated successfully' });
             router.refresh();
