@@ -41,16 +41,23 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // 1. Fetch coupon WITHOUT explicit client_id filter
-        // We rely on RLS/View definition to handle isolation if needed,
-        // or just strict code matching.
-        // Also removed status filter to allow "Claimed" coupons to be found.
+        // 1. Fetch coupon via 'coupons' TABLE directly (RLS Protected)
+        // We bypass 'client_coupons' view to avoid RLS 400 errors on views.
+        // We assume RLS handles 'client_id' isolation automatically (auth.uid() check).
         
         console.log(`[Verify Coupon] Verifying: ${cleanCode}`);
 
         const { data, error } = await supabase
-            .from('client_coupons')
-            .select('*, campaigns(name)')
+            .from('coupons')
+            .select(`
+                coupon_code,
+                status,
+                generated_at:issued_at,
+                redeemed_at,
+                expires_at:expiry_date,
+                discount_value,
+                campaigns(name)
+            `)
             .eq('coupon_code', cleanCode) 
             .maybeSingle();
 
