@@ -207,10 +207,10 @@ export default async function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-black lg:bg-transparent text-slate-200 font-sans">
-        <div className="max-w-7xl mx-auto px-6 py-10 space-y-8 animate-in fade-in duration-700">
+        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6 animate-in fade-in duration-700">
         
             {/* --- 1. Hero Analytics Section --- */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-black border border-slate-800 p-8 shadow-2xl">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-black border border-slate-800 p-6 shadow-2xl">
                 {/* Background Glow */}
                 <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none opacity-50"></div>
                 
@@ -256,7 +256,7 @@ export default async function ClientDashboard() {
             </div>
 
             {/* SPACER Divider */}
-            <div className="border-t border-slate-800/50 my-8" />
+            <div className="border-t border-slate-800/50 my-4" />
 
             {/* --- 2. KPI Metric Grid --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -301,7 +301,7 @@ export default async function ClientDashboard() {
 
 
             {/* SPACER Divider */}
-            <div className="border-t border-slate-800/50 my-8" />
+            <div className="border-t border-slate-800/50 my-6" />
 
             {/* --- 3. Main Content Area --- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -476,7 +476,7 @@ export default async function ClientDashboard() {
             </div>
 
             {/* SPACER Divider */}
-            <div className="border-t border-slate-800/50 my-8" />
+            <div className="border-t border-slate-800/50 my-6" />
 
              {/* --- Weekly Scan Chart (Moved to Bottom) --- */}
             <div className="bg-slate-900/40 backdrop-blur-sm border-t border-b border-slate-800/50 py-6 -mx-6 px-6 md:mx-0 md:px-6 md:rounded-2xl md:border">
