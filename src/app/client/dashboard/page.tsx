@@ -207,7 +207,7 @@ export default async function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-black lg:bg-transparent text-slate-200 font-sans">
-        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6 animate-in fade-in duration-700">
+        <div className="max-w-7xl mx-auto px-6 py-4 space-y-3 animate-in fade-in duration-700">
         
             {/* --- 1. Hero Analytics Section --- */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-black border border-slate-800 p-6 shadow-2xl">
