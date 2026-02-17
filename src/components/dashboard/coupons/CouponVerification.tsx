@@ -47,6 +47,14 @@ export default function CouponVerification() {
         
         console.log(`[Verify Coupon] Verifying: ${cleanCode}`);
 
+        // DEBUG: Check Auth Session
+        const { data: authData } = await supabase.auth.getUser();
+        console.log("AUTH UID:", authData?.user?.id);
+        
+        if (!authData?.user) {
+             console.log("Current Session:", await supabase.auth.getSession());
+        }
+
         const { data, error } = await supabase
             .from('coupons')
             .select(`
@@ -63,6 +71,7 @@ export default function CouponVerification() {
 
         if (error) {
              console.error('[Verify Coupon] DB Error:', error);
+             console.log("DB ERROR FULL:", error);
              setStatus('invalid');
         } else if (!data) {
              console.log('[Verify Coupon] No record found for:', cleanCode);
