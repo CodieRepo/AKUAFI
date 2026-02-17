@@ -13,15 +13,18 @@ export default async function ClientSettingsPage() {
     return redirect("/client/login");
   }
 
-  const { data: client, error: clientError } = await supabase
+  // We fetch client data, but if it's missing (e.g. new user or error),
+  // we SHOULD NOT redirect. The user is authenticated (auth.getUser() passed).
+  // We should allow them to see the settings page, possibly to create/update their profile.
+  const { data: client } = await supabase
     .from("clients")
     .select("id, client_name, phone")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle(); // Use maybeSingle to avoid 406 error if not found
 
-  if (clientError || !client) {
-    return redirect("/client/login");
-  }
+  // REMOVED: Rigid redirect if (!client). 
+  // User is logged in, so let them stay.
+  // if (clientError || !client) { return redirect("/client/login"); }
 
   return (
       <div className="max-w-[1600px] mx-auto p-6 md:p-8 space-y-8 animate-in fade-in duration-500">

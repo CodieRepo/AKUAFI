@@ -86,21 +86,30 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
                 throw new Error("Phone number must be valid (10-12 digits)");
             }
 
-            // Update Client Table (Name + Phone)
-            // CRITICAL: We are NOT using supabase.auth.updateUser for phone anymore.
-            // Phone is stored as a profile field in 'clients' table.
-            const { error: clientError } = await supabase
-                .from('clients')
-                .update({ 
-                    client_name: companyName,
-                    phone: cleanPhone 
-                })
-                .eq('id', client.id);
-
-            if (clientError) throw clientError;
-
-            // Optional: If we want to keep Auth email in sync (we are not changing email here)
-            // But phone in Auth is now ignored/legacy.
+            // Update OR Insert Client Table
+            if (client?.id) {
+                // Update existing
+                const { error: clientError } = await supabase
+                    .from('clients')
+                    .update({ 
+                        client_name: companyName,
+                        phone: cleanPhone 
+                    })
+                    .eq('id', client.id);
+                
+                 if (clientError) throw clientError;
+            } else {
+                 // Safe fallback: Update by user_id if client.id missing?
+                 const { error: upsertError } = await supabase
+                    .from('clients')
+                    .upsert({
+                        user_id: user.id,
+                        client_name: companyName,
+                        phone: cleanPhone
+                    }, { onConflict: 'user_id' });
+                    
+                 if (upsertError) throw upsertError;
+            }
 
             setMessage({ type: 'success', text: 'Profile updated successfully' });
             router.refresh();
@@ -297,7 +306,7 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
             <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-800 p-6 flex flex-col md:flex-row gap-8 text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-slate-900/30">
                 <div>
                     <span className="block text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider text-[10px] font-sans font-bold">Client ID</span>
-                    <span className="bg-white dark:bg-slate-950 px-2 py-1 rounded border border-gray-200 dark:border-slate-800">{client.id}</span>
+                    <span className="bg-white dark:bg-slate-950 px-2 py-1 rounded border border-gray-200 dark:border-slate-800">{client?.id || 'Not Assigned'}</span>
                 </div>
                 <div>
                     <span className="block text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider text-[10px] font-sans font-bold">User ID</span>

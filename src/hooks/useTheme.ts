@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 export function useTheme() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     // Check local storage or system preference
     const stored = localStorage.getItem("theme") as "light" | "dark" | null;
     
@@ -22,5 +25,5 @@ export function useTheme() {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  return { theme, toggleTheme };
+  return { theme, toggleTheme, mounted };
 }
