@@ -298,22 +298,7 @@ export default async function ClientDashboard() {
                 />
             </div>
             
-             {/* --- Weekly Scan Chart --- */}
-            <div className="bg-slate-900/40 backdrop-blur-sm border-t border-b border-slate-800/50 py-6 -mx-6 px-6 md:mx-0 md:px-6 md:rounded-2xl md:border mt-8">
-                <div className="flex flex-col items-center justify-center gap-6">
-                     <div className="flex flex-col items-center text-center">
-                        <div className="inline-flex items-center gap-2 mb-2">
-                             <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
-                                <Activity className="h-4 w-4" />
-                            </div>
-                            <h3 className="text-sm font-semibold text-white">Scan Activity (Past 7 days)</h3>
-                        </div>
-                    </div>
-                    <div className="w-full max-w-lg">
-                        <MiniScanChart data={scanChartData} labels={weeklyLabels} />
-                    </div>
-                </div>
-            </div>
+
 
             {/* SPACER Divider */}
             <div className="border-t border-slate-800/50 my-8" />
@@ -487,6 +472,26 @@ export default async function ClientDashboard() {
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            {/* SPACER Divider */}
+            <div className="border-t border-slate-800/50 my-8" />
+
+             {/* --- Weekly Scan Chart (Moved to Bottom) --- */}
+            <div className="bg-slate-900/40 backdrop-blur-sm border-t border-b border-slate-800/50 py-6 -mx-6 px-6 md:mx-0 md:px-6 md:rounded-2xl md:border">
+                <div className="flex flex-col items-center justify-center gap-6">
+                     <div className="flex flex-col items-center text-center">
+                        <div className="inline-flex items-center gap-2 mb-2">
+                             <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
+                                <Activity className="h-4 w-4" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white">Scan Activity (Past 7 days)</h3>
+                        </div>
+                    </div>
+                    <div className="w-full max-w-lg">
+                        <MiniScanChart data={scanChartData} labels={weeklyLabels} />
+                    </div>
                 </div>
             </div>
         </div>
