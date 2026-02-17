@@ -44,22 +44,22 @@ export default function AISummaryCard({
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-900/40 to-purple-900/30 backdrop-blur-xl rounded-2xl border border-white/5 p-5 shadow-lg relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl"></div>
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30 p-5 shadow-sm relative overflow-hidden">
+      {/* Background decoration - subtle */}
+      <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-indigo-50 dark:bg-indigo-500/10 rounded-full blur-2xl"></div>
       
       <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-indigo-400" />
-              <h3 className="text-sm font-bold text-indigo-100 uppercase tracking-wider">Smart Insight</h3>
+              <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-sm font-bold text-gray-900 dark:text-indigo-100 uppercase tracking-wider">Smart Insight</h3>
           </div>
           
           <div className="flex gap-4 items-start">
-             <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${color}`}>
+             <div className={`p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 ${color.replace('text-', 'text-')}`}>
                  <Icon className="h-5 w-5" />
              </div>
              <div>
-                 <p className="text-white font-medium text-sm leading-relaxed">
+                 <p className="text-gray-700 dark:text-gray-300 font-medium text-sm leading-relaxed">
                      {message}
                  </p>
              </div>

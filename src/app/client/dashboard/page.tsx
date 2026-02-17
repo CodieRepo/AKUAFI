@@ -206,125 +206,102 @@ export default async function ClientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black lg:bg-transparent text-slate-200 font-sans">
-        <div className="max-w-7xl mx-auto px-6 py-4 space-y-3 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-gray-50 dark:bg-black text-gray-900 dark:text-white font-sans transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-6 py-6 space-y-8 animate-in fade-in duration-500">
         
-            {/* --- 1. Hero Analytics Section --- */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-black border border-slate-800 p-6 shadow-2xl">
-                {/* Background Glow */}
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none opacity-50"></div>
-                
-                <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <span>Live Analytics</span>
+            {/* --- 1. Minimal Header --- */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                   <div className="flex items-center gap-2 mb-1">
+                        <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
+                            <Sparkles className="h-4 w-4" />
                         </div>
-                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
-                            Welcome back, {client.client_name}
-                        </h1>
-                        <p className="text-slate-400 text-sm max-w-lg mb-4">
-                             Your campaigns generated <span className="text-white font-semibold">{todayScans} scans</span> and <span className="text-white font-semibold">{formatCurrency(todayRevenue)} revenue</span> today.
-                        </p>
-                        
-                        <div className="flex flex-wrap gap-3">
-                            <div className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
-                                Active Campaigns: <span className="text-white font-semibold">{activeCampaigns}</span>
-                            </div>
-                            <div className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
-                                Today&apos;s Scans: <span className="text-white font-semibold">{todayScans}</span>
-                            </div>
-                             <div className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300 border border-slate-700">
-                                Today&apos;s Revenue: <span className="text-white font-semibold">{formatCurrency(todayRevenue)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="flex flex-col items-start md:items-end gap-2">
-                         <div className="flex items-center gap-2 text-slate-400 text-sm bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span>{new Date().toLocaleDateString("en-IN", { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-                         </div>
-                         <p className="text-xs text-slate-500">
-                            Last updated: {new Date().toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
-                         </p>
-                    </div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Dashboard</span>
+                   </div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                        {client.client_name}
+                    </h1>
+                     <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span>Live updates enabled</span>
+                        <span className="text-gray-300 dark:text-gray-700">•</span>
+                        <span>{new Date().toLocaleDateString("en-IN", { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                    </p>
                 </div>
-            </div>
-
-            {/* SPACER Divider */}
-            <div className="border-t border-slate-800/50 my-4" />
+                
+                <div className="flex items-center gap-3">
+                     <button className="hidden md:flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                        <Calendar className="h-4 w-4" />
+                        <span>Filter</span>
+                     </button>
+                      <button className="flex items-center gap-2 text-sm font-medium text-white bg-slate-900 dark:bg-white dark:text-black border border-transparent px-4 py-2 rounded-lg shadow-sm hover:opacity-90 transition-opacity">
+                        <Zap className="h-4 w-4" />
+                        <span>New Campaign</span>
+                     </button>
+                </div>
+            </header>
 
             {/* --- 2. KPI Metric Grid --- */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* --- 2. KPI Stats Row --- */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <PremiumStatCard 
-                    title="Impressions"
-                    value={impressions}
-                    iconType="impressions"
-                    description="Total bottles generated"
+                    title="Active Campaigns"
+                    value={activeCampaigns}
+                    iconType="impressions" // Using eye icon as generic or change to zap
+                    description="Live Now"
                     delay={0}
                 />
                 <PremiumStatCard 
-                    title="QR Scans"
+                    title="Total Scans"
                     value={scans}
                     iconType="scans"
-                    description="Total redemptions"
+                    description="All time redemptions"
                     delay={75}
                 />
                 <PremiumStatCard 
-                    title="Unique Users"
+                    title="Total Users"
                     value={uniqueUsers}
                     iconType="users"
-                    description="Total customers"
+                    description="Unique customers"
                     delay={150}
                 />
-                 <PremiumStatCard 
-                    title="Conversion Rate"
-                    value={conversionRate}
-                    iconType="conversion"
-                    description="Redemption efficiency"
-                    delay={225}
-                />
                 <PremiumStatCard 
-                    title="Revenue Generated"
+                    title="Total Revenue"
                     value={formatCurrency(revenue)}
                     iconType="revenue"
-                    description="Revenue tracking soon"
+                    description="Generated verified revenue"
                     type="revenue"
-                    delay={300}
+                    delay={225}
                 />
             </div>
             
 
 
-            {/* SPACER Divider */}
-            <div className="border-t border-slate-800/50 my-6" />
-
             {/* --- 3. Main Content Area --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* LEFT: Campaign Permformance & Activity (2 Cols) */}
                 <div className="lg:col-span-2 space-y-8">
                     
                     {/* Campaign Performance Card */}
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl leading-relaxed">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6 shadow-sm leading-relaxed">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                    <Trophy className="h-5 w-5 text-blue-500" />
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-500" />
                                     Campaign Performance
                                 </h3>
-                                <p className="text-sm text-slate-400">Engagement breakdown</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Engagement breakdown</p>
                             </div>
                         </div>
 
                         {campaignList.length === 0 ? (
-                             <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
-                                <Sparkles className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-                                <p className="text-slate-400">No active campaigns found.</p>
+                             <div className="text-center py-12 border border-dashed border-gray-200 dark:border-slate-800 rounded-xl bg-gray-50 dark:bg-slate-800/20">
+                                <Sparkles className="h-10 w-10 text-gray-400 dark:text-slate-600 mx-auto mb-3" />
+                                <p className="text-gray-500 dark:text-slate-400">No active campaigns found.</p>
                              </div>
                         ) : (
                             <div className="space-y-6">
@@ -341,35 +318,35 @@ export default async function ClientDashboard() {
                                         <div key={campaign.id} className="group">
                                             <div className="mb-3">
                                                 <div className="flex justify-between items-center mb-1">
-                                                     <h4 className="text-white font-semibold text-base flex items-center gap-2">
+                                                    <h4 className="text-gray-900 dark:text-white font-semibold text-base flex items-center gap-2">
                                                         {campaign.name || campaign.campaign_name}
                                                     </h4>
-                                                     <span className={`text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-800/50 font-bold ${healthColor}`}>
+                                                     <span className={`text-[10px] px-2 py-0.5 rounded-full border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 font-bold ${healthColor}`}>
                                                             {stats.health} Health
                                                     </span>
                                                 </div>
                                                 
                                                 {/* Inline Metrics */}
-                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-                                                    <span>Impressions: <span className="text-slate-200 font-mono">{stats.impressions}</span></span>
-                                                    <span className="text-slate-700">|</span>
-                                                    <span>Scans: <span className="text-slate-200 font-mono">{Number(campaign.total_claims) || 0}</span></span>
-                                                    <span className="text-slate-700">|</span>
-                                                    <span>Conversion: <span className="text-slate-200 font-mono">{stats.conversion.toFixed(1)}%</span></span>
-                                                    <span className="text-slate-700">|</span>
-                                                    <span>Users: <span className="text-slate-200 font-mono">{stats.unique_users}</span></span>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-slate-400">
+                                                    <span>Impressions: <span className="text-gray-700 dark:text-slate-200 font-mono">{stats.impressions}</span></span>
+                                                    <span className="text-gray-300 dark:text-slate-700">|</span>
+                                                    <span>Scans: <span className="text-gray-700 dark:text-slate-200 font-mono">{Number(campaign.total_claims) || 0}</span></span>
+                                                    <span className="text-gray-300 dark:text-slate-700">|</span>
+                                                    <span>Conversion: <span className="text-gray-700 dark:text-slate-200 font-mono">{stats.conversion.toFixed(1)}%</span></span>
+                                                    <span className="text-gray-300 dark:text-slate-700">|</span>
+                                                    <span>Users: <span className="text-gray-700 dark:text-slate-200 font-mono">{stats.unique_users}</span></span>
                                                 </div>
                                             </div>
                                             
                                             {/* Advanced Progress Bar */}
-                                            <div className="relative h-1.5 w-full bg-slate-800 rounded-full overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+                                            <div className="relative h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
                                                 <div 
-                                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"
+                                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
                                                     style={{ width: `${progress}%` }}
                                                 />
                                             </div>
                                             
-                                            {idx < campaigns.length - 1 && <div className="h-px bg-slate-800/50 mt-6" />}
+                                            {idx < campaigns.length - 1 && <div className="h-px bg-gray-100 dark:bg-slate-800/50 mt-6" />}
                                         </div>
                                     );
                                 })}
@@ -442,31 +419,31 @@ export default async function ClientDashboard() {
                     </div>
 
                     {/* Quick Insights Card */}
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-xl">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6 shadow-sm">
                         <div className="mb-4">
-                            <h3 className="text-base font-bold text-white flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-amber-500" />
                                 Quick Insights
                             </h3>
                         </div>
                         
                         <div className="space-y-4">
-                            <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-800 flex items-center justify-between">
+                            <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800/30 border border-gray-200 dark:border-slate-800 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs text-slate-400 uppercase tracking-wide">Best Campaign</p>
-                                    <p className="text-sm font-bold text-white mt-1 truncate max-w-[150px]" title={bestCampaign?.name || 'N/A'}>{bestCampaign?.name || 'N/A'}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Best Campaign</p>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-1 truncate max-w-[150px]" title={bestCampaign?.name || 'N/A'}>{bestCampaign?.name || 'N/A'}</p>
                                 </div>
                                 <Trophy className="h-5 w-5 text-yellow-500" />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 rounded-xl bg-slate-800/30 border border-slate-800">
-                                    <p className="text-[10px] text-slate-400 uppercase">Active</p>
-                                    <p className="text-xl font-bold text-white mt-1">{activeCampaigns}</p>
+                                <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800/30 border border-gray-200 dark:border-slate-800">
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Active</p>
+                                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{activeCampaigns}</p>
                                 </div>
-                                <div className="p-3 rounded-xl bg-slate-800/30 border border-slate-800">
-                                    <p className="text-[10px] text-slate-400 uppercase">Total</p>
-                                    <p className="text-xl font-bold text-white mt-1">{campaignList.length}</p>
+                                <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800/30 border border-gray-200 dark:border-slate-800">
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Total</p>
+                                    <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{campaignList.length}</p>
                                 </div>
                             </div>
                         </div>
@@ -475,21 +452,18 @@ export default async function ClientDashboard() {
                 </div>
             </div>
 
-            {/* SPACER Divider */}
-            <div className="border-t border-slate-800/50 my-6" />
-
              {/* --- Weekly Scan Chart (Moved to Bottom) --- */}
-            <div className="bg-slate-900/40 backdrop-blur-sm border-t border-b border-slate-800/50 py-6 -mx-6 px-6 md:mx-0 md:px-6 md:rounded-2xl md:border">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6 shadow-sm mt-6">
                 <div className="flex flex-col items-center justify-center gap-6">
                      <div className="flex flex-col items-center text-center">
                         <div className="inline-flex items-center gap-2 mb-2">
-                             <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
+                             <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
                                 <Activity className="h-4 w-4" />
                             </div>
-                            <h3 className="text-sm font-semibold text-white">Scan Activity (Past 7 days)</h3>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Scan Activity (Past 7 days)</h3>
                         </div>
                     </div>
-                    <div className="w-full max-w-lg">
+                    <div className="w-full max-w-4xl">
                         <MiniScanChart data={scanChartData} labels={weeklyLabels} />
                     </div>
                 </div>

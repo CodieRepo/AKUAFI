@@ -176,47 +176,40 @@ export default function PremiumStatCard({
   return (
     <div 
       className={cn(
-        "relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group",
-        "bg-slate-900/70 backdrop-blur-md border border-white/5 shadow-xl",
-        "opacity-0 animate-in fade-in slide-in-from-bottom-4 fill-mode-forwards"
+        "relative overflow-hidden rounded-xl p-5 transition-all duration-200 group",
+        "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md",
+        "opacity-0 animate-in fade-in slide-in-from-bottom-2 fill-mode-forwards"
       )}
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
     >
-      {/* Top Accent Line */}
-      <div className={cn("absolute top-0 left-0 right-0 h-1 rounded-t-2xl", accentBg)} />
-      
-      {/* Background Glow */}
-      <div className={cn(
-        "absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-10 transition-transform duration-500 group-hover:scale-125",
-        accentBg
-      )} />
-
       <div className="relative z-10 flex flex-col h-full justify-between">
         <div className="flex justify-between items-start mb-4">
-          <div className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
-            <Icon className={cn("h-5 w-5", accentColor)} />
+          <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">{title}</span>
+          <div className={cn("p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300")}>
+            <Icon className="h-4 w-4" />
           </div>
-          <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</span>
         </div>
 
         <div>
-           <h3 className="text-3xl font-bold text-white tracking-tight mb-1">
+           <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-1">
              {formattedDisplay}
            </h3>
            
            {(description || trend) && (
-             <div className="flex items-center gap-2 text-xs relative z-20">
+             <div className="flex items-center gap-2 text-xs relative z-20 mt-1">
                 {trend && (
                    <span className={cn(
-                     "flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-slate-800/50 border border-slate-700/50",
-                     trendColor
+                     "flex items-center gap-0.5 font-medium",
+                     trendType === 'up' ? "text-emerald-600 dark:text-emerald-400" 
+                     : trendType === 'down' ? "text-red-600 dark:text-red-400"
+                     : "text-gray-600 dark:text-gray-400"
                    )}>
                       <TrendIcon className="h-3 w-3" />
-                      <span className="font-medium">{trend}</span>
+                      <span>{trend}</span>
                    </span>
                 )}
                 {description && (
-                    <span className="text-slate-500 font-medium">
+                    <span className="text-slate-500 dark:text-slate-400">
                         {description}
                     </span>
                 )}
@@ -225,7 +218,7 @@ export default function PremiumStatCard({
         </div>
       </div>
       
-      {/* Sparkline for Revenue */}
+      {/* Light Sparkline for Revenue */}
       {isRevenue && sparklineData && renderSparkline()}
     </div>
   );
