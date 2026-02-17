@@ -60,9 +60,9 @@ export default function CouponVerification() {
             .select(`
                 coupon_code,
                 status,
-                generated_at:issued_at,
+                generated_at,
                 redeemed_at,
-                expires_at:expiry_date,
+                expiry_date,
                 discount_value,
                 campaigns(name)
             `)
@@ -210,7 +210,7 @@ export default function CouponVerification() {
                         </div>
                         <div className="flex justify-between">
                             <span className="opacity-70">Expires:</span> 
-                            <span className="font-medium text-right">{couponData.expires_at ? new Date(couponData.expires_at).toLocaleDateString() : 'Never'}</span>
+                            <span className="font-medium text-right">{couponData.expiry_date ? new Date(couponData.expiry_date).toLocaleDateString() : 'Never'}</span>
                         </div>
                          {couponData?.discount_value > 0 && (
                             <div className="flex justify-between">
