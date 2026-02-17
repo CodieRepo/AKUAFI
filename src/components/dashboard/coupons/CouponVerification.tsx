@@ -41,39 +41,17 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // 1. Get Current Client ID
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            setStatus('invalid'); // Or unauthorized
-            setLoading(false);
-            return;
-        }
+        // 1. Fetch coupon WITHOUT explicit client_id filter
+        // We rely on RLS/View definition to handle isolation if needed,
+        // or just strict code matching.
+        // Also removed status filter to allow "Claimed" coupons to be found.
         
-        const { data: client } = await supabase
-            .from('clients')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-            
-        if (!client) {
-             setStatus('invalid');
-             setLoading(false);
-             return;
-        }
-
-        // 2. Fetch coupon with Strict Client Scoping
-        // Use client_coupons view for safe read validation, but join campaigns for name if missing
-        
-        // Normalize: trimming and uppercase are handled in input, but ensuring here for query safety
-        const cleanCode = code.trim().toUpperCase().replace(/[–—]/g, "-");
-
         console.log(`[Verify Coupon] Verifying: ${cleanCode}`);
 
         const { data, error } = await supabase
             .from('client_coupons')
             .select('*, campaigns(name)')
-            .eq('client_id', client.id) 
-            .eq('coupon_code', cleanCode) // STRICT MATCH
+            .eq('coupon_code', cleanCode) 
             .maybeSingle();
 
         if (error) {
@@ -95,12 +73,12 @@ export default function CouponVerification() {
             setCouponData(enhancedData);
             
             // Status Logic
-            if (enhancedData.status === 'claimed') {
+            if (enhancedData.status === 'claimed' || enhancedData.status === 'redeemed') {
                 setStatus('redeemed');
-            } else if (enhancedData.status !== 'active') {
-                setStatus('expired');
-            } else {
+            } else if (enhancedData.status === 'active') {
                 setStatus('valid');
+            } else {
+                setStatus('expired');
             }
         }
     } catch (err) {
