@@ -45,29 +45,30 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // Query REDEMPTIONS table primarily (Source of Truth for User Scans)
+        // Query COUPONS table primarily (Source of Truth)
         const { data, error } = await supabase
-            .from('redemptions')
-            .select('id, coupon_code, redeemed_at, campaign_id')
+            .from('coupons')
+            .select('id, coupon_code, status, generated_at, redeemed_at, campaign_id, discount_value')
             .eq('coupon_code', cleanCode)
             .maybeSingle();
 
         if (!data) {
-             console.log('[Verify Coupon] No record found in redemptions for:', cleanCode);
-             setStatus('invalid'); // Not found = Invalid/Not Redeemed
+             console.log('[Verify Coupon] No record found in coupons for:', cleanCode);
+             setStatus('invalid');
              setLoading(false);
              return;
         }
 
-        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'redeemed';
+        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
         
-        // If found in redemptions, it is by definition 'redeemed'
-        // We can display it as "Already Redeemed"
-        
+        if (data.status === 'active') finalDisplayStatus = 'valid';
+        else if (data.status === 'claimed' || data.status === 'redeemed') finalDisplayStatus = 'redeemed';
+        else if (data.status === 'expired') finalDisplayStatus = 'expired';
+
         // Fetch Campaign Details Manually
         let campaignName = 'Unknown Campaign';
         let location = null;
-        let generatedAt = data.redeemed_at; // Use redeemed_at as generation time for now
+        let generatedAt = data.generated_at || data.redeemed_at;
 
         if (data.campaign_id) {
             const { data: camp } = await supabase
@@ -88,16 +89,18 @@ export default function CouponVerification() {
             campaign_name: campaignName,
             location: location,
             generated_at: generatedAt,
-            status: 'redeemed'
+            status: finalDisplayStatus
         });
-        setStatus('redeemed');
+        setStatus(finalDisplayStatus);
 
+        // setStatus is called above
     } catch (err) {
         console.error(err);
         setStatus('invalid');
     } finally {
         setLoading(false);
     }
+
   };
 
   const handleClaim = async () => {

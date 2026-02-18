@@ -78,10 +78,10 @@ export default async function ClientDashboard() {
       supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
       campaignIds.length > 0 
         ? supabase
-            .from("redemptions")
-            .select("id, coupon_code, redeemed_at, campaign_id")
+            .from("coupons")
+            .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
             .in("campaign_id", campaignIds)
-            .order("redeemed_at", { ascending: false })
+            .order("generated_at", { ascending: false })
             .limit(100) 
         : Promise.resolve({ data: [] })
   ]);
@@ -96,15 +96,14 @@ export default async function ClientDashboard() {
   const recentActivity = recentActivityData || [];
   const weeklyScans = weeklyScansData || [];
   
-  // MERGE: Generated Coupons (Redemptions + Campaign Info)
-  // Status is ALWAYS 'redeemed' because we are only fetching from redemptions table
+  // MERGE: Generated Coupons (Coupons Table + Campaign Info)
   const generatedCoupons = ((redemptionsData as any[]) || []).map((r: any) => {
       const camp = campaignMap.get(r.campaign_id);
       return {
           id: r.id,
           coupon_code: r.coupon_code || 'N/A',
-          status: 'redeemed' as const, // Strict status
-          generated_at: r.redeemed_at, // Use redeemed time as generation time proxy
+          status: r.status || 'active', // Default to active if status missing
+          generated_at: r.generated_at || r.redeemed_at, // Fallback
           redeemed_at: r.redeemed_at,
           campaign_id: r.campaign_id,
           location: camp?.location || null,
@@ -116,9 +115,11 @@ export default async function ClientDashboard() {
   // 3. Metrics Aggregation
   let impressions = 0;
   
-  // Scans/Redemptions = Count of actual redemption records
-  let scans = generatedCoupons.length; 
-  let redemptions = generatedCoupons.length; 
+  // Scans/Redemptions = Count of actual CLAIMED/REDEEMED records only
+  // generatedCoupons now includes ACTIVE coupons, which shouldn't count as scans/redemptions yet.
+  const claimedCoupons = generatedCoupons.filter((c: any) => c.status === 'claimed' || c.status === 'redeemed');
+  let scans = claimedCoupons.length; 
+  let redemptions = claimedCoupons.length; 
   
   let revenue = 0; 
   let uniqueUsers = 0;

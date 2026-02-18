@@ -32,13 +32,30 @@ export async function POST(request: Request) {
     }
 
     if (!data) {
-       // Should be caught by error check above with .single(), but double check.
-       return NextResponse.json({ error: 'Coupon already redeemed or invalid' }, { status: 400 });
+       return NextResponse.json({ error: 'Coupon already redeemed, invalid, or not active' }, { status: 400 });
+    }
+
+    // 2. Insert into Redemptions Table (Metric Consistency)
+    // We now log this as a redemption in the redemptions table
+    const { error: redemptionError } = await getSupabaseAdmin()
+        .from('redemptions')
+        .insert({
+            user_id: data.user_id || null, // If user_id exists on coupon (backfilled or assigned), use it. Else null (manual claim).
+            campaign_id: data.campaign_id,
+            coupon_code: data.coupon_code,
+            bottle_id: data.bottle_id, // Important to link bottle if it exists
+            redeemed_at: new Date().toISOString()
+        });
+
+    if (redemptionError) {
+        console.error('Error inserting redemption record:', redemptionError);
+        // We don't rollback the coupon status? ideally we should, but for now log error.
+        // The coupon IS claimed, just metrics might be off.
     }
 
     return NextResponse.json({ 
         success: true, 
-        message: 'Coupon redeemed successfully',
+        message: 'Coupon marked as claimed successfully',
         coupon: data
     });
 

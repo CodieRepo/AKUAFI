@@ -68,10 +68,11 @@ export async function POST(req: NextRequest) {
     const bottle = bottles[0];
 
     // -------------------------------------------------------
-    // STEP 3: HARD CHECK - QR ALREADY REDEEMED (Redemptions Table)
+    // STEP 3: HARD CHECK - QR ALREADY REDEEMED (Coupons Table)
     // -------------------------------------------------------
+    // Now checking 'coupons' table as source of truth for used bottles
     const { data: existingBottleRedemptions, error: qrCheckError } = await supabaseAdmin
-        .from('redemptions')
+        .from('coupons')
         .select('id')
         .eq('bottle_id', bottle.id)
         .limit(1);
@@ -106,8 +107,9 @@ export async function POST(req: NextRequest) {
     // -------------------------------------------------------
     // STEP 5: HARD CHECK - SAME USER IN SAME CAMPAIGN
     // -------------------------------------------------------
+    // Checking 'coupons' table for user participation in this campaign
     const { data: existingUserRedemptions, error: userCheckError } = await supabaseAdmin
-        .from('redemptions')
+        .from('coupons')
         .select('id')
         .eq('user_id', userId)
         .eq('campaign_id', bottle.campaign_id)
