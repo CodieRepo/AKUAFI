@@ -54,6 +54,19 @@ export async function POST(request: Request) {
          return NextResponse.json({ error: 'Coupon redeemed from this QR' }, { status: 400 });
     }
 
+    // 4. Increment Scan Count (Fire and Forget)
+    // We increment scan count for "Valid Bottle View"
+    if (bottle.campaign_id) {
+        // We do not await this strictly to keep response fast, 
+        // or we can await if we want strict logging. 
+        // Since it's critical analytic, better to await catch error quietly.
+        try {
+            await supabaseAdmin.rpc('increment_scan_count', { p_campaign_id: bottle.campaign_id });
+        } catch (cntErr) {
+            console.error("Failed to increment scan count:", cntErr);
+        }
+    }
+
     return NextResponse.json({ 
         success: true, 
         bottle: bottle 

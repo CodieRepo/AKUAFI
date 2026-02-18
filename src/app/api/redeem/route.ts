@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, otp, qr_token, name } = await req.json();
+    const { phone, otp, qr_token, name, address } = await req.json();
 
-    console.log("--- API REDEEM V7 (HARDENED PRODUCTION) ---");
+    console.log("--- API REDEEM V8 (ADDRESS SUPPORT) ---");
     
     if (!phone || !otp || !qr_token) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -159,7 +159,8 @@ export async function POST(req: NextRequest) {
             p_client_id: campaign.client_id,
             p_phone: normalizedPhone,
             p_coupon_code: couponCode,
-            p_discount: discountValue
+            p_discount: discountValue,
+            p_address: address || null // New Optional Address
         });
 
         if (!error) {
