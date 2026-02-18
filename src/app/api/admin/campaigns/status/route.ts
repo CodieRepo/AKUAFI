@@ -4,7 +4,7 @@ import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function POST(request: Request) {
   try {
-    await verifyAdmin(request);
+    await verifyAdmin();
     const body = await request.json();
     const { campaign_id, status } = body;
 

@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     // I will assume verifyAdmin works or I will implement a manual check if it relies on old auth helpers?
     // "verifyAdmin via admins table" is a requirement.
     // I will stick to calling verifyAdmin(request) as previously operational.
-    await verifyAdmin(request);
+    await verifyAdmin();
 
     const body = await request.json();
     const { campaign_id, quantity } = body;

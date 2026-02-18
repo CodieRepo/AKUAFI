@@ -4,7 +4,7 @@ import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await verifyAdmin(request);
+    await verifyAdmin();
     const { id } = await params;
 
     const { data, error } = await getSupabaseAdmin()
@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await verifyAdmin(request);
+    await verifyAdmin();
     const { id } = await params;
     const body = await request.json();
 

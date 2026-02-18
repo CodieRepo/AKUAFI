@@ -4,7 +4,7 @@ import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
   try {
-    await verifyAdmin(request);
+    await verifyAdmin();
 
     // Fetch redemptions via coupons table which links everything
     // We attempt to perform a join. If FKs are missing, this might fail or return nulls.
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await verifyAdmin(request);
+    await verifyAdmin();
     const { code } = await request.json();
 
     if (!code) {
