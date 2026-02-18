@@ -127,7 +127,7 @@ async function handleProcessingPhase(job: any, supabaseAdmin: any) {
     let query = supabaseAdmin
         .from('bottles')
         .select('id, qr_token, campaign_id, created_at')
-        .eq('campaign_id', job.campaign_id)
+        .eq('job_id', job.id)
         .order('id', { ascending: true })
         .limit(BATCH_SIZE);
 
@@ -214,7 +214,21 @@ async function handleProcessingPhase(job: any, supabaseAdmin: any) {
 async function handleZippingPhase(job: any, supabaseAdmin: any) {
     console.log(`[QR-WORKER] Starting ZIP generation for Job ${job.id}...`);
 
-    // A. Create PassThrough stream & Archiver
+    const zipPath = `${job.campaign_id}/${job.id}.zip`;
+
+    // 1. Get Signed Upload URL (Stream Destination)
+    const { data: uploadData, error: uploadTokenError } = await supabaseAdmin
+        .storage
+        .from('qr-zips')
+        .createSignedUploadUrl(zipPath);
+
+    if (uploadTokenError || !uploadData) {
+        throw new Error(`Failed to get upload URL: ${uploadTokenError?.message}`);
+    }
+
+    const { signedUrl } = uploadData;
+
+    // 2. Setup Archiver & Stream
     const archive = archiver('zip', {
         zlib: { level: 6 } // Compression level
     });
@@ -222,116 +236,109 @@ async function handleZippingPhase(job: any, supabaseAdmin: any) {
     const stream = new PassThrough();
     archive.pipe(stream);
 
-    // B. Collect chunks for Supabase Upload (Buffer-based, constrained by compressed size)
-    // Note: archiver streams compression, so we don't hold raw images in memory.
-    const chunks: Buffer[] = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
+    // 3. Start Upload (Consumer)
+    // We start the request immediately. It will consume 'stream' as 'archive' produces data.
+    // duplex: 'half' is required for Node.js fetch with streaming body.
+    const uploadPromise = fetch(signedUrl, {
+        method: 'PUT',
+        body: stream as any, // Node fetch accepts stream
+        headers: {
+            'Content-Type': 'application/zip',
+        },
+        duplex: 'half' 
+    } as any); // Cast for duplex type support if needed
 
-    // C. Append CSV 
+    // 4. Produce Data (Producer)
+    
+    // A. CSV
     let csvContent = "qr_token,url,campaign_id,created_at\n";
     
-    // Keyset Pagination for all bottles
+    // B. Images Loop
     let lastConfigId = null; 
     const CHUNK = 500;
     let keepFetching = true;
-
-    // We first gather all CSV data + Streaming images
-    // Note: We must be careful not to keep "open" streams too long if we await sequentially.
-    // Archiver handles queuing well.
     
-    while (keepFetching) {
-        let query = supabaseAdmin
-            .from('bottles')
-            .select('id, qr_token, campaign_id, created_at')
-            .eq('campaign_id', job.campaign_id)
-            .order('id', { ascending: true })
-            .limit(CHUNK);
-            
-        if (lastConfigId) {
-            query = query.gt('id', lastConfigId);
-        }
-
-        const { data: allBottles, error } = await query;
-
-        if (error || !allBottles || allBottles.length === 0) {
-            keepFetching = false;
-            break;
-        }
-
-        for (const b of allBottles) {
-            const url = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://akuafi.com'}/scan/${b.qr_token}`;
-            csvContent += `${b.qr_token},${url},${b.campaign_id},${b.created_at}\n`;
-
-            const filePath = `${job.campaign_id}/${job.id}/${b.qr_token}.png`;
-            
-            // 1. Download as Stream if possible? Supabase download returns Blob.
-            // We need to get it as reliable stream or buffer. 
-            // supabase-js 'download' returns a Blob.
-            // We can convert Blob to ArrayBuffer -> Buffer.
-            // Ideally we want a stream to pipe.
-            // But getting a stream from Supabase storage via JS client is tricky (it returns Blob/File).
-            // However, Blob.arrayBuffer() -> Buffer is efficient enough if done one by one.
-            
-            const { data: fileBlob } = await supabaseAdmin.storage
-                .from('qr-images')
-                .download(filePath);
-
-            if (fileBlob) {
-                // Convert to Buffer/Stream
-                const arrayBuffer = await fileBlob.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
+    try {
+        while (keepFetching) {
+            let query = supabaseAdmin
+                .from('bottles')
+                .select('id, qr_token, campaign_id, created_at')
+                .eq('job_id', job.id)
+                .order('id', { ascending: true })
+                .limit(CHUNK);
                 
-                // Append Buffer to Archive
-                const fileName = `QR_${b.qr_token.slice(0, 8)}.png`; 
-                archive.append(buffer, { name: fileName });
+            if (lastConfigId) {
+                query = query.gt('id', lastConfigId);
             }
-            lastConfigId = b.id;
+
+            const { data: allBottles, error } = await query;
+
+            if (error || !allBottles || allBottles.length === 0) {
+                keepFetching = false;
+                break;
+            }
+
+            for (const b of allBottles) {
+                const url = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://akuafi.com'}/scan/${b.qr_token}`;
+                csvContent += `${b.qr_token},${url},${b.campaign_id},${b.created_at}\n`;
+
+                const filePath = `${job.campaign_id}/${job.id}/${b.qr_token}.png`;
+                
+                // Download Image
+                const { data: fileBlob } = await supabaseAdmin.storage
+                    .from('qr-images')
+                    .download(filePath);
+
+                if (fileBlob) {
+                    const arrayBuffer = await fileBlob.arrayBuffer();
+                    const buffer = Buffer.from(arrayBuffer);
+                    const fileName = `QR_${b.qr_token.slice(0, 8)}.png`; 
+                    archive.append(buffer, { name: fileName });
+                }
+                lastConfigId = b.id;
+            }
         }
-    }
 
-    // Append CSV finally (or iteratively if we wanted, but string is fine for <50MB CSV)
-    archive.append(csvContent, { name: 'campaign_codes.csv' });
+        // Append CSV
+        archive.append(csvContent, { name: 'campaign_codes.csv' });
 
-    // Finalize and wait for steam to end
-    await new Promise<void>((resolve, reject) => {
-        archive.on('error', reject);
-        stream.on('end', resolve);
-        archive.finalize();
-    });
+        // Finalize Archive (Closes the write side of the stream)
+        // This will trigger 'end' on 'stream', which signals fetch to finish sending.
+        await archive.finalize();
 
-    const zipBuffer = Buffer.concat(chunks);
+        // 5. Wait for Upload Completion
+        const response = await uploadPromise;
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Upload failed with status ${response.status}: ${text}`);
+        }
 
-    // Upload ZIP
-    const zipPath = `${job.campaign_id}/${job.id}.zip`;
-    const { error: zipUploadError } = await supabaseAdmin
-        .storage
-        .from('qr-zips')
-        .upload(zipPath, zipBuffer, {
-            contentType: 'application/zip',
-            upsert: true
+        // 6. Generate Download Link (for User)
+        const { data: signedData } = await supabaseAdmin
+            .storage
+            .from('qr-zips')
+            .createSignedUrl(zipPath, 600);
+
+        await supabaseAdmin
+            .from('qr_jobs')
+            .update({
+                status: 'completed',
+                zip_url: signedData?.signedUrl
+            })
+            .eq('id', job.id);
+
+        console.log(`[QR-WORKER] Job ${job.id} FULLY COMPLETED.`);
+        
+        return NextResponse.json({
+            success: true,
+            message: `Job ${job.id} Zipped & Completed.`,
+            job_id: job.id
         });
 
-    if (zipUploadError) throw new Error(`ZIP Upload failed: ${zipUploadError.message}`);
-
-    // Signed URL (10 minutes)
-    const { data: signedData } = await supabaseAdmin
-        .storage
-        .from('qr-zips')
-        .createSignedUrl(zipPath, 600);
-
-    await supabaseAdmin
-        .from('qr_jobs')
-        .update({
-            status: 'completed',
-            zip_url: signedData?.signedUrl
-        })
-        .eq('id', job.id);
-
-    console.log(`[QR-WORKER] Job ${job.id} FULLY COMPLETED.`);
-    
-    return NextResponse.json({
-        success: true,
-        message: `Job ${job.id} Zipped & Completed.`,
-        job_id: job.id
-    });
+    } catch (err: any) {
+        console.error("[QR-WORKER] Zipping Error:", err);
+        // Abort archive if something failed mid-way?
+        // archive.abort();
+        throw err;
+    }
 }

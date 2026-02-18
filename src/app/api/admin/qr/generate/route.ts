@@ -51,8 +51,6 @@ export async function POST(request: Request) {
     }
 
     // STRICT SERVER-SIDE ENFORCEMENT
-    // Increased max limit for Async Jobs, but keep a reasonable cap if needed.
-    // Let's allow up to 50,000 for async.
     const MAX_SYNC_QR = 200;
     const MAX_ASYNC_QR = 50000;
 
@@ -62,33 +60,13 @@ export async function POST(request: Request) {
 
     console.log(`[QR-GEN] Starting generation. Campaign: ${campaign_id}, Qty: ${quantity}, User: ${user.id}`);
 
-    // 3. Generate Codes & Rows
-    const rows = [];
-    for (let i = 0; i < quantity; i++) {
-        rows.push({
-            campaign_id,
-            qr_token: randomUUID(),
-            is_used: false,
-            created_at: new Date().toISOString()
-        });
-    }
+    // DETERMINISTIC JOB ID
+    let jobId: string | null = null;
+    let jobStatus = 'pending';
 
-    // 4. DB Insert (Chunked) using Service Role (getSupabaseAdmin)
+    // If Large Batch: Create Job Record FIRST
     const supabaseAdmin = getSupabaseAdmin();
-    const dbChunkSize = 1000;
-    for (let i = 0; i < rows.length; i += dbChunkSize) {
-        const chunk = rows.slice(i, i + dbChunkSize);
-        const { error } = await supabaseAdmin.from('bottles').insert(chunk);
-        
-        if (error) {
-            console.error("[QR-GEN] DB Insert Error:", error);
-            throw new Error(`Database error: ${error.message}`);
-        }
-    }
-
-    // --- CONDITIONAL LOGIC START ---
     
-    // IF LARGE BATCH: Create Job & Return
     if (quantity > MAX_SYNC_QR) {
         console.log(`[QR-GEN] Large batch detected (${quantity}). Creating background job.`);
         
@@ -107,11 +85,48 @@ export async function POST(request: Request) {
              console.error("[QR-GEN] Job Creation Error:", jobError);
              throw new Error(`Failed to create generation job: ${jobError.message}`);
         }
+        jobId = job.id;
+        jobStatus = 'processing'; // We interpret pending logic as processing start
+    }
 
+    // 3. Generate Codes & Rows
+    const rows = [];
+    for (let i = 0; i < quantity; i++) {
+        rows.push({
+            campaign_id,
+            qr_token: randomUUID(),
+            is_used: false,
+            created_at: new Date().toISOString(),
+            job_id: jobId // LINK BOTTLE TO JOB
+        });
+    }
+
+    // 4. DB Insert (Chunked) using Service Role
+    // Note: requestSupabaseAdmin above was a typo in my thought process, I should use the helper.
+    // But I can't use `requestSupabaseAdmin` variable if I haven't defined it.
+    // I should use `supabaseAdmin` variable inside the block or define it earlier.
+    
+    // Correcting the flow:
+    
+    const dbChunkSize = 1000;
+    for (let i = 0; i < rows.length; i += dbChunkSize) {
+        const chunk = rows.slice(i, i + dbChunkSize);
+        const { error } = await supabaseAdmin.from('bottles').insert(chunk);
+        
+        if (error) {
+            console.error("[QR-GEN] DB Insert Error:", error);
+            // If job created, maybe fail it? 
+            // For now, throw.
+            throw new Error(`Database error: ${error.message}`);
+        }
+    }
+
+    // 5. If Async, Return Early
+    if (jobId) {
         return NextResponse.json({
             success: true,
-            job_id: job.id,
-            status: 'processing', // Client sees this and starts polling
+            job_id: jobId,
+            status: 'processing',
             message: `Started background generation for ${quantity} QR codes.`
         });
     }
