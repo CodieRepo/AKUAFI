@@ -60,7 +60,7 @@ export default function CouponVerification() {
         ]);
 
         let finalData: any = null;
-        let finalStatus: 'active' | 'redeemed' | 'expired' | 'invalid' = 'invalid';
+        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
 
         // Priority 1: Redemptions Table (Definitive "Redeemed" status)
         if (redemptionRes.data) {
@@ -69,18 +69,18 @@ export default function CouponVerification() {
                  status: 'redeemed',
                  generated_at: redemptionRes.data.redeemed_at // Fallback for UI
              };
-             finalStatus = 'redeemed';
+             finalDisplayStatus = 'redeemed';
         } 
         // Priority 2: Coupons Table (Can be Active or Claimed)
         else if (couponRes.data) {
              finalData = couponRes.data;
              // Map DB status to UI status
              if (couponRes.data.status === 'claimed' || couponRes.data.status === 'redeemed') {
-                 finalStatus = 'redeemed';
+                 finalDisplayStatus = 'redeemed';
              } else if (couponRes.data.status === 'active') {
-                 finalStatus = 'active';
+                 finalDisplayStatus = 'valid'; // Map 'active' DB status to 'valid' UI state
              } else {
-                 finalStatus = 'expired'; // expired, invalid, etc
+                 finalDisplayStatus = 'expired'; // expired, invalid, etc
              }
         }
 
@@ -110,10 +110,10 @@ export default function CouponVerification() {
             }
         }
 
-        // Check if expired based on date (if Active)
-        if (finalStatus === 'active' && finalData.expires_at) {
+        // Check if expired based on date (if Active/Valid)
+        if (finalDisplayStatus === 'valid' && finalData.expires_at) {
              if (new Date(finalData.expires_at) < new Date()) {
-                 finalStatus = 'expired';
+                 finalDisplayStatus = 'expired';
              }
         }
 
@@ -122,9 +122,12 @@ export default function CouponVerification() {
             campaign_name: campaignName,
             location: location,
             generated_at: generatedAt,
-            status: finalStatus
+            // Keep original status in data object or derived? 
+            // The UI uses status state mostly, but data.status might be used differently.
+            // Let's ensure data.status reflects the final determination
+            status: finalDisplayStatus === 'valid' ? 'active' : finalDisplayStatus
         });
-        setStatus(finalStatus);
+        setStatus(finalDisplayStatus);
 
     } catch (err) {
         console.error(err);
