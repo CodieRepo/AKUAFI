@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import QRCode from 'qrcode';
-import JSZip from 'jszip';
+import { PassThrough } from 'stream';
+const archiver = require('archiver');
+
 
 export const runtime = 'nodejs';
 
@@ -207,18 +209,41 @@ async function handleProcessingPhase(job: any, supabaseAdmin: any) {
     });
 }
 
+
+
 async function handleZippingPhase(job: any, supabaseAdmin: any) {
     console.log(`[QR-WORKER] Starting ZIP generation for Job ${job.id}...`);
 
-    const zip = new JSZip();
-    const folder = zip.folder("qr_codes");
+    // A. Create PassThrough stream & Archiver
+    const archive = archiver('zip', {
+        zlib: { level: 6 } // Compression level
+    });
+
+    const stream = new PassThrough();
+    archive.pipe(stream);
+
+    // B. Collect chunks for Supabase Upload (Buffer-based, constrained by compressed size)
+    // Note: archiver streams compression, so we don't hold raw images in memory.
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+
+    const uploadPromise = new Promise<Buffer>((resolve, reject) => {
+        stream.on('end', () => resolve(Buffer.concat(chunks)));
+        stream.on('error', reject);
+    });
+
+    // C. Append CSV 
     let csvContent = "qr_token,url,campaign_id,created_at\n";
     
     // Keyset Pagination for all bottles
-    let lastConfigId = null; // We can use the bottle ID for pagination
+    let lastConfigId = null; 
     const CHUNK = 500;
     let keepFetching = true;
 
+    // We first gather all CSV data + Streaming images
+    // Note: We must be careful not to keep "open" streams too long if we await sequentially.
+    // Archiver handles queuing well.
+    
     while (keepFetching) {
         let query = supabaseAdmin
             .from('bottles')
@@ -243,27 +268,42 @@ async function handleZippingPhase(job: any, supabaseAdmin: any) {
             csvContent += `${b.qr_token},${url},${b.campaign_id},${b.created_at}\n`;
 
             const filePath = `${job.campaign_id}/${job.id}/${b.qr_token}.png`;
+            
+            // 1. Download as Stream if possible? Supabase download returns Blob.
+            // We need to get it as reliable stream or buffer. 
+            // supabase-js 'download' returns a Blob.
+            // We can convert Blob to ArrayBuffer -> Buffer.
+            // Ideally we want a stream to pipe.
+            // But getting a stream from Supabase storage via JS client is tricky (it returns Blob/File).
+            // However, Blob.arrayBuffer() -> Buffer is efficient enough if done one by one.
+            
             const { data: fileBlob } = await supabaseAdmin.storage
                 .from('qr-images')
                 .download(filePath);
 
             if (fileBlob) {
-                const arr = await fileBlob.arrayBuffer();
+                // Convert to Buffer/Stream
+                const arrayBuffer = await fileBlob.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                
+                // Append Buffer to Archive
                 const fileName = `QR_${b.qr_token.slice(0, 8)}.png`; 
-                folder?.file(fileName, new Uint8Array(arr));
+                archive.append(buffer, { name: fileName });
             }
             lastConfigId = b.id;
         }
     }
 
-    zip.file("campaign_codes.csv", csvContent);
-    
-    const zipBuffer = await zip.generateAsync({ 
-        type: 'nodebuffer',
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 } 
-    });
+    // Append CSV finally (or iteratively if we wanted, but string is fine for <50MB CSV)
+    archive.append(csvContent, { name: 'campaign_codes.csv' });
 
+    // Finalize
+    await archive.finalize();
+
+    // Wait for stream to finish collecting
+    const zipBuffer = await uploadPromise;
+
+    // Upload ZIP
     const zipPath = `${job.campaign_id}/${job.id}.zip`;
     const { error: zipUploadError } = await supabaseAdmin
         .storage
