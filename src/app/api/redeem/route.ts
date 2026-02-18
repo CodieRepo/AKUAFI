@@ -165,49 +165,58 @@ export async function POST(req: NextRequest) {
         
         // Let's ADJUST the call to get data.
         
-        const { data: rpcResponse, error: transportError } = await supabaseAdmin.rpc('redeem_coupon_atomic', {
-             p_user_id: userId,
-             p_campaign_id: bottle.campaign_id,
-             p_bottle_id: bottle.id,
-             p_client_id: campaign.client_id,
-             p_phone: normalizedPhone,
-             p_coupon_code: couponCode,
-             p_discount: discountValue,
-             p_address: address || null
-        });
+    // Log the payload for debugging
+    const rpcPayload = {
+        p_user_id: userId,
+        p_campaign_id: bottle.campaign_id,
+        p_bottle_id: bottle.id,
+        p_client_id: campaign.client_id,
+        p_phone: normalizedPhone,
+        p_coupon_code: couponCode,
+        p_discount: discountValue,
+        p_address: address || null
+    };
 
-        if (transportError) {
-             // This is a hard DB error (connection, etc)
-             console.error("RPC Transport Error:", transportError);
-             break;
-        }
+    console.log("[Redeem API] RPC Call Payload:", JSON.stringify(rpcPayload));
 
-        if (rpcResponse && !rpcResponse.success) {
-             // Logic Error from inside RPC (Duplicate, Collision, etc)
-             rpcError = { message: rpcResponse.error, code: rpcResponse.code };
-             
-             if (rpcResponse.code === 'COUPON_COLLISION') {
-                 console.warn(`[Redeem API] Coupon collision for ${couponCode}, retrying...`);
-                 continue; // Retry loop
-             } else {
-                 // Non-retriable error (Already Redeemed, etc)
-                 break; 
-             }
-        }
-        
-        // Success
-        rpcError = null;
-        break; 
+    const { data: rpcResponse, error: transportError } = await supabaseAdmin.rpc('redeem_coupon_atomic', rpcPayload);
+
+    if (transportError) {
+         console.error("RPC Transport Error:", transportError);
+         break;
+    }
+
+    console.log("[Redeem API] RPC Response:", JSON.stringify(rpcResponse));
+
+    if (rpcResponse && !rpcResponse.success) {
+         // Logic Error from inside RPC (Duplicate, Collision, etc)
+         rpcError = { message: rpcResponse.error, code: rpcResponse.code };
+         
+         if (rpcResponse.code === 'COUPON_COLLISION') {
+             console.warn(`[Redeem API] Coupon collision for ${couponCode}, retrying...`);
+             continue; // Retry loop
+         } else {
+             // Non-retriable error (Already Redeemed, etc)
+             break; 
+         }
+    }
+    
+    // Success
+    rpcError = null;
+    break; 
 
     } // End While
 
     if (rpcError) {
         console.error("Redemption Failed:", rpcError);
         // Map codes to user-friendly status
-        if (rpcError.code === 'ALREADY_REDEEMED' || rpcError.code === 'USER_ALREADY_REDEEMED') {
-             return NextResponse.json({ error: rpcError.message }, { status: 400 });
-        }
-        return NextResponse.json({ error: "System busy, please try again" }, { status: 500 });
+        const status = (rpcError.code === 'ALREADY_REDEEMED' || rpcError.code === 'USER_ALREADY_REDEEMED') ? 400 : 500;
+        return NextResponse.json({ error: rpcError.message, code: rpcError.code }, { status });
+    }
+
+    if (attempts >= MAX_ATTEMPTS) {
+         console.error("Redemption Failed: Max attempts reached for coupon generation");
+         return NextResponse.json({ error: "System busy, please try again (Max Attempts)" }, { status: 500 });
     }
 
     console.log(`[Redeem API] Atomic redeem success for coupon: ${couponCode}`);
@@ -217,8 +226,8 @@ export async function POST(req: NextRequest) {
         coupon_code: couponCode
     });
 
-  } catch (err) {
-    console.error('Unexpected error:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error("REDEEM ERROR FULL:", error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
