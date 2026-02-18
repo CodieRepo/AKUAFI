@@ -45,42 +45,35 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // Query COUPONS table primarily (Source of Lifecycle Status)
-        // Note: Redemptions table is for scan logs, but Coupons table holds current status (Active/Redeemed/Claimed)
+        // Query REDEMPTIONS table primarily (Source of Truth for User Scans)
         const { data, error } = await supabase
-            .from('coupons')
-            .select('*')
+            .from('redemptions')
+            .select('id, coupon_code, redeemed_at, campaign_id')
             .eq('coupon_code', cleanCode)
             .maybeSingle();
 
         if (!data) {
-             setStatus('invalid');
+             console.log('[Verify Coupon] No record found in redemptions for:', cleanCode);
+             setStatus('invalid'); // Not found = Invalid/Not Redeemed
              setLoading(false);
              return;
         }
 
-        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
+        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'redeemed';
         
-        // Map DB status to UI status
-        // DB: 'active' | 'redeemed' | 'claimed' | 'expired'
-        if (data.status === 'claimed' || data.status === 'redeemed') {
-             finalDisplayStatus = 'redeemed';
-        } else if (data.status === 'active') {
-             finalDisplayStatus = 'valid';
-        } else {
-             finalDisplayStatus = 'expired';
-        }
-
+        // If found in redemptions, it is by definition 'redeemed'
+        // We can display it as "Already Redeemed"
+        
         // Fetch Campaign Details Manually
         let campaignName = 'Unknown Campaign';
         let location = null;
-        let generatedAt = data.generated_at || data.redeemed_at; 
+        let generatedAt = data.redeemed_at; // Use redeemed_at as generation time for now
 
         if (data.campaign_id) {
             const { data: camp } = await supabase
                 .from('campaigns')
                 .select('name, location, campaign_date')
-                .eq('id', data.campaign_id) // Corrected from finalData.campaign_id
+                .eq('id', data.campaign_id) 
                 .single();
             
             if (camp) {
@@ -90,22 +83,14 @@ export default function CouponVerification() {
             }
         }
 
-        // Check if expired based on date (if Active/Valid)
-        // Note: DB constraints might already set status='expired', but double check based on expiry_date
-        if (finalDisplayStatus === 'valid' && data.expires_at) {
-             if (new Date(data.expires_at) < new Date()) {
-                 finalDisplayStatus = 'expired';
-             }
-        }
-
         setCouponData({
             ...data,
             campaign_name: campaignName,
             location: location,
             generated_at: generatedAt,
-            status: finalDisplayStatus === 'valid' ? 'active' : finalDisplayStatus
+            status: 'redeemed'
         });
-        setStatus(finalDisplayStatus);
+        setStatus('redeemed');
 
     } catch (err) {
         console.error(err);

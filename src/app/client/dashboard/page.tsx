@@ -66,22 +66,22 @@ export default async function ClientDashboard() {
   const campaignIds = (campaignsData || []).map(c => c.id);
   const campaignMap = new Map((campaignsData || []).map(c => [c.id, c]));
 
-  // 3. Parallel Fetch: Views & Coupons (Manual Join)
+  // 3. Parallel Fetch: Views & Redemptions (Manual Join)
   const [
       { data: summaryData },
       { data: recentActivityData },
       { data: weeklyScansData },
-      { data: couponsData }
+      { data: redemptionsData }
   ] = await Promise.all([
       supabase.from("client_campaign_summary").select("*").eq("client_id", client.id),
       supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
       supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
       campaignIds.length > 0 
         ? supabase
-            .from("coupons")
-            .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
+            .from("redemptions")
+            .select("id, coupon_code, redeemed_at, campaign_id")
             .in("campaign_id", campaignIds)
-            .order("generated_at", { ascending: false })
+            .order("redeemed_at", { ascending: false })
             .limit(100) 
         : Promise.resolve({ data: [] })
   ]);
@@ -96,17 +96,17 @@ export default async function ClientDashboard() {
   const recentActivity = recentActivityData || [];
   const weeklyScans = weeklyScansData || [];
   
-  // MERGE: Generated Coupons (Coupons + Campaign Info)
-  // Strict Status Logic: Active | Redeemed | Claimed | Expired
-  const generatedCoupons = ((couponsData as any[]) || []).map((c: any) => {
-      const camp = campaignMap.get(c.campaign_id);
+  // MERGE: Generated Coupons (Redemptions + Campaign Info)
+  // Status is ALWAYS 'redeemed' because we are only fetching from redemptions table
+  const generatedCoupons = ((redemptionsData as any[]) || []).map((r: any) => {
+      const camp = campaignMap.get(r.campaign_id);
       return {
-          id: c.id,
-          coupon_code: c.coupon_code || 'N/A',
-          status: (c.status || 'active') as 'active' | 'redeemed' | 'claimed' | 'expired',
-          generated_at: c.generated_at, 
-          redeemed_at: c.redeemed_at,
-          campaign_id: c.campaign_id,
+          id: r.id,
+          coupon_code: r.coupon_code || 'N/A',
+          status: 'redeemed' as const, // Strict status
+          generated_at: r.redeemed_at, // Use redeemed time as generation time proxy
+          redeemed_at: r.redeemed_at,
+          campaign_id: r.campaign_id,
           location: camp?.location || null,
           campaign_date: camp?.campaign_date || null,
           campaign_name: camp?.name || 'Unknown'
@@ -116,9 +116,9 @@ export default async function ClientDashboard() {
   // 3. Metrics Aggregation
   let impressions = 0;
   
-  // Scans/Redemptions = Count of coupons with status 'redeemed' or 'claimed'
-  let scans = generatedCoupons.filter(c => c.status === 'redeemed' || c.status === 'claimed').length; 
-  let redemptions = scans; // Total verified redemptions
+  // Scans/Redemptions = Count of actual redemption records
+  let scans = generatedCoupons.length; 
+  let redemptions = generatedCoupons.length; 
   
   let revenue = 0; 
   let uniqueUsers = 0;
