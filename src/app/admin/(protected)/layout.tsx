@@ -9,7 +9,7 @@ export default async function ProtectedAdminLayout({
   try {
     await verifyAdmin();
   } catch (error) {
-    redirect("/admin/login");
+    redirect("/admin/login?error=unauthorized");
   }
 
   return <>{children}</>;

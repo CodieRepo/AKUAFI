@@ -69,8 +69,9 @@ export async function middleware(request: NextRequest) {
     
     // Case A: User is accessing /admin/login
     if (pathname === "/admin/login") {
-      if (user) {
-        // Logged-in admin should not see login page
+      const hasError = request.nextUrl.searchParams.has('error');
+      if (user && !hasError) {
+        // Logged-in admin should not see login page (unless there's an error)
         return NextResponse.redirect(new URL("/admin/dashboard", request.url));
       }
       // Unauthenticated user can see login page

@@ -22,6 +22,7 @@ export async function verifyAdmin() {
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
+    console.log('[VerifyAdmin] No user found via getUser()', error);
     throw new Error('Unauthorized');
   }
 
@@ -33,9 +34,11 @@ export async function verifyAdmin() {
     .single();
 
   if (adminError || !admin) {
-    console.error(`Admin verification failed for user ${user.id}: Record not found in admins table.`);
+    console.error(`[VerifyAdmin] Failed for user ${user.id}: Record not found in admins table.`, adminError);
     throw new Error('Forbidden');
   }
+
+  console.log(`[VerifyAdmin] Success for user ${user.id}`);
 
   return { user, adminId: admin.id };
 }
