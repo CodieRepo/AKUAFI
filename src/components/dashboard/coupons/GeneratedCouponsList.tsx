@@ -20,7 +20,8 @@ export interface CouponData {
   redeemed_at?: string | null;
   expires_at?: string | null;
   campaign_id?: string;
-  // View might return other fields, but these are what we need
+  location?: string | null;
+  campaign_date?: string | null;
 }
 
 interface GeneratedCouponsListProps {
@@ -167,6 +168,7 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                         <thead className="bg-gray-100 dark:bg-slate-900/80 sticky top-0 backdrop-blur-sm z-10 text-gray-500 dark:text-slate-400">
                             <tr>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Coupon Code</th>
+                                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Location</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Generated</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Redeemed</th>
@@ -198,6 +200,9 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                     );
                                 }
                                 
+                                // Format Location Tag
+                                const locTag = coupon.location || '-';
+                                
                                 return (
                                     <tr key={coupon.id} className="group hover:bg-gray-50 dark:hover:bg-slate-900/50 transition-colors">
                                         <td className="px-6 py-3">
@@ -211,6 +216,9 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                                     <Copy className="h-3 w-3" />
                                                 </button>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <span className="text-gray-900 dark:text-white text-xs font-medium">{locTag}</span>
                                         </td>
                                         <td className="px-6 py-3">
                                             {statusBadgex}

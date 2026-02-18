@@ -74,10 +74,29 @@ export default async function ClientDashboard() {
         .limit(50)
   ]);
 
-  const campaigns = summaryData || [];
+  // 2b. Fetch Campaign Metadata (Location/Date) - Parallel Fetch
+  const { data: campaignMeta } = await supabase
+      .from('campaigns')
+      .select('id, location, campaign_date')
+      .eq('client_id', client.id);
+
+  const metaMap = (campaignMeta || []).reduce((acc: any, c: any) => {
+      acc[c.id] = c;
+      return acc;
+  }, {});
+
+  const campaigns = (summaryData || []).map((c: any) => ({
+      ...c,
+      location: metaMap[c.id || c.campaign_id]?.location,
+      campaign_date: metaMap[c.id || c.campaign_id]?.campaign_date
+  }));
   const recentActivity = recentActivityData || [];
   const weeklyScans = weeklyScansData || [];
-  const generatedCoupons = (generatedCouponsData as any[]) || [];
+  const generatedCoupons = ((generatedCouponsData as any[]) || []).map((c: any) => ({
+      ...c,
+      location: metaMap[c.campaign_id]?.location,
+      campaign_date: metaMap[c.campaign_id]?.campaign_date
+  }));
 
   // 3. Metrics Aggregation
   // Calculate totals from summary view
@@ -318,8 +337,21 @@ export default async function ClientDashboard() {
                                         <div key={campaign.id} className="group">
                                             <div className="mb-3">
                                                 <div className="flex justify-between items-center mb-1">
-                                                    <h4 className="text-gray-900 dark:text-white font-semibold text-base flex items-center gap-2">
+                                                    <h4 className="text-gray-900 dark:text-white font-semibold text-base flex flex-wrap items-center gap-2">
                                                         {campaign.name || campaign.campaign_name}
+                                                        
+                                                        {/* Location Tag Badge */}
+                                                        {(campaign.location) && (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 whitespace-nowrap">
+                                                                {campaign.location}
+                                                                {campaign.campaign_date && (
+                                                                    <>
+                                                                     <span className="mx-1 opacity-50">•</span>
+                                                                     {new Date(campaign.campaign_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                                                                    </>
+                                                                )}
+                                                            </span>
+                                                        )}
                                                     </h4>
                                                      <span className={`text-[10px] px-2 py-0.5 rounded-full border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 font-bold ${healthColor}`}>
                                                             {stats.health} Health
