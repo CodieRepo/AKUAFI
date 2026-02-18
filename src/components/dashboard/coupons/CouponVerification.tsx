@@ -27,13 +27,17 @@ export default function CouponVerification() {
       setCode(value);
   };
 
+  /* 
+    Enhanced Verify Logic:
+    1. Check 'redemptions' (Primary source for User Scans/Redemptions)
+    2. Check 'coupons' (Secondary source for Pre-generated/Active codes)
+    3. Merge & Display
+  */
   const handleVerify = async () => {
     if (!code || code.length < MIN_LENGTH) return;
     
-    // Final Trim before sending
+    // Final Trim
     const cleanCode = code.trim();
-    console.log("[Verify Coupon] Normalizing Input:", cleanCode);
-    
     setLoading(true);
     setStatus('idle');
     setCouponData(null);
@@ -41,79 +45,87 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // 1. Fetch coupon via 'coupons' TABLE directly (RLS Protected)
-        // We bypass 'client_coupons' view to avoid RLS 400 errors on views.
-        // We assume RLS handles 'client_id' isolation automatically (auth.uid() check).
-        
-        console.log(`[Verify Coupon] Verifying: ${cleanCode}`);
+        // Parallel Query: Check both tables
+        const [redemptionRes, couponRes] = await Promise.all([
+             supabase
+                .from('redemptions')
+                .select('id, coupon_code, redeemed_at, campaign_id')
+                .eq('coupon_code', cleanCode)
+                .maybeSingle(),
+             supabase
+                .from('coupons')
+                .select('*')
+                .eq('coupon_code', cleanCode)
+                .maybeSingle()
+        ]);
 
-        // DEBUG: Check Auth Session
-        const { data: sessionData } = await supabase.auth.getSession();
-        console.log("SESSION:", sessionData);
+        let finalData: any = null;
+        let finalStatus: 'active' | 'redeemed' | 'expired' | 'invalid' = 'invalid';
 
-        const { data: authData } = await supabase.auth.getUser();
-        console.log("AUTH UID:", authData?.user?.id);
+        // Priority 1: Redemptions Table (Definitive "Redeemed" status)
+        if (redemptionRes.data) {
+             finalData = {
+                 ...redemptionRes.data,
+                 status: 'redeemed',
+                 generated_at: redemptionRes.data.redeemed_at // Fallback for UI
+             };
+             finalStatus = 'redeemed';
+        } 
+        // Priority 2: Coupons Table (Can be Active or Claimed)
+        else if (couponRes.data) {
+             finalData = couponRes.data;
+             // Map DB status to UI status
+             if (couponRes.data.status === 'claimed' || couponRes.data.status === 'redeemed') {
+                 finalStatus = 'redeemed';
+             } else if (couponRes.data.status === 'active') {
+                 finalStatus = 'active';
+             } else {
+                 finalStatus = 'expired'; // expired, invalid, etc
+             }
+        }
 
-        const { data, error } = await supabase
-            .from('coupons')
-            .select(`
-                coupon_code,
-                status,
-                generated_at,
-                redeemed_at,
-                expiry_date,
-                discount_value,
-                client_id,
-                campaign_id
-            `)
-            .eq('coupon_code', cleanCode) 
-            .maybeSingle();
+        if (!finalData) {
+            setStatus('invalid');
+            setLoading(false);
+            return;
+        }
 
-        console.log("Verify result:", data, error);
+        // Fetch Campaign Details Manually
+        let campaignName = 'Unknown Campaign';
+        let location = null;
+        let generatedAt = finalData.generated_at || finalData.redeemed_at; // Fallback
 
-        if (error) {
-             console.error('[Verify Coupon] DB Error:', error);
-             console.log("DB ERROR FULL:", error);
-             setStatus('invalid');
-        } else if (!data) {
-             console.log('[Verify Coupon] No record found for:', cleanCode);
-             setStatus('invalid');
-        } else {
-            console.log("[Verify Coupon] Record Found:", data);
+        if (finalData.campaign_id) {
+            const { data: camp } = await supabase
+                .from('campaigns')
+                .select('name, location, campaign_date')
+                .eq('id', finalData.campaign_id)
+                .single();
             
-            let campaignName = 'Unknown Campaign';
-
-            // Fetch Campaign Name Separately
-            if (data.campaign_id) {
-                const { data: campaign } = await supabase
-                    .from('campaigns')
-                    .select('name')
-                    .eq('id', data.campaign_id)
-                    .single();
-                
-                if (campaign) {
-                    campaignName = campaign.name;
-                }
-            }
-            
-            // Construct Enhanced Data
-            const enhancedData = {
-                ...data,
-                campaign_name: campaignName
-            };
-
-            console.log("[Verify Coupon] Enhanced Data:", enhancedData);
-            setCouponData(enhancedData);
-            
-            // Status Logic
-            if (enhancedData.status === 'claimed' || enhancedData.status === 'redeemed') {
-                setStatus('redeemed');
-            } else if (enhancedData.status === 'active') {
-                setStatus('valid');
-            } else {
-                setStatus('expired');
+            if (camp) {
+                campaignName = camp.name;
+                location = camp.location;
+                // If we don't have a generated_at (e.g. from redemptions), use campaign date or redeemed date
+                if (!generatedAt) generatedAt = camp.campaign_date;
             }
         }
+
+        // Check if expired based on date (if Active)
+        if (finalStatus === 'active' && finalData.expires_at) {
+             if (new Date(finalData.expires_at) < new Date()) {
+                 finalStatus = 'expired';
+             }
+        }
+
+        setCouponData({
+            ...finalData,
+            campaign_name: campaignName,
+            location: location,
+            generated_at: generatedAt,
+            status: finalStatus
+        });
+        setStatus(finalStatus);
+
     } catch (err) {
         console.error(err);
         setStatus('invalid');
@@ -141,11 +153,14 @@ export default function CouponVerification() {
         // Optimistic Update
         setCouponData({
             ...couponData,
-            status: 'claimed',
-            redeemed_at: new Date().toISOString() // Approximate local
+            status: 'redeemed',
+            redeemed_at: new Date().toISOString()
         });
         setStatus('redeemed');
         alert("Coupon successfully marked as claimed!");
+        
+        // Refresh page to update dashboard lists
+        window.location.reload();
 
     } catch (err: any) {
         alert(err.message);
@@ -221,15 +236,17 @@ export default function CouponVerification() {
                             <span className="opacity-70">Campaign:</span> 
                             <span className="font-medium text-right">{couponData?.campaign_name}</span>
                         </div>
+                         {couponData?.location && (
+                            <div className="flex justify-between">
+                                <span className="opacity-70">Location:</span> 
+                                <span className="font-medium text-right">{couponData.location}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between">
                             <span className="opacity-70">Generated:</span> 
-                            <span className="font-medium text-right">{new Date(couponData.generated_at).toLocaleDateString()}</span>
+                            <span className="font-medium text-right">{couponData?.generated_at ? new Date(couponData.generated_at).toLocaleDateString() : 'N/A'}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="opacity-70">Expires:</span> 
-                            <span className="font-medium text-right">{couponData.expiry_date ? new Date(couponData.expiry_date).toLocaleDateString() : 'Never'}</span>
-                        </div>
-                         {couponData?.discount_value > 0 && (
+                        {couponData?.discount_value > 0 && (
                             <div className="flex justify-between">
                                 <span className="opacity-70">Value:</span> 
                                 <span className="font-medium text-right">₹{couponData.discount_value}</span>
@@ -263,10 +280,16 @@ export default function CouponVerification() {
                             <span className="opacity-70">Campaign:</span> 
                             <span className="font-medium text-right">{couponData?.campaign_name}</span>
                         </div>
+                        {couponData?.location && (
+                            <div className="flex justify-between">
+                                <span className="opacity-70">Location:</span> 
+                                <span className="font-medium text-right">{couponData.location}</span>
+                            </div>
+                        )}
                         {couponData?.redeemed_at && (
                            <div className="flex justify-between">
                                 <span className="opacity-70">Redeemed:</span> 
-                                <span className="font-medium text-right">{new Date(couponData.redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'medium' })}</span>
+                                <span className="font-medium text-right">{new Date(couponData.redeemed_at).toLocaleString("en-IN", { timeStyle: 'short', dateStyle: 'medium', timeZone: 'Asia/Kolkata' })}</span>
                             </div>
                         )}
                   </div>
