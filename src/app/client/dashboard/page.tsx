@@ -57,7 +57,16 @@ export default async function ClientDashboard() {
   }
 
   // 2. Fetch Data from Views
-  // 2. Fetch Data from Views & Tables
+  // 2. Fetch Campaign IDs & Metadata First
+  const { data: campaignsData } = await supabase
+    .from("campaigns")
+    .select("id, name, location, campaign_date")
+    .eq("client_id", client.id);
+
+  const campaignIds = (campaignsData || []).map(c => c.id);
+  const campaignMap = new Map((campaignsData || []).map(c => [c.id, c]));
+
+  // 3. Parallel Fetch: Views & Redemptions (Manual Join)
   const [
       { data: summaryData },
       { data: recentActivityData },
@@ -67,64 +76,55 @@ export default async function ClientDashboard() {
       supabase.from("client_campaign_summary").select("*").eq("client_id", client.id),
       supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
       supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
-      // Fetch directly from redemptions table as requested
-      supabase
-        .from("redemptions")
-        .select(`
-            id,
-            coupon_code,
-            redeemed_at,
-            user_id,
-            campaign_id,
-            campaigns!inner (
-                id,
-                client_id,
-                location,
-                campaign_date
-            )
-        `)
-        .eq("campaigns.client_id", client.id)
-        .order("redeemed_at", { ascending: false })
-        .limit(50)
+      campaignIds.length > 0 
+        ? supabase
+            .from("redemptions")
+            .select("id, coupon_code, redeemed_at, campaign_id")
+            .in("campaign_id", campaignIds)
+            .order("redeemed_at", { ascending: false })
+            //.limit(100) // Optional: limit if needed, but keeping all for accurate counters as requested
+        : Promise.resolve({ data: [] })
   ]);
 
-  // 2b. Fetch Campaign Metadata (Backup)
-  const { data: campaignMeta } = await supabase
-      .from('campaigns')
-      .select('id, location, campaign_date')
-      .eq('client_id', client.id);
-
-  const metaMap = (campaignMeta || []).reduce((acc: any, c: any) => {
-      acc[c.id] = c;
-      return acc;
-  }, {});
-
+  // 4. Merge Data & Transform
   const campaigns = (summaryData || []).map((c: any) => ({
       ...c,
-      location: metaMap[c.id || c.campaign_id]?.location,
-      campaign_date: metaMap[c.id || c.campaign_id]?.campaign_date
+      location: campaignMap.get(c.id || c.campaign_id)?.location,
+      campaign_date: campaignMap.get(c.id || c.campaign_id)?.campaign_date
   }));
   
   const recentActivity = recentActivityData || [];
+  const weeklyScans = weeklyScansData || [];
   
-  // Transform Redemptions to strict CouponData format
-  const generatedCoupons = ((redemptionsData as any[]) || []).map((r: any) => ({
-      id: r.id,
-      coupon_code: r.coupon_code || 'N/A',
-      status: 'redeemed' as const, // Strict typing
-      generated_at: r.redeemed_at, 
-      redeemed_at: r.redeemed_at,
-      campaign_id: r.campaign_id,
-      location: r.campaigns?.location || metaMap[r.campaign_id]?.location,
-      campaign_date: r.campaigns?.campaign_date || metaMap[r.campaign_id]?.campaign_date
-  }));
+  // MERGE: Generated Coupons (Redemptions + Campaign Info)
+  const generatedCoupons = ((redemptionsData as any[]) || []).map((r: any) => {
+      const c = campaignMap.get(r.campaign_id);
+      return {
+          id: r.id,
+          coupon_code: r.coupon_code || 'N/A',
+          status: 'redeemed' as const,
+          generated_at: r.redeemed_at, 
+          redeemed_at: r.redeemed_at,
+          campaign_id: r.campaign_id,
+          location: c?.location || null,
+          campaign_date: c?.campaign_date || null,
+          campaign_name: c?.name || 'Unknown'
+      };
+  });
 
   // 3. Metrics Aggregation
-  // Calculate totals from summary view
   let impressions = 0;
-  let scans = generatedCoupons.length; // Use actual redemptions count for scans/claims if preferred, or mix
-  let redemptions = generatedCoupons.length; // Total = redemptions count
+  // Use actual redemptions count for scans/claims as requested
+  let scans = generatedCoupons.length; 
+  let redemptions = generatedCoupons.length; 
   let revenue = 0; 
+  let uniqueUsers = 0;
+
+  // Aggregate from Summary for Impressions/Users (since redemptions only give us counts)
+  campaigns.forEach((c: any) => {
+      impressions += (Number(c.total_bottles) || 0);
+      uniqueUsers += (Number(c.unique_users) || 0);
+  });
   
   // Weekly Graph Processing
   const last7Days = getLast7Days();
@@ -135,8 +135,6 @@ export default async function ClientDashboard() {
     scansByDate[d] = 0;
   });
 
-  // Fill from weeklyScans view (or we could derive from redemptions if needed, but view is likely faster)
-  const weeklyScans = weeklyScansData || [];
   weeklyScans.forEach((row: any) => {
       const dateStr = row.scan_date || row.date || row.day; 
       if (dateStr && scansByDate[dateStr] !== undefined) {
@@ -166,13 +164,8 @@ export default async function ClientDashboard() {
 
   // Campaign Stats Processing
   const campaignStats: Record<string, any> = {};
-  let uniqueUsers = 0;
 
   campaigns.forEach((c: any) => {
-      impressions += (Number(c.total_bottles) || 0);
-      redemptions += (Number(c.total_claims) || 0);
-      uniqueUsers += (Number(c.unique_users) || 0);
-      
       let health = 'Low';
       const conv = Number(c.conversion_rate) || 0;
       if (conv >= 25) health = 'High';
@@ -188,14 +181,6 @@ export default async function ClientDashboard() {
   });
   
   // Calculate Global Rates
-  if (scans === 0 && campaigns.length > 0) {
-      scans = campaigns.reduce((acc: number, c: any) => {
-          const b = Number(c.total_bottles) || 0;
-          const r = Number(c.conversion_rate) || 0;
-          return acc + Math.round(b * (r / 100));
-      }, 0);
-  }
-
   const conversionRate = impressions > 0 ? ((scans / impressions) * 100).toFixed(1) + "%" : "0%";
   const redemptionRate = scans > 0 ? ((redemptions / scans) * 100).toFixed(1) + "%" : "0%";
 
@@ -204,14 +189,13 @@ export default async function ClientDashboard() {
   // Sort by highest redemptions (claims) as proxy for "Best"
   const bestCampaign = [...campaigns].sort((a: any, b: any) => (Number(b.total_claims) || 0) - (Number(a.total_claims) || 0))[0];
 
-  // Trends - Not available in views (would need yesterday's data).
-  // We will set to "neutral" or hide.
+  // Trends
   const scanTrendLabel = "View details"; 
   const scanTrendType = 'neutral';
   const revTrendLabel = "View details";
   const revTrendType = 'neutral';
   
-  const revenueSparkData = last7Days.map(() => 0); // No daily revenue data
+  const revenueSparkData = last7Days.map(() => 0); 
 
   // AI Summary Logic Prep
   const revTrendEnum = 'stable';
