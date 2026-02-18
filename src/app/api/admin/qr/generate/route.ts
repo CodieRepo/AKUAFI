@@ -21,8 +21,6 @@ export async function POST(request: Request) {
               return cookieStore.getAll()
             },
             setAll(cookiesToSet) {
-                // In Route Handler, we can set cookies if needed, but for validation mainly reading is key.
-                // We'll implement it to be safe.
                 try {
                     cookiesToSet.forEach(({ name, value, options }) =>
                         cookieStore.set(name, value, options)
@@ -42,14 +40,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Unauthorized: No session' }, { status: 401 });
     }
 
-    // Rely on verifyAdmin for role check, but pass the request. 
-    // Optimization: verifyAdmin inside lib might act on request headers/cookies too.
-    // If verifyAdmin uses 'getSupabaseClient' (old), it might break. 
-    // I should check 'verifyAdmin' implementation if tasks allowed "Do not refactor unrelated files".
-    // User said "Do not refactor unrelated files".
-    // I will assume verifyAdmin works or I will implement a manual check if it relies on old auth helpers?
-    // "verifyAdmin via admins table" is a requirement.
-    // I will stick to calling verifyAdmin(request) as previously operational.
     await verifyAdmin();
 
     const body = await request.json();
@@ -61,9 +51,13 @@ export async function POST(request: Request) {
     }
 
     // STRICT SERVER-SIDE ENFORCEMENT
-    const MAX_QR_PER_REQUEST = 2000;
-    if (quantity > MAX_QR_PER_REQUEST) {
-      return NextResponse.json({ error: `Max quantity per request is ${MAX_QR_PER_REQUEST}. Please batch your requests.` }, { status: 400 });
+    // Increased max limit for Async Jobs, but keep a reasonable cap if needed.
+    // Let's allow up to 50,000 for async.
+    const MAX_SYNC_QR = 200;
+    const MAX_ASYNC_QR = 50000;
+
+    if (quantity > MAX_ASYNC_QR) {
+      return NextResponse.json({ error: `Max quantity is ${MAX_ASYNC_QR}.` }, { status: 400 });
     }
 
     console.log(`[QR-GEN] Starting generation. Campaign: ${campaign_id}, Qty: ${quantity}, User: ${user.id}`);
@@ -80,7 +74,6 @@ export async function POST(request: Request) {
     }
 
     // 4. DB Insert (Chunked) using Service Role (getSupabaseAdmin)
-    // This bypasses RLS on 'bottles' insertion effectively, ensuring we can write despite being "just an admin".
     const supabaseAdmin = getSupabaseAdmin();
     const dbChunkSize = 1000;
     for (let i = 0; i < rows.length; i += dbChunkSize) {
@@ -92,6 +85,39 @@ export async function POST(request: Request) {
             throw new Error(`Database error: ${error.message}`);
         }
     }
+
+    // --- CONDITIONAL LOGIC START ---
+    
+    // IF LARGE BATCH: Create Job & Return
+    if (quantity > MAX_SYNC_QR) {
+        console.log(`[QR-GEN] Large batch detected (${quantity}). Creating background job.`);
+        
+        const { data: job, error: jobError } = await supabaseAdmin
+            .from('qr_jobs')
+            .insert({
+                campaign_id,
+                total: quantity,
+                processed: 0,
+                status: 'pending'
+            })
+            .select()
+            .single();
+
+        if (jobError) {
+             console.error("[QR-GEN] Job Creation Error:", jobError);
+             throw new Error(`Failed to create generation job: ${jobError.message}`);
+        }
+
+        return NextResponse.json({
+            success: true,
+            job_id: job.id,
+            status: 'processing', // Client sees this and starts polling
+            message: `Started background generation for ${quantity} QR codes.`
+        });
+    }
+
+    // IF SMALL BATCH: Continue with Synchronous Generation (Original Logic)
+    console.log(`[QR-GEN] Small batch detected (${quantity}). Generating synchronously.`);
 
     // 5. Generate ZIP
     const zip = new JSZip();
@@ -130,7 +156,6 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("[QR-GEN] Fatal Error:", error);
     const status = error.message.includes('Unauthorized') ? 401 : 500;
-    // Ensure we don't accidentally return 400 for internal errors
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status });
   }
 }
