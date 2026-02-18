@@ -57,15 +57,17 @@ export default async function ClientDashboard() {
   }
 
   // 2. Fetch Data from Views
+  // 2. Fetch Data from Views & Tables
   const [
       { data: summaryData },
       { data: recentActivityData },
       { data: weeklyScansData },
-      { data: generatedCouponsData }
+      { data: redemptionsData }
   ] = await Promise.all([
       supabase.from("client_campaign_summary").select("*").eq("client_id", client.id),
       supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
       supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
+      // Fetch directly from redemptions table as requested
       supabase
         .from("redemptions")
         .select(`
@@ -73,9 +75,12 @@ export default async function ClientDashboard() {
             coupon_code,
             redeemed_at,
             user_id,
+            campaign_id,
             campaigns!inner (
                 id,
-                client_id
+                client_id,
+                location,
+                campaign_date
             )
         `)
         .eq("campaigns.client_id", client.id)
@@ -83,7 +88,7 @@ export default async function ClientDashboard() {
         .limit(50)
   ]);
 
-  // 2b. Fetch Campaign Metadata (Location/Date) - Parallel Fetch
+  // 2b. Fetch Campaign Metadata (Backup)
   const { data: campaignMeta } = await supabase
       .from('campaigns')
       .select('id, location, campaign_date')
@@ -99,28 +104,28 @@ export default async function ClientDashboard() {
       location: metaMap[c.id || c.campaign_id]?.location,
       campaign_date: metaMap[c.id || c.campaign_id]?.campaign_date
   }));
-  const recentActivity = recentActivityData || [];
-  const weeklyScans = weeklyScansData || [];
   
-  // Transform Redemptions to CouponData format
-  const generatedCoupons = ((generatedCouponsData as any[]) || []).map((r: any) => ({
+  const recentActivity = recentActivityData || [];
+  
+  // Transform Redemptions to strict CouponData format
+  const generatedCoupons = ((redemptionsData as any[]) || []).map((r: any) => ({
       id: r.id,
       coupon_code: r.coupon_code || 'N/A',
-      status: 'redeemed' as const, // Explicitly cast to literal type to satisfy CouponData union
-      generated_at: r.redeemed_at, // Use redeemed_at as proxy for "Generated/Date" in UI list for now
+      status: 'redeemed' as const, // Strict typing
+      generated_at: r.redeemed_at, 
       redeemed_at: r.redeemed_at,
-      campaign_id: r.campaigns?.id,
-      location: metaMap[r.campaigns?.id]?.location,
-      campaign_date: metaMap[r.campaigns?.id]?.campaign_date
+      campaign_id: r.campaign_id,
+      location: r.campaigns?.location || metaMap[r.campaign_id]?.location,
+      campaign_date: r.campaigns?.campaign_date || metaMap[r.campaign_id]?.campaign_date
   }));
 
   // 3. Metrics Aggregation
   // Calculate totals from summary view
   let impressions = 0;
-  let scans = 0; 
-  let redemptions = 0;
+  let scans = generatedCoupons.length; // Use actual redemptions count for scans/claims if preferred, or mix
+  let redemptions = generatedCoupons.length; // Total = redemptions count
   let revenue = 0; 
-
+  
   // Weekly Graph Processing
   const last7Days = getLast7Days();
   const scansByDate: Record<string, number> = {};
@@ -130,7 +135,8 @@ export default async function ClientDashboard() {
     scansByDate[d] = 0;
   });
 
-  // Fill from weeklyScans view
+  // Fill from weeklyScans view (or we could derive from redemptions if needed, but view is likely faster)
+  const weeklyScans = weeklyScansData || [];
   weeklyScans.forEach((row: any) => {
       const dateStr = row.scan_date || row.date || row.day; 
       if (dateStr && scansByDate[dateStr] !== undefined) {
@@ -140,20 +146,17 @@ export default async function ClientDashboard() {
 
   const scanChartData = last7Days.map(d => scansByDate[d]);
 
-  // Derive Today/Yesterday from Chart Data
-  // last7Days is [today-6, ..., Today] (Ascending Order)
-  // So last element is Today. Second to last is Yesterday.
-  
+  // Derive Today/Yesterday
   const todayDateKey = last7Days[last7Days.length - 1];
   const yesterdayDateKey = last7Days[last7Days.length - 2];
   
   const todayScans = scansByDate[todayDateKey] || 0;
   const yesterdayScans = scansByDate[yesterdayDateKey] || 0;
   
-  const todayRevenue = 0; // Not available in views
-  const yesterdayRevenue = 0; // Not available in views
+  const todayRevenue = 0; 
+  const yesterdayRevenue = 0; 
   
-  const campaignList = campaigns; // Alias for compatibility with existing UI code
+  const campaignList = campaigns;
   
   // Weekly Labels (e.g., "Mon", "Tue")
   const weeklyLabels = last7Days.map(dateStr => {
