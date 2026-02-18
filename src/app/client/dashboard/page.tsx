@@ -106,7 +106,7 @@ export default async function ClientDashboard() {
   const generatedCoupons = ((generatedCouponsData as any[]) || []).map((r: any) => ({
       id: r.id,
       coupon_code: r.coupon_code || 'N/A',
-      status: 'redeemed', // Since we are fetching from redemptions
+      status: 'redeemed' as const, // Explicitly cast to literal type to satisfy CouponData union
       generated_at: r.redeemed_at, // Use redeemed_at as proxy for "Generated/Date" in UI list for now
       redeemed_at: r.redeemed_at,
       campaign_id: r.campaigns?.id,
