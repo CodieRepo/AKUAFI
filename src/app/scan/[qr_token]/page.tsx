@@ -20,10 +20,7 @@ export default function Page() {
   const [formData, setFormData] = useState({ 
     name: '', 
     phone: '',
-    addressLine: '',
-    city: '',
-    state: '',
-    pincode: ''
+    address: '' // Single optional address field
   });
   const [couponCode, setCouponCode] = useState('');
 
@@ -41,13 +38,6 @@ export default function Page() {
     }
   };
 
-  const handleCityStateChange = (field: 'city' | 'state') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (/^[a-zA-Z\s]*$/.test(val)) {
-      setFormData(prev => ({ ...prev, [field]: val }));
-    }
-  };
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
     if (val.length <= 10) {
@@ -55,19 +45,6 @@ export default function Page() {
     }
   };
 
-  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '');
-    if (val.length <= 6) {
-      setFormData(prev => ({ ...prev, pincode: val }));
-    }
-  };
-
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (/^[a-zA-Z0-9\s,]*$/.test(val)) {
-      setFormData(prev => ({ ...prev, addressLine: val }));
-    }
-  };
 
   // --- API Interactions ---
 
@@ -198,15 +175,8 @@ export default function Page() {
         return;
     }
 
-    // Validate Address Fields if user is verifyng (checking only if we are in otpSent state, which we are)
-    if (formData.pincode.length !== 6) {
-        alert("Pincode must be 6 digits.");
-        return;
-    }
-    if (!formData.addressLine || !formData.city || !formData.state) {
-        alert("Please complete the address section.");
-        return;
-    }
+    // Validate Address Fields (Optional but recommended)
+    // if (!formData.address) ...
 
     setLoadingAction(true);
     // Explicit State Reset
@@ -215,7 +185,7 @@ export default function Page() {
     const fullPhone = `+91${formData.phone}`;
 
     try {
-      // 3️⃣ Redeem API Call Fix: Send ALL 3 fields
+      // 3️⃣ Redeem API Call Fix: Send address if present
       console.log("Redeeming:", { phone: fullPhone, otp, qr_token });
 
       const response = await fetch('/api/redeem', {
@@ -225,7 +195,8 @@ export default function Page() {
            phone: fullPhone,
            otp: otp,
            qr_token: qr_token,
-           name: formData.name.trim()
+           name: formData.name.trim(),
+           address: formData.address // Send Address
         })
       });
 
@@ -355,50 +326,22 @@ export default function Page() {
                   <p className="text-xs text-muted-foreground mt-1">10-digit mobile number</p>
                 </div>
 
-                {/* Address Section */}
+                {/* Address Section (Simplified) */}
                 <div className="pt-4 border-t border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Address Details</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Location Details</h3>
                     
-                    <div className="space-y-3">
-                        <div>
-                            <input
-                                type="text"
+                    <div>
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <textarea
                                 required
-                                placeholder="Address Line (Letters, Numbers, Comma)"
-                                className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
-                                value={formData.addressLine}
-                                onChange={handleAddressChange}
+                                placeholder="Enter your current location / city..."
+                                className="w-full h-20 pl-10 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
+                                value={formData.address}
+                                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <input
-                                type="text"
-                                required
-                                placeholder="City"
-                                className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
-                                value={formData.city}
-                                onChange={handleCityStateChange('city')}
-                            />
-                            <input
-                                type="text"
-                                required
-                                placeholder="State"
-                                className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
-                                value={formData.state}
-                                onChange={handleCityStateChange('state')}
-                            />
-                        </div>
-                        <div>
-                             <input
-                                type="text"
-                                required
-                                inputMode="numeric"
-                                placeholder="Pincode (6 digits)"
-                                className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
-                                value={formData.pincode}
-                                onChange={handlePincodeChange}
-                            />
-                        </div>
+                        <p className="text-xs text-gray-500 mt-1">This validates your coupon claim.</p>
                     </div>
                 </div>
 

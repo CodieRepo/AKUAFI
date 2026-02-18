@@ -11,11 +11,14 @@ export interface Campaign {
   id: string;
   name: string;
   status: string;
-  scans: number | null; // Assumed to be Total QR or Total Scans
-  redeemed: number | null;
+  total_scans: number; // New Counter
+  redeemed_count: number; // New Counter
   created_at: string;
   start_date: string;
   end_date: string;
+  location: string | null;
+  campaign_date: string | null;
+  client_id?: string;
 }
 
 // FORMATTER: UTC -> IST Display Only
@@ -26,6 +29,11 @@ function formatIST(dateString: string) {
       dateStyle: "medium",
     //   timeStyle: "short" // Keeping it minimal as per "Clean SaaS"
     });
+}
+
+function formatDateTag(dateString: string | null) {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleString("en-IN", { month: 'short', year: 'numeric' });
 }
 
 interface CampaignTableProps {
@@ -121,9 +129,9 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
           <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
             <tr>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Campaign Name</th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Dates</th>
+              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Location / Tag</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Status</th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Total QR</th>
+              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Total Scans</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Redeemed</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Progress</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Actions</th>
@@ -134,9 +142,14 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
                 const status = campaign.status || 'draft';
                 const isUpdating = updatingId === campaign.id;
                 
-                const scans = campaign.scans ?? 0;
-                const redeemed = campaign.redeemed ?? 0;
+                // Use new counters with fallback
+                const scans = campaign.total_scans ?? 0;
+                const redeemed = campaign.redeemed_count ?? 0;
                 const progress = scans > 0 ? Math.round((redeemed / scans) * 100) : 0;
+
+                // Tag Logic: Location + Date
+                const tag = campaign.location || 'Global';
+                const dateTag = formatDateTag(campaign.campaign_date);
 
                 return (
                   <motion.tr 
@@ -153,14 +166,14 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-200">{campaign.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 font-mono">ID: {campaign.id.slice(0, 8)}...</p>
+                          <p className="text-xs text-gray-400 font-mono hidden group-hover:block transition-all">{campaign.id.slice(0, 8)}...</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">
-                        <div className="flex flex-col text-xs">
-                            <span>start: {formatIST(campaign.start_date)}</span>
-                            <span className="text-gray-400 dark:text-gray-500">end: {formatIST(campaign.end_date)}</span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                            <span className="font-medium text-gray-900 dark:text-gray-200">{tag}</span>
+                            {dateTag && <span className="text-xs text-gray-500">{dateTag}</span>}
                         </div>
                     </td>
                     <td className="px-6 py-4">

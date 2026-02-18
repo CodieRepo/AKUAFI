@@ -23,7 +23,9 @@ export default function NewCampaignPage() {
     description: '',
     start_date: '',
     end_date: '',
-    client_id: '', // New field
+    client_id: '', 
+    location: '', // New Field
+    campaign_date: '', // New Field
     coupon_type: 'alphanumeric',
     coupon_min_value: '',
     coupon_max_value: '',
@@ -69,6 +71,12 @@ export default function NewCampaignPage() {
         return;
     }
 
+    if (!formData.location) {
+        setError("Please specify a Location Tag (e.g. City Name).");
+        setLoading(false);
+        return;
+    }
+
     if (new Date(formData.end_date) < new Date(formData.start_date)) {
         setError("End date cannot be before start date.");
         setLoading(false);
@@ -97,6 +105,8 @@ export default function NewCampaignPage() {
             start_date: startUTC,
             end_date: endUTC,
             client_id: formData.client_id, // 4️⃣ Send client_id
+            location: formData.location.trim(),
+            campaign_date: formData.campaign_date || null,
             coupon_min_value: Number(formData.coupon_min_value),
             coupon_max_value: Number(formData.coupon_max_value),
             coupon_prefix: formData.coupon_prefix,
@@ -189,6 +199,32 @@ export default function NewCampaignPage() {
                         value={formData.description}
                         onChange={handleChange}
                     />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">Location Tag</label>
+                        <input 
+                            name="location"
+                            type="text" 
+                            required
+                            placeholder="e.g. Mumbai South"
+                            className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            value={formData.location}
+                            onChange={handleChange}
+                        />
+                         <p className="text-[10px] text-gray-500 mt-1">Shown in admin list for filtering.</p>
+                    </div>
+                    <div>
+                         <label className="block text-sm font-semibold text-gray-900 dark:text-gray-200 mb-2">Campaign Month/Date (Optional)</label>
+                        <input 
+                            name="campaign_date"
+                            type="date"
+                            className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            value={formData.campaign_date}
+                            onChange={handleChange}
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

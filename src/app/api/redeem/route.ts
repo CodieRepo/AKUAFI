@@ -151,37 +151,62 @@ export async function POST(req: NextRequest) {
         attempts++;
         couponCode = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-        // Execute Atomic RPC
-        const { error } = await supabaseAdmin.rpc('redeem_coupon_atomic', {
-            p_user_id: userId,
-            p_campaign_id: bottle.campaign_id,
-            p_bottle_id: bottle.id,
-            p_client_id: campaign.client_id,
-            p_phone: normalizedPhone,
-            p_coupon_code: couponCode,
-            p_discount: discountValue,
-            p_address: address || null // New Optional Address
+        // If error is UNIQUE constraint violation (23505) OR custom code from RPC
+        // The RPC now returns { success: false, error: '...', code: '...' } in the data, 
+        // BUT supabase.rpc might return it as 'data' or 'error' depending on how it's called.
+        // Wait, if RPC returns JSON, 'error' is null, and 'data' contains the success/error flag.
+        // Let's check how the previous code was expecting it.
+        // The previous code expected `const { error } = await supabaseAdmin.rpc(...)`
+        // If the function returns a table or json, `data` likely holds the return value.
+        // However, if the function RAISES an exception, `error` will be populated.
+        // My new RPC implementation uses `RETURN json_build_object...` for "soft errors" inside EXCEPTION block? 
+        // NO, the RPC catches exception and RETURNS a JSON object with success:false.
+        // So `error` from supabase client will be NULL, but `data` will have success:false.
+        
+        // Let's ADJUST the call to get data.
+        
+        const { data: rpcResponse, error: transportError } = await supabaseAdmin.rpc('redeem_coupon_atomic', {
+             p_user_id: userId,
+             p_campaign_id: bottle.campaign_id,
+             p_bottle_id: bottle.id,
+             p_client_id: campaign.client_id,
+             p_phone: normalizedPhone,
+             p_coupon_code: couponCode,
+             p_discount: discountValue,
+             p_address: address || null
         });
 
-        if (!error) {
-            rpcError = null;
-            break; // Success!
+        if (transportError) {
+             // This is a hard DB error (connection, etc)
+             console.error("RPC Transport Error:", transportError);
+             break;
         }
 
-        rpcError = error;
-
-        // If error is UNIQUE constraint violation (23505), retry.
-        // Otherwise, break and return 500.
-        if (error.code === '23505') {
-            console.warn(`[Redeem API] Coupon collision for ${couponCode}, retrying (${attempts}/${MAX_ATTEMPTS})...`);
-        } else {
-            console.error("Atomic Redemption RPC Error (Non-Retriable):", error);
-            break;
+        if (rpcResponse && !rpcResponse.success) {
+             // Logic Error from inside RPC (Duplicate, Collision, etc)
+             rpcError = { message: rpcResponse.error, code: rpcResponse.code };
+             
+             if (rpcResponse.code === 'COUPON_COLLISION') {
+                 console.warn(`[Redeem API] Coupon collision for ${couponCode}, retrying...`);
+                 continue; // Retry loop
+             } else {
+                 // Non-retriable error (Already Redeemed, etc)
+                 break; 
+             }
         }
-    }
+        
+        // Success
+        rpcError = null;
+        break; 
+
+    } // End While
 
     if (rpcError) {
-        console.error("Failed to redeem token after max attempts or critical error:", rpcError);
+        console.error("Redemption Failed:", rpcError);
+        // Map codes to user-friendly status
+        if (rpcError.code === 'ALREADY_REDEEMED' || rpcError.code === 'USER_ALREADY_REDEEMED') {
+             return NextResponse.json({ error: rpcError.message }, { status: 400 });
+        }
         return NextResponse.json({ error: "System busy, please try again" }, { status: 500 });
     }
 
