@@ -25,13 +25,15 @@ export async function verifyAdmin(request: Request) {
     throw new Error('Unauthorized');
   }
 
+  // Check against 'admins' table
   const { data: admin, error: adminError } = await supabase
     .from("admins")
     .select("id")
-    .eq("id", user.id)
+    .eq("user_id", user.id) // Match auth.users.id
     .single();
 
   if (adminError || !admin) {
+    console.error(`Admin verification failed for user ${user.id}: Record not found in admins table.`);
     throw new Error('Forbidden');
   }
 

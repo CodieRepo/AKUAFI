@@ -1,36 +1,15 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // 1. Admin Verification (Strict Security Check)
+    // 1. Admin Verification (Centralized)
+    await verifyAdmin(request);
+
     const supabase = await createClient();
-    const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !currentUser) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized: User not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    // Check if current user is an admin via DB lookup
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (roleError || !userRole) {
-      console.error('Admin verification failed for client list fetch:', currentUser.id);
-      return NextResponse.json(
-        { success: false, message: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
-    }
 
     // 2. Fetch Clients
     const { data: clients, error: fetchError } = await supabase
