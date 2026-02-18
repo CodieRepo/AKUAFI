@@ -227,11 +227,6 @@ async function handleZippingPhase(job: any, supabaseAdmin: any) {
     const chunks: Buffer[] = [];
     stream.on('data', (chunk) => chunks.push(chunk));
 
-    const uploadPromise = new Promise<Buffer>((resolve, reject) => {
-        stream.on('end', () => resolve(Buffer.concat(chunks)));
-        stream.on('error', reject);
-    });
-
     // C. Append CSV 
     let csvContent = "qr_token,url,campaign_id,created_at\n";
     
@@ -297,11 +292,14 @@ async function handleZippingPhase(job: any, supabaseAdmin: any) {
     // Append CSV finally (or iteratively if we wanted, but string is fine for <50MB CSV)
     archive.append(csvContent, { name: 'campaign_codes.csv' });
 
-    // Finalize
-    await archive.finalize();
+    // Finalize and wait for steam to end
+    await new Promise<void>((resolve, reject) => {
+        archive.on('error', reject);
+        stream.on('end', resolve);
+        archive.finalize();
+    });
 
-    // Wait for stream to finish collecting
-    const zipBuffer = await uploadPromise;
+    const zipBuffer = Buffer.concat(chunks);
 
     // Upload ZIP
     const zipPath = `${job.campaign_id}/${job.id}.zip`;
