@@ -67,10 +67,19 @@ export default async function ClientDashboard() {
       supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
       supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
       supabase
-        .from("client_coupons")
-        .select("*")
-        .eq("client_id", client.id)
-        .order("generated_at", { ascending: false })
+        .from("redemptions")
+        .select(`
+            id,
+            coupon_code,
+            redeemed_at,
+            user_id,
+            campaigns!inner (
+                id,
+                client_id
+            )
+        `)
+        .eq("campaigns.client_id", client.id)
+        .order("redeemed_at", { ascending: false })
         .limit(50)
   ]);
 
@@ -92,10 +101,17 @@ export default async function ClientDashboard() {
   }));
   const recentActivity = recentActivityData || [];
   const weeklyScans = weeklyScansData || [];
-  const generatedCoupons = ((generatedCouponsData as any[]) || []).map((c: any) => ({
-      ...c,
-      location: metaMap[c.campaign_id]?.location,
-      campaign_date: metaMap[c.campaign_id]?.campaign_date
+  
+  // Transform Redemptions to CouponData format
+  const generatedCoupons = ((generatedCouponsData as any[]) || []).map((r: any) => ({
+      id: r.id,
+      coupon_code: r.coupon_code || 'N/A',
+      status: 'redeemed', // Since we are fetching from redemptions
+      generated_at: r.redeemed_at, // Use redeemed_at as proxy for "Generated/Date" in UI list for now
+      redeemed_at: r.redeemed_at,
+      campaign_id: r.campaigns?.id,
+      location: metaMap[r.campaigns?.id]?.location,
+      campaign_date: metaMap[r.campaigns?.id]?.campaign_date
   }));
 
   // 3. Metrics Aggregation

@@ -227,7 +227,14 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                             {new Date(coupon.generated_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
-                                            {coupon.redeemed_at ? new Date(coupon.redeemed_at).toLocaleDateString() : '-'}
+                                            {coupon.redeemed_at ? new Date(coupon.redeemed_at).toLocaleString('en-IN', { 
+                                                timeZone: 'Asia/Kolkata',
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) : '-'}
                                         </td>
                                         <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
                                             {coupon.status === 'active' ? (
