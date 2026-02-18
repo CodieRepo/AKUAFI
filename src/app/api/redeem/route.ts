@@ -209,8 +209,8 @@ export async function POST(req: NextRequest) {
 
     if (rpcError) {
         console.error("Redemption Failed:", rpcError);
-        // Map codes to user-friendly status
-        const status = (rpcError.code === 'ALREADY_REDEEMED' || rpcError.code === 'USER_ALREADY_REDEEMED') ? 400 : 500;
+        // Return 400 for logic errors, 500 for system errors
+        const status = (rpcError.code === 'INTERNAL_ERROR' || rpcError.code === 'DB_ERROR') ? 500 : 400;
         return NextResponse.json({ error: rpcError.message, code: rpcError.code }, { status });
     }
 
