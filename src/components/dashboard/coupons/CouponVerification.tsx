@@ -45,86 +45,64 @@ export default function CouponVerification() {
     try {
         const supabase = createClient();
         
-        // Parallel Query: Check both tables
-        const [redemptionRes, couponRes] = await Promise.all([
-             supabase
-                .from('redemptions')
-                .select('id, coupon_code, redeemed_at, campaign_id')
-                .eq('coupon_code', cleanCode)
-                .maybeSingle(),
-             supabase
-                .from('coupons')
-                .select('*')
-                .eq('coupon_code', cleanCode)
-                .maybeSingle()
-        ]);
+        // Query COUPONS table primarily (Source of Lifecycle Status)
+        // Note: Redemptions table is for scan logs, but Coupons table holds current status (Active/Redeemed/Claimed)
+        const { data, error } = await supabase
+            .from('coupons')
+            .select('*')
+            .eq('coupon_code', cleanCode)
+            .maybeSingle();
 
-        let finalData: any = null;
-        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
-
-        // Priority 1: Redemptions Table (Definitive "Redeemed" status)
-        if (redemptionRes.data) {
-             finalData = {
-                 ...redemptionRes.data,
-                 status: 'redeemed',
-                 generated_at: redemptionRes.data.redeemed_at // Fallback for UI
-             };
-             finalDisplayStatus = 'redeemed';
-        } 
-        // Priority 2: Coupons Table (Can be Active or Claimed)
-        else if (couponRes.data) {
-             finalData = couponRes.data;
-             // Map DB status to UI status
-             if (couponRes.data.status === 'claimed' || couponRes.data.status === 'redeemed') {
-                 finalDisplayStatus = 'redeemed';
-             } else if (couponRes.data.status === 'active') {
-                 finalDisplayStatus = 'valid'; // Map 'active' DB status to 'valid' UI state
-             } else {
-                 finalDisplayStatus = 'expired'; // expired, invalid, etc
-             }
+        if (!data) {
+             setStatus('invalid');
+             setLoading(false);
+             return;
         }
 
-        if (!finalData) {
-            setStatus('invalid');
-            setLoading(false);
-            return;
+        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
+        
+        // Map DB status to UI status
+        // DB: 'active' | 'redeemed' | 'claimed' | 'expired'
+        if (data.status === 'claimed' || data.status === 'redeemed') {
+             finalDisplayStatus = 'redeemed';
+        } else if (data.status === 'active') {
+             finalDisplayStatus = 'valid';
+        } else {
+             finalDisplayStatus = 'expired';
         }
 
         // Fetch Campaign Details Manually
         let campaignName = 'Unknown Campaign';
         let location = null;
-        let generatedAt = finalData.generated_at || finalData.redeemed_at; // Fallback
+        let generatedAt = data.generated_at || data.redeemed_at; 
 
-        if (finalData.campaign_id) {
+        if (data.campaign_id) {
             const { data: camp } = await supabase
                 .from('campaigns')
                 .select('name, location, campaign_date')
-                .eq('id', finalData.campaign_id)
+                .eq('id', data.campaign_id) // Corrected from finalData.campaign_id
                 .single();
             
             if (camp) {
                 campaignName = camp.name;
                 location = camp.location;
-                // If we don't have a generated_at (e.g. from redemptions), use campaign date or redeemed date
                 if (!generatedAt) generatedAt = camp.campaign_date;
             }
         }
 
         // Check if expired based on date (if Active/Valid)
-        if (finalDisplayStatus === 'valid' && finalData.expires_at) {
-             if (new Date(finalData.expires_at) < new Date()) {
+        // Note: DB constraints might already set status='expired', but double check based on expiry_date
+        if (finalDisplayStatus === 'valid' && data.expires_at) {
+             if (new Date(data.expires_at) < new Date()) {
                  finalDisplayStatus = 'expired';
              }
         }
 
         setCouponData({
-            ...finalData,
+            ...data,
             campaign_name: campaignName,
             location: location,
             generated_at: generatedAt,
-            // Keep original status in data object or derived? 
-            // The UI uses status state mostly, but data.status might be used differently.
-            // Let's ensure data.status reflects the final determination
             status: finalDisplayStatus === 'valid' ? 'active' : finalDisplayStatus
         });
         setStatus(finalDisplayStatus);

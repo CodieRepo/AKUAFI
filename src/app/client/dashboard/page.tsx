@@ -66,23 +66,23 @@ export default async function ClientDashboard() {
   const campaignIds = (campaignsData || []).map(c => c.id);
   const campaignMap = new Map((campaignsData || []).map(c => [c.id, c]));
 
-  // 3. Parallel Fetch: Views & Redemptions (Manual Join)
+  // 3. Parallel Fetch: Views & Coupons (Manual Join)
   const [
       { data: summaryData },
       { data: recentActivityData },
       { data: weeklyScansData },
-      { data: redemptionsData }
+      { data: couponsData }
   ] = await Promise.all([
       supabase.from("client_campaign_summary").select("*").eq("client_id", client.id),
       supabase.from("client_recent_activity").select("*").eq("client_id", client.id).limit(5),
       supabase.from("client_weekly_scans").select("*").eq("client_id", client.id),
       campaignIds.length > 0 
         ? supabase
-            .from("redemptions")
-            .select("id, coupon_code, redeemed_at, campaign_id")
+            .from("coupons")
+            .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
             .in("campaign_id", campaignIds)
-            .order("redeemed_at", { ascending: false })
-            //.limit(100) // Optional: limit if needed, but keeping all for accurate counters as requested
+            .order("generated_at", { ascending: false })
+            .limit(100) 
         : Promise.resolve({ data: [] })
   ]);
 
@@ -96,31 +96,34 @@ export default async function ClientDashboard() {
   const recentActivity = recentActivityData || [];
   const weeklyScans = weeklyScansData || [];
   
-  // MERGE: Generated Coupons (Redemptions + Campaign Info)
-  const generatedCoupons = ((redemptionsData as any[]) || []).map((r: any) => {
-      const c = campaignMap.get(r.campaign_id);
+  // MERGE: Generated Coupons (Coupons + Campaign Info)
+  // Strict Status Logic: Active | Redeemed | Claimed | Expired
+  const generatedCoupons = ((couponsData as any[]) || []).map((c: any) => {
+      const camp = campaignMap.get(c.campaign_id);
       return {
-          id: r.id,
-          coupon_code: r.coupon_code || 'N/A',
-          status: 'redeemed' as const,
-          generated_at: r.redeemed_at, 
-          redeemed_at: r.redeemed_at,
-          campaign_id: r.campaign_id,
-          location: c?.location || null,
-          campaign_date: c?.campaign_date || null,
-          campaign_name: c?.name || 'Unknown'
+          id: c.id,
+          coupon_code: c.coupon_code || 'N/A',
+          status: (c.status || 'active') as 'active' | 'redeemed' | 'claimed' | 'expired',
+          generated_at: c.generated_at, 
+          redeemed_at: c.redeemed_at,
+          campaign_id: c.campaign_id,
+          location: camp?.location || null,
+          campaign_date: camp?.campaign_date || null,
+          campaign_name: camp?.name || 'Unknown'
       };
   });
 
   // 3. Metrics Aggregation
   let impressions = 0;
-  // Use actual redemptions count for scans/claims as requested
-  let scans = generatedCoupons.length; 
-  let redemptions = generatedCoupons.length; 
+  
+  // Scans/Redemptions = Count of coupons with status 'redeemed' or 'claimed'
+  let scans = generatedCoupons.filter(c => c.status === 'redeemed' || c.status === 'claimed').length; 
+  let redemptions = scans; // Total verified redemptions
+  
   let revenue = 0; 
   let uniqueUsers = 0;
 
-  // Aggregate from Summary for Impressions/Users (since redemptions only give us counts)
+  // Aggregate from Summary for Impressions/Users
   campaigns.forEach((c: any) => {
       impressions += (Number(c.total_bottles) || 0);
       uniqueUsers += (Number(c.unique_users) || 0);
