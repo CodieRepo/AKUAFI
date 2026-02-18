@@ -9,11 +9,16 @@ export const runtime = 'nodejs';
 
 // Helper to validate Cron Secret
 function isValidCron(request: Request) {
-    const authHeader = request.headers.get('x-cron-secret');
-    return authHeader === process.env.CRON_SECRET;
+    const authHeader = request.headers.get('authorization');
+    return authHeader === `Bearer ${process.env.CRON_SECRET}`;
 }
 
 export async function GET(request: Request) {
+    console.log("[QR-WORKER] Cron Triggered");
+    
+    const authHeader = request.headers.get('authorization');
+    console.log(`[QR-WORKER] Auth Header received: ${authHeader ? 'Present' : 'Missing'}`);
+
     // 1. Security Check
     if (!isValidCron(request)) {
         console.warn("[QR-WORKER] Unauthorized access attempt.");
