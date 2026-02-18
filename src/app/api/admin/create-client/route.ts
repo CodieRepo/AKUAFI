@@ -6,7 +6,7 @@ import { verifyAdmin } from '@/lib/adminAuth';
 export async function POST(request: Request) {
   try {
     // 1. Admin Verification (Centralized)
-    await verifyAdmin(request);
+    await verifyAdmin();
 
     // --- Admin Verified beyond this point ---
 

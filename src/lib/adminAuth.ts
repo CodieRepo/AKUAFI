@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function verifyAdmin(request: Request) {
+export async function verifyAdmin() {
   const cookieStore = await cookies();
 
   const supabase = createServerClient(

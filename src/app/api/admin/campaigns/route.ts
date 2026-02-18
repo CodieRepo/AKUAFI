@@ -4,7 +4,7 @@ import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
   try {
-    await verifyAdmin(request);
+    await verifyAdmin();
 
     // Optimized Query: Select new fields + counters
     const { data, error } = await getSupabaseAdmin()
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { adminId } = await verifyAdmin(request);
+    const { adminId } = await verifyAdmin();
     const body = await request.json();
 
     // Enhanced Validation

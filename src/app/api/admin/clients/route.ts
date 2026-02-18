@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     // 1. Admin Verification (Centralized)
-    await verifyAdmin(request);
+    await verifyAdmin();
 
     const supabase = await createClient();
 

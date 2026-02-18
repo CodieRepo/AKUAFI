@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     
     // Explicitly handle auth verification
     try {
-        await verifyAdmin(request);
+        await verifyAdmin();
     } catch (authError: any) {
         console.error('[API] Auth failed:', authError.message);
         // Force 401/403 based on error message or default to 401 for safety if it was an auth attempt
