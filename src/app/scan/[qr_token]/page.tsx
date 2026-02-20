@@ -71,6 +71,7 @@ export default function Page() {
           body: JSON.stringify({ qr_token }),
         });
         const result = await response.json();
+        console.log('Bottle Check Response:', result);
 
         if (!response.ok || !result.success) {
           if (result.error === 'Coupon redeemed from this QR') { setView('used'); return; }
@@ -82,9 +83,8 @@ export default function Page() {
         const data = result.bottle;
         setBottle(data);
 
-        // Only switch to 'used' view if the backend explicitly signals a HARD block
+        // Permanently locked: backend says this bottle already has a coupon
         if (result.exists === true) {
-          setExistingCoupon(result.coupon || null);
           setView('used');
           return;
         }
@@ -220,51 +220,12 @@ export default function Page() {
         <AkuafiLogo />
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 w-full max-w-sm">
           <div className="h-16 w-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <QrCode className="h-8 w-8" />
+            <AlertCircle className="h-8 w-8" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Coupon Already Redeemed</h1>
-          <p className="text-gray-500 text-xs mb-6 px-4">
-            This QR code has already been used to claim a reward. Each QR code can only be redeemed once.
+          <h1 className="text-xl font-bold text-gray-900 mb-3">This QR has already been used.</h1>
+          <p className="text-gray-500 text-sm">
+            If you believe this is an error, please contact support.
           </p>
-
-          {existingCoupon && ['claimed', 'used', 'expired', 'redeemed'].includes(existingCoupon.status) && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
-               {/* Badge */}
-               <div className="flex justify-center">
-                 <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                   existingCoupon.status === 'claimed' || existingCoupon.status === 'redeemed'
-                    ? 'bg-green-100 text-green-700 border border-green-200' 
-                    : 'bg-blue-100 text-blue-700 border border-blue-200'
-                 }`}>
-                   {existingCoupon.status}
-                 </span>
-               </div>
-
-               {/* Coupon Details */}
-               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                 <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Coupon Code</p>
-                 <p className="text-xl font-mono font-bold text-primary tracking-wider">{existingCoupon.coupon_code}</p>
-                 
-                 {existingCoupon.discount_value > 0 && (
-                   <div className="mt-3 pt-3 border-t border-gray-200">
-                      <p className="text-lg font-bold text-emerald-600">₹{existingCoupon.discount_value} OFF</p>
-                   </div>
-                 )}
-               </div>
-
-               {existingCoupon.redeemed_at && (
-                 <p className="text-[10px] text-gray-400">
-                   Claimed on: {new Date(existingCoupon.redeemed_at).toLocaleDateString()}
-                 </p>
-               )}
-            </div>
-          )}
-
-          {!existingCoupon && (
-            <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-100">
-              <p className="text-[11px] text-amber-700 font-medium">If you believe this is a mistake, please contact support.</p>
-            </div>
-          )}
         </div>
       </div>
     );

@@ -46,10 +46,9 @@ export async function POST(request: Request) {
 
     const existingCoupon = coupons && coupons.length > 0 ? coupons[0] : null;
 
-    // HARD FIX: Logic Correction
-    // Only block if coupon is truly "spent" (claimed, used, or expired)
-    // If it's 'active' or 'unclaimed', we allow the flow to continue.
-    const isHardBlocked = existingCoupon && !['active', 'unclaimed'].includes(existingCoupon.status);
+    // STRICT RULE: If ANY coupon exists for this bottle, permanently lock the QR.
+    // Status is irrelevant — active, claimed, used, expired all block the form.
+    const isHardBlocked = Boolean(existingCoupon);
 
     // 3. Increment Scan Count (Fire and Forget)
     // Only increment if it's the first time scan (bottle not used)
