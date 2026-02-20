@@ -3,194 +3,184 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
-import { StatCard } from '@/components/admin/ui/StatCard';
-import { Megaphone, QrCode, ScanLine, Users, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Users, Megaphone, QrCode, ScanLine, ChevronRight } from 'lucide-react';
 
-// Animation config — named rowVariants to avoid collision with the `item` loop variable below.
-// Previously `variants={item}` was passing row data as the animation config, which silently
-// broke framer-motion and prevented the table from rendering.
-const rowVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1, y: 0 },
+type ClientRow = {
+  client_id: string;
+  client_name: string;
+  total_campaigns: number;
+  total_qr: number;
+  total_claims: number;
+  unique_users: number;
+  conversion_rate: number;
 };
 
+function StatCard({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </p>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>(null);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Derived totals — computed directly from the clients array, no complex reduce
+  const totalClients   = clients.length;
+  const totalCampaigns = clients.reduce((s, c) => s + Number(c.total_campaigns || 0), 0);
+  const totalQR        = clients.reduce((s, c) => s + Number(c.total_qr        || 0), 0);
+  const totalClaims    = clients.reduce((s, c) => s + Number(c.total_claims    || 0), 0);
+  const uniqueUsers    = clients.reduce((s, c) => s + Number(c.unique_users    || 0), 0);
+
   useEffect(() => {
-    async function fetchDashboardData() {
+    async function load() {
       try {
         setLoading(true);
         const supabase = createClient();
 
-        // 1. Fetch from client_dashboard_v1
-        console.log("Fetching client_dashboard_v1...");
-        const { data: clientsData, error: statsError } = await supabase
+        // Fetch all client analytics in one query from the view
+        const { data: viewData, error: viewErr } = await supabase
           .from('client_dashboard_v1')
           .select('*');
 
-        console.log("client_dashboard_v1 data:", clientsData);
-        if (statsError) {
-          console.error('Error fetching stats:', statsError);
-        }
+        if (viewErr) throw viewErr;
 
-        // Aggregate stats across all clients.
-        // Coerce to Number() — Supabase views can return bigint aggregates as strings.
-        const aggregatedStats = (clientsData || []).reduce((acc: any, curr: any) => ({
-          total_campaigns: (acc.total_campaigns || 0) + Number(curr.total_campaigns || 0),
-          total_qr:        (acc.total_qr        || 0) + Number(curr.total_qr        || 0),
-          total_claims:    (acc.total_claims    || 0) + Number(curr.total_claims    || 0),
-          unique_users:    (acc.unique_users    || 0) + Number(curr.unique_users    || 0),
-        }), { total_campaigns: 0, total_qr: 0, total_claims: 0, unique_users: 0 });
+        // Enrich with client names — join clients table
+        const { data: clientsData, error: clientsErr } = await supabase
+          .from('clients')
+          .select('id, client_name');
 
-        console.log("Aggregated Stats:", aggregatedStats);
+        if (clientsErr) throw clientsErr;
 
-        // 2. Fetch Recent Activity from campaign_user_details_v1
-        console.log("Fetching campaign_user_details_v1 (activity)...");
-        const { data: activityData, error: activityError } = await supabase
-          .from('campaign_user_details_v1')
-          .select('campaign_name, user_name, phone, coupon_code, redeemed_at, status')
-          .eq('status', 'claimed')
-          .order('redeemed_at', { ascending: false })
-          .limit(10);
+        // Build a lookup: client_id → client_name
+        const nameMap: Record<string, string> = {};
+        (clientsData || []).forEach(c => { nameMap[c.id] = c.client_name; });
 
-        console.log("Recent Activity Data:", activityData);
-        if (activityError) console.error('Error fetching activity:', activityError);
+        // Merge name into view rows
+        const merged: ClientRow[] = (viewData || []).map(row => ({
+          client_id:       row.client_id,
+          client_name:     nameMap[row.client_id] || 'Unknown Client',
+          total_campaigns: Number(row.total_campaigns || 0),
+          total_qr:        Number(row.total_qr        || 0),
+          total_claims:    Number(row.total_claims    || 0),
+          unique_users:    Number(row.unique_users    || 0),
+          conversion_rate: Number(row.conversion_rate || 0),
+        }));
 
-        setStats(aggregatedStats);
-        setRecentActivity(activityData || []);
-
+        console.log('[AdminDashboard] clients merged:', merged);
+        setClients(merged);
       } catch (err: any) {
-        console.error('Unexpected error:', err);
+        console.error('[AdminDashboard] error:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchDashboardData();
+    load();
   }, []);
 
   if (error) {
-    return (
-      <div className="p-8 text-center text-red-500">
-        <p>Error loading dashboard: {error}</p>
-      </div>
-    );
+    return <div className="p-8 text-center text-red-500">Error: {error}</div>;
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 py-2">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome back, here is what is happening today.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">All clients and their campaign analytics</p>
       </div>
 
-      {/* Metric Cards — values bound directly from client_dashboard_v1 aggregation */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          label="Total Campaigns"
-          value={stats?.total_campaigns ?? 0}
-          icon={<Megaphone className="h-6 w-6" />}
-          loading={loading}
-          trend={{ value: "12%", direction: "up" }}
-        />
-        <StatCard
-          label="Total QR Generated"
-          value={stats?.total_qr ?? 0}
-          icon={<QrCode className="h-6 w-6" />}
-          loading={loading}
-        />
-        <StatCard
-          label="Total Claims"
-          value={stats?.total_claims ?? 0}
-          icon={<ScanLine className="h-6 w-6" />}
-          loading={loading}
-          trend={{ value: "5%", direction: "up" }}
-        />
-        <StatCard
-          label="Unique Redeemers"
-          value={stats?.unique_users ?? 0}
-          icon={<Users className="h-6 w-6" />}
-          loading={loading}
-          trend={{ value: "8%", direction: "up" }}
-        />
-      </div>
+      {/* Top Stats */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-28 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard label="Total Clients"    value={totalClients}   />
+          <StatCard label="Total Campaigns"  value={totalCampaigns} />
+          <StatCard label="Total QR"         value={totalQR}        />
+          <StatCard label="Total Claims"     value={totalClaims}    />
+          <StatCard label="Unique Users"     value={uniqueUsers}    />
+        </div>
+      )}
 
-      {/* Recent Activity — from campaign_user_details_v1 (status = 'claimed') */}
+      {/* Clients Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-          <h3 className="font-bold text-gray-900 dark:text-white">Recent Activity</h3>
-          <Link href="/admin/redemptions" className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
-            View All <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="font-bold text-gray-900 dark:text-white">Clients</h2>
         </div>
 
-        {loading ? (
-          <div className="p-8 space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-12 bg-gray-50 dark:bg-gray-700/50 rounded animate-pulse" />
-            ))}
-          </div>
-        ) : !recentActivity || recentActivity.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 dark:text-gray-500 text-sm">
-            No recent activity found.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400">
+              <tr>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Client Name</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Campaigns</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">QR Generated</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Claims</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Unique Users</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              {loading ? (
+                [...Array(3)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {[...Array(6)].map((__, j) => (
+                      <td key={j} className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : clients.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Time</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Campaign</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Phone</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Coupon</th>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                    <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                    No clients found.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {recentActivity.map((item: any, idx: number) => (
-                  <motion.tr
-                    key={idx}
-                    variants={rowVariants}
-                    initial="hidden"
-                    animate="show"
-                    transition={{ delay: idx * 0.05 }}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {item.redeemed_at
-                        ? new Date(item.redeemed_at).toLocaleString('en-IN', {
-                            timeZone: "Asia/Kolkata",
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })
-                        : '—'}
+              ) : (
+                clients.map(client => (
+                  <tr key={client.client_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
+                      {client.client_name}
                     </td>
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-200">
-                      {item.campaign_name || 'Unknown'}
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                      {client.total_campaigns.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300 font-medium">
-                      {item.user_name || 'N/A'}
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                      {client.total_qr.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs">
-                      {item.phone || '—'}
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                      {client.total_claims.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-mono text-xs">
-                      <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded">
-                        {item.coupon_code || '—'}
-                      </span>
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                      {client.unique_users.toLocaleString()}
                     </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    <td className="px-6 py-4">
+                      <Link
+                        href={`/admin/clients/${client.client_id}`}
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm font-medium"
+                      >
+                        View <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
