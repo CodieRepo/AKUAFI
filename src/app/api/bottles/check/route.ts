@@ -31,45 +31,36 @@ export async function POST(request: Request) {
 
     const bottle = bottles[0];
 
-    // 2. HARD CHECK: Redemption Existence
-    // Prevent form from opening if already redeemed
-    const { data: existingRedemptions, error: redemptionError } = await supabaseAdmin
-      .from('redemptions')
-      .select('id')
+    // 2. CHECK: Existing Coupon for this bottle
+    // Query 'coupons' table to see if a coupon was already generated for this bottle
+    const { data: coupons, error: couponError } = await supabaseAdmin
+      .from('coupons')
+      .select('coupon_code, status, redeemed_at, discount_value')
       .eq('bottle_id', bottle.id)
       .limit(1);
 
-    if (redemptionError) {
-        console.error('Redemption check failed:', redemptionError);
-        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    if (couponError) {
+      console.error('Coupon check failed:', couponError);
+      return NextResponse.json({ error: 'Database error checking redemptions' }, { status: 500 });
     }
 
-    if (existingRedemptions && existingRedemptions.length > 0) {
-        // Front-end expects this exact string to show "Used" view
-        return NextResponse.json({ error: 'Coupon redeemed from this QR' }, { status: 400 });
-    }
+    const existingCoupon = coupons && coupons.length > 0 ? coupons[0] : null;
 
-    // 3. Fallback Check: is_used flag
-    if (bottle.is_used) {
-         return NextResponse.json({ error: 'Coupon redeemed from this QR' }, { status: 400 });
-    }
-
-    // 4. Increment Scan Count (Fire and Forget)
-    // We increment scan count for "Valid Bottle View"
+    // 3. Increment Scan Count (Fire and Forget)
+    // Only increment if it's the first time scan (bottle not used)
     if (bottle.campaign_id) {
-        // We do not await this strictly to keep response fast, 
-        // or we can await if we want strict logging. 
-        // Since it's critical analytic, better to await catch error quietly.
-        try {
-            await supabaseAdmin.rpc('increment_scan_count', { p_campaign_id: bottle.campaign_id });
-        } catch (cntErr) {
-            console.error("Failed to increment scan count:", cntErr);
-        }
+      try {
+        await supabaseAdmin.rpc('increment_scan_count', { p_campaign_id: bottle.campaign_id });
+      } catch (cntErr) {
+        console.error("Failed to increment scan count:", cntErr);
+      }
     }
 
     return NextResponse.json({ 
-        success: true, 
-        bottle: bottle 
+      success: true, 
+      bottle: bottle,
+      exists: !!existingCoupon,
+      coupon: existingCoupon
     });
 
   } catch (error) {
