@@ -82,16 +82,14 @@ export default function Page() {
         const data = result.bottle;
         setBottle(data);
 
-        // HARD FIX: If coupon already exists for this bottle
+        // Only switch to 'used' view if the backend signals a HARD block
         if (result.exists && result.coupon) {
-          setCouponCode(result.coupon.coupon_code);
-          setDiscountValue(result.coupon.discount_value);
-          // We can reuse parts of the success view or a dedicated used view
           setExistingCoupon(result.coupon);
           setView('used');
           return;
         }
 
+        // Otherwise allow the flow to proceed
         if (data.is_used) { setView('used'); return; }
         setView('form');
       } catch {
@@ -229,7 +227,7 @@ export default function Page() {
             This QR code has already been used to claim a reward. Each QR code can only be redeemed once.
           </p>
 
-          {existingCoupon && (
+          {existingCoupon && ['claimed', 'used', 'expired', 'redeemed'].includes(existingCoupon.status) && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
                {/* Badge */}
                <div className="flex justify-center">

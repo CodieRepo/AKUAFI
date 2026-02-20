@@ -46,6 +46,11 @@ export async function POST(request: Request) {
 
     const existingCoupon = coupons && coupons.length > 0 ? coupons[0] : null;
 
+    // HARD FIX: Logic Correction
+    // Only block if coupon is truly "spent" (claimed, used, or expired)
+    // If it's 'active' or 'unclaimed', we allow the flow to continue.
+    const isHardBlocked = existingCoupon && !['active', 'unclaimed'].includes(existingCoupon.status);
+
     // 3. Increment Scan Count (Fire and Forget)
     // Only increment if it's the first time scan (bottle not used)
     if (bottle.campaign_id) {
@@ -59,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true, 
       bottle: bottle,
-      exists: !!existingCoupon,
+      exists: isHardBlocked,
       coupon: existingCoupon
     });
 
