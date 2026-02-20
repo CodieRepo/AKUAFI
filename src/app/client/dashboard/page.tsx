@@ -88,7 +88,8 @@ function QRvsClaimsChart({ campaigns }: { campaigns: CampaignMetricRow[] }) {
 }
 
 function DailyClaimsChart({ data }: { data: { date: string; count: number }[] }) {
-  if (!data.every(d => d.count === 0) === false)
+  const allZero = data.every(d => d.count === 0);
+  if (allZero)
     return <div className="text-sm text-gray-400 py-6 text-center">No claims in last 7 days.</div>;
 
   const W = 480, H = 120;
@@ -134,7 +135,7 @@ type UniqueUserRow = {
   user_name: string | null;
   phone: string;
   campaign_name: string;
-  redeemed_at: string;
+  claim_count: number;
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -158,13 +159,22 @@ export default async function ClientDashboard() {
   // 2. Parallel data fetch — all scoped to clientId
   const last7 = getLast7Days();
 
+  // Step 1: Get client record + campaign IDs first (required for subsequent view queries)
+  const { data: campaignsData } = await supabase
+    .from("campaigns")
+    .select("id, name, location, campaign_date")
+    .eq("client_id", clientId);
+
+  const campaignIds = (campaignsData || []).map((c: any) => c.id);
+  const campaignMap = new Map((campaignsData || []).map((c: any) => [c.id, c]));
+
+  // Step 2: Parallel fetch — campaign_user_details_v1 filtered by campaign_id IN (...)
   const [
     { data: overviewRow },
     { data: campaignMetrics },
     { data: uniqueUsersRaw },
     { data: dailyClaimsRaw },
-    { data: couponsData },
-    { data: campaignsData },
+    { data: couponsProper },
   ] = await Promise.all([
     // Top metrics from client_dashboard_v1
     supabase.from("client_dashboard_v1").select("*").eq("client_id", clientId).maybeSingle(),
@@ -172,51 +182,35 @@ export default async function ClientDashboard() {
     // Campaign table from campaign_metrics_v1
     supabase.from("campaign_metrics_v1").select("*").eq("client_id", clientId),
 
-    // Unique users from campaign_user_details_v1
-    supabase
-      .from("campaign_user_details_v1")
-      .select("user_name, phone, campaign_name, redeemed_at")
-      .eq("client_id", clientId)
-      .eq("status", "claimed")
-      .order("redeemed_at", { ascending: false }),
+    // Unique users — must filter by campaign_id IN (client campaigns), NOT client_id
+    campaignIds.length > 0
+      ? supabase
+          .from("campaign_user_details_v1")
+          .select("user_name, phone, campaign_name")
+          .in("campaign_id", campaignIds)
+          .eq("status", "claimed")
+      : Promise.resolve({ data: [] }),
 
-    // Daily claims (last 7 days)
-    supabase
-      .from("campaign_user_details_v1")
-      .select("redeemed_at")
-      .eq("client_id", clientId)
-      .eq("status", "claimed")
-      .gte("redeemed_at", last7[0]),
+    // Daily claims (last 7 days) — same filter pattern
+    campaignIds.length > 0
+      ? supabase
+          .from("campaign_user_details_v1")
+          .select("redeemed_at")
+          .in("campaign_id", campaignIds)
+          .eq("status", "claimed")
+          .gte("redeemed_at", last7[0])
+      : Promise.resolve({ data: [] }),
 
-    // Generated coupons list (for GeneratedCouponsList component)
-    supabase
-      .from("coupons")
-      .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
-      .in(
-        "campaign_id",
-        // We'll get campaign IDs from campaign_metrics_v1 once fetched — done below
-        [] // placeholder; filled after campaignMetrics resolved
-      )
-      .order("generated_at", { ascending: false })
-      .limit(100),
-
-    // Campaign IDs for CouponVerification scoping
-    supabase.from("campaigns").select("id, name, location, campaign_date").eq("client_id", clientId),
+    // Generated coupons list
+    campaignIds.length > 0
+      ? supabase
+          .from("coupons")
+          .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
+          .in("campaign_id", campaignIds)
+          .order("generated_at", { ascending: false })
+          .limit(100)
+      : Promise.resolve({ data: [] }),
   ]);
-
-  // Campaign IDs (for coupon verification and coupons list)
-  const campaignIds = (campaignsData || []).map((c: any) => c.id);
-  const campaignMap = new Map((campaignsData || []).map((c: any) => [c.id, c]));
-
-  // Fetch coupons properly now that we have IDs
-  const { data: couponsProper } = campaignIds.length > 0
-    ? await supabase
-        .from("coupons")
-        .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
-        .in("campaign_id", campaignIds)
-        .order("generated_at", { ascending: false })
-        .limit(100)
-    : { data: [] };
 
   // 3. Process top metrics
   const metrics = overviewRow as any;
@@ -239,20 +233,23 @@ export default async function ClientDashboard() {
   const bestCampaign = [...campaigns].sort((a, b) => b.total_claims - a.total_claims)[0];
   const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
 
-  // 5. Unique users (deduplicated by phone)
-  const seenPhones = new Set<string>();
-  const uniqueUsers: UniqueUserRow[] = [];
+  // 5. Unique users — aggregate claim count per phone
+  const userMap = new Map<string, UniqueUserRow>();
   for (const r of (uniqueUsersRaw || []) as any[]) {
-    if (!seenPhones.has(r.phone)) {
-      seenPhones.add(r.phone);
-      uniqueUsers.push({
+    const phone = r.phone || 'unknown';
+    if (userMap.has(phone)) {
+      userMap.get(phone)!.claim_count++;
+    } else {
+      userMap.set(phone, {
         user_name:    r.user_name || null,
-        phone:        r.phone,
-        campaign_name: r.campaign_name || "—",
-        redeemed_at:  r.redeemed_at,
+        phone,
+        campaign_name: r.campaign_name || '—',
+        claim_count:  1,
       });
     }
   }
+  const uniqueUsers: UniqueUserRow[] = Array.from(userMap.values())
+    .sort((a, b) => b.claim_count - a.claim_count);
 
   // 6. Daily claims (last 7 days)
   const claimsByDate: Record<string, number> = {};
@@ -429,16 +426,27 @@ export default async function ClientDashboard() {
                         <th className="px-6 py-3">User</th>
                         <th className="px-6 py-3">Phone</th>
                         <th className="px-6 py-3">Campaign</th>
-                        <th className="px-6 py-3 text-right">Claimed At</th>
+                        <th className="px-6 py-3 text-right">Claims</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                       {uniqueUsers.slice(0, 50).map((u, i) => (
                         <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                          <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{u.user_name || "—"}</td>
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">
+                                {(u.user_name || u.phone).charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-medium text-gray-900 dark:text-white">{u.user_name || "—"}</span>
+                            </div>
+                          </td>
                           <td className="px-6 py-3 font-mono text-gray-600 dark:text-slate-400">{u.phone}</td>
                           <td className="px-6 py-3 text-gray-600 dark:text-slate-400">{u.campaign_name}</td>
-                          <td className="px-6 py-3 text-right text-gray-500 dark:text-slate-500 text-xs">{fmtDate(u.redeemed_at)}</td>
+                          <td className="px-6 py-3 text-right">
+                            <span className="inline-flex items-center justify-center h-6 min-w-[24px] px-2 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+                              {u.claim_count}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

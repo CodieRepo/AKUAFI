@@ -131,7 +131,7 @@ export default function CouponVerification({ campaignIds = [] }: { campaignIds?:
   };
 
   return (
-    <div className="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm flex flex-col h-full">
+    <div className="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
           <ScanLine className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Verify Coupon</h3>
@@ -180,7 +180,7 @@ export default function CouponVerification({ campaignIds = [] }: { campaignIds?:
         </Button>
       </div>
 
-      <div className="flex-grow">
+      <div>
           {status === 'valid' && (
               <div className="h-full p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 animate-in fade-in slide-in-from-top-2 flex flex-col justify-between">
                   <div>
