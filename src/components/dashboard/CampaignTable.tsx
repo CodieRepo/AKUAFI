@@ -133,7 +133,7 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Status</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Total Scans</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Redeemed</th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Progress</th>
+              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs" title="Percentage of generated QR codes that resulted in a claim">Claim Rate</th>
               <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Actions</th>
             </tr>
           </thead>
@@ -182,18 +182,26 @@ export default function CampaignTable({ campaigns, loading, onRefresh }: Campaig
                     <td className="px-6 py-4 text-right font-medium text-gray-900 dark:text-gray-200">{scans.toLocaleString()}</td>
                     <td className="px-6 py-4 text-right text-gray-600 dark:text-gray-400">{redeemed.toLocaleString()}</td>
                     
-                    {/* Progress Bar */}
+                    {/* Claim Rate — colour-coded by threshold */}
                     <td className="px-6 py-4 align-middle">
                         <div className="w-full max-w-[140px]">
-                            <div className="flex justify-between items-center text-xs mb-1">
-                                <span className="font-medium text-gray-700 dark:text-gray-300">{progress}%</span>
+                            <div className="flex justify-between items-center text-xs mb-1.5">
+                                <span className={`font-semibold px-1.5 py-0.5 rounded text-xs ${
+                                  progress >= 15
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                    : progress >= 5
+                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                    : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                }`}>{progress}%</span>
                             </div>
                             <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <motion.div 
-                                    className="h-full bg-blue-600 dark:bg-blue-500 rounded-full"
+                                <motion.div
+                                    className={`h-full rounded-full ${
+                                      progress >= 15 ? 'bg-emerald-500' : progress >= 5 ? 'bg-amber-500' : 'bg-red-500'
+                                    }`}
                                     initial={{ width: 0 }}
                                     animate={{ width: `${progress}%` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
+                                    transition={{ duration: 1, ease: 'easeOut' }}
                                 />
                             </div>
                         </div>
