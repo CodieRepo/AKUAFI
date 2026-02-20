@@ -61,15 +61,16 @@ export async function POST(request: Request) {
         });
 
     if (rpcError) {
-        console.error("[RPC Error] Validation failed:", rpcError);
-        return NextResponse.json({ error: 'System error during validation' }, { status: 500 });
+        console.error("[RPC Error] validate_bottle_for_otp failed:", JSON.stringify(rpcError));
+        return NextResponse.json({ error: `RPC Error: ${rpcError.message}` }, { status: 500 });
     }
     
-    // Log for debugging
-    console.log("[Validation RPC Result]", validation);
+    // Log full RPC result for debug
+    console.log("[Validation RPC Result] raw:", JSON.stringify(validation));
 
     if (validation && !validation.valid) {
-         return NextResponse.json({ error: validation.error }, { status: validation.code || 400 });
+        console.warn("[Validation] RPC blocked OTP:", validation.error, "| code:", validation.code);
+        return NextResponse.json({ error: validation.error, rpc_code: validation.code }, { status: validation.code || 400 });
     }
 
     // If valid, proceed to send OTP

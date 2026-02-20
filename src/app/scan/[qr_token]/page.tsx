@@ -112,6 +112,7 @@ export default function Page() {
     if (!qr_token) { alert('Invalid Request: Missing QR Token'); return; }
 
     const fullPhone = `+91${formData.phone}`;
+    console.log('[OTP] ▶ Sending OTP. Payload:', { phone: fullPhone, qr_token, name: formData.name });
     setLoadingAction(true);
     try {
       const response = await fetch('/api/otp/send', {
@@ -119,20 +120,25 @@ export default function Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: fullPhone, qr_token }),
       });
+      console.log('[OTP] ◀ Response status:', response.status, response.statusText);
       const result = await response.json();
+      console.log('[OTP] ◀ Response body:', result);
       if (!response.ok) {
+        console.error('[OTP] ✘ API error:', result.error);
         if (result.error === 'Mobile already registered') {
           alert('This mobile number has already claimed a reward for this campaign.');
         } else if (result.error === 'Coupon redeemed from this QR') {
           setView('used');
         } else {
-          throw new Error(result.error || 'Failed to send OTP');
+          alert(`OTP Error: ${result.error || 'Failed to send OTP'}`);
         }
         return;
       }
+      console.log('[OTP] ✔ OTP sent successfully. session_id:', result.session_id);
       setOtpSent(true);
     } catch (error: any) {
-      alert(error.message || 'Failed to send code.');
+      console.error('[OTP] ✘ Fetch threw an exception:', error);
+      alert(error.message || 'Failed to send code. Check console for details.');
     } finally {
       setLoadingAction(false);
     }
