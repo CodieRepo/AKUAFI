@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     // Fetch Campaign Details (client_id & rules)
     const { data: campaign, error: campaignError } = await supabaseAdmin
         .from('campaigns')
-        .select('id, client_id, coupon_prefix, coupon_min_value')
+        .select('id, client_id, coupon_prefix, coupon_min_value, coupon_max_value')
         .eq('id', bottle.campaign_id)
         .single();
 
@@ -141,7 +141,16 @@ export async function POST(req: NextRequest) {
     }
         
     const prefix = campaign.coupon_prefix || 'OFFER';
-    const discountValue = campaign.coupon_min_value || 0;
+
+    // Random discount in [min, max] range — assigned at generation time (not redemption time)
+    const minVal = Number(campaign.coupon_min_value || 0);
+    const maxVal = Number(campaign.coupon_max_value || 0);
+    const discountValue = maxVal > minVal
+        ? Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal
+        : minVal;
+
+    console.log(`[Redeem API] Discount assigned: ₹${discountValue} (range: ${minVal}–${maxVal})`);
+
     
     // Generate Coupon Code inside a Loop for Collision Safety
     const MAX_ATTEMPTS = 5;
@@ -225,7 +234,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
         success: true,
-        coupon_code: couponCode
+        coupon_code: couponCode,
+        discount_value: discountValue,
     });
 
   } catch (error: any) {

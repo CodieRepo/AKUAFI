@@ -2,12 +2,28 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone, MapPin } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone, MapPin, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import Image from 'next/image';
+
+// ── Logo component (reused on every view) ─────────────────────────────────────
+function AkuafiLogo() {
+  return (
+    <div className="flex justify-center mb-6">
+      <Image
+        src="/images/logo.png"
+        alt="Akuafi"
+        width={140}
+        height={48}
+        className="object-contain"
+        priority
+      />
+    </div>
+  );
+}
 
 export default function Page() {
   const params = useParams();
-  // 1️⃣ Scan Route Parameter Handling: Extract qr_token strictly from params
   const qr_token = params?.qr_token as string;
   const hasRedeemedRef = useRef(false);
 
@@ -17,66 +33,47 @@ export default function Page() {
 
   // Data
   const [bottle, setBottle] = useState<any>(null);
-  const [formData, setFormData] = useState({ 
-    name: '', 
+  const [formData, setFormData] = useState({
+    name: '',
     phone: '',
-    address: '' // Single optional address field
+    address: '', // optional
   });
   const [couponCode, setCouponCode] = useState('');
+  const [discountValue, setDiscountValue] = useState<number | null>(null);
 
   // OTP State
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loadingAction, setLoadingAction] = useState(false);
 
-  // --- Input Handlers (Strict Validation) ---
-
+  // Input Handlers
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    if (/^[a-zA-Z\s]*$/.test(val)) {
-      setFormData(prev => ({ ...prev, name: val }));
-    }
+    if (/^[a-zA-Z\s]*$/.test(val)) setFormData(prev => ({ ...prev, name: val }));
   };
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
-    if (val.length <= 10) {
-      setFormData(prev => ({ ...prev, phone: val }));
-    }
+    if (val.length <= 10) setFormData(prev => ({ ...prev, phone: val }));
   };
 
-
-  // --- API Interactions ---
-
-  // 1. Fetch Bottle on Mount (Updated to use API)
+  // 1. Fetch Bottle on Mount
   useEffect(() => {
-    console.log("SCAN_QR_TOKEN_PAGE_MOUNTED", qr_token);
-    
     async function fetchBottle() {
       if (!qr_token) {
         setErrorMsg('Invalid QR Code. Token missing.');
         setView('error');
         return;
       }
-
       try {
         const response = await fetch('/api/bottles/check', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ qr_token })
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qr_token }),
         });
-        
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          console.error('Bottle lookup failed:', result.error);
-          
-          // 6️⃣ Error Handling (User Friendly)
-          if (result.error === 'Coupon redeemed from this QR') {
-              setView('used');
-              return;
-          }
-
+          if (result.error === 'Coupon redeemed from this QR') { setView('used'); return; }
           setErrorMsg(result.error || 'Invalid QR code. Bottle not found.');
           setView('error');
           return;
@@ -84,172 +81,110 @@ export default function Page() {
 
         const data = result.bottle;
         setBottle(data);
-        
-        // Check if already used
-        if (data.is_used) {
-            setView('used');
-            return;
-        }
-
-        setView('form'); 
-
-      } catch (err) {
-        console.error('Unexpected exception during fetch:', err);
+        if (data.is_used) { setView('used'); return; }
+        setView('form');
+      } catch {
         setErrorMsg('Unexpected error verifying QR code.');
         setView('error');
       }
     }
-
     fetchBottle();
   }, [qr_token]);
 
-  // 2. Handle Send OTP
+  // 2. Send OTP
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 4️⃣ Pre-Submission Validation
     if (!formData.phone || formData.phone.length !== 10) {
-      alert('Please enter a valid 10-digit phone number.');
-      return;
+      alert('Please enter a valid 10-digit phone number.'); return;
     }
-    
-    if (!qr_token) {
-        alert('Invalid Request: Missing QR Token');
-        return;
-    }
-    
-    // Auto-prepend +91
+    if (!qr_token) { alert('Invalid Request: Missing QR Token'); return; }
+
     const fullPhone = `+91${formData.phone}`;
-    
-    // 5️⃣ Logging & Debug
-    console.log("Frontend: handleSendCode called");
-    console.log("Sending OTP Request:", { phone: fullPhone, qr_token });
-
     setLoadingAction(true);
-
     try {
-      // 2️⃣ OTP Send API Call Fix: Send BOTH phone and qr_token
       const response = await fetch('/api/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            phone: fullPhone,
-            qr_token: qr_token
-        })
+        body: JSON.stringify({ phone: fullPhone, qr_token }),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
-        // 6️⃣ Error Handling (User Friendly)
         if (result.error === 'Mobile already registered') {
-             alert('This mobile number has already claimed a reward for this campaign.');
+          alert('This mobile number has already claimed a reward for this campaign.');
         } else if (result.error === 'Coupon redeemed from this QR') {
-             setView('used');
+          setView('used');
         } else {
-             throw new Error(result.error || 'Failed to send OTP');
+          throw new Error(result.error || 'Failed to send OTP');
         }
         return;
       }
-
       setOtpSent(true);
     } catch (error: any) {
-      console.error('OTP Send Error:', error);
       alert(error.message || 'Failed to send code.');
     } finally {
       setLoadingAction(false);
     }
   };
 
-  // 3. Handle Verify & Redeem
+  // 3. Verify & Redeem
   const handleVerifyAndRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 4️⃣ Pre-Submission Validation
-    if (!otp || otp.length !== 6) {
-        alert("Please enter a valid 6-digit OTP.");
-        return;
-    }
-    if (!qr_token) {
-        alert("Session invalid: Missing QR Token.");
-        return;
-    }
-
-    // Validate Address Fields (Optional but recommended)
-    // if (!formData.address) ...
+    if (!otp || otp.length !== 6) { alert('Please enter a valid 6-digit OTP.'); return; }
+    if (!qr_token) { alert('Session invalid: Missing QR Token.'); return; }
 
     setLoadingAction(true);
-    // Explicit State Reset
-    setCouponCode("");
-    
+    setCouponCode('');
+    setDiscountValue(null);
+
     const fullPhone = `+91${formData.phone}`;
-
     try {
-      // 3️⃣ Redeem API Call Fix: Send address if present
-      console.log("Redeeming:", { phone: fullPhone, otp, qr_token });
-
       const response = await fetch('/api/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-           phone: fullPhone,
-           otp: otp,
-           qr_token: qr_token,
-           name: formData.name.trim(),
-           address: formData.address // Send Address
-        })
+          phone: fullPhone,
+          otp,
+          qr_token,
+          name: formData.name.trim(),
+          address: formData.address,
+        }),
       });
-
       const result = await response.json();
-      console.log("FULL API RESPONSE:", result);
 
       if (!response.ok) {
-        // 6️⃣ Error Handling
-        if (result.error === 'Coupon redeemed from this QR') {
-            setView('used');
-        } else if (result.error === 'Mobile already registered') {
-            alert('This mobile number has already registered for this campaign.');
+        if (result.error === 'Coupon redeemed from this QR') { setView('used'); }
+        else if (result.error === 'Mobile already registered') {
+          alert('This mobile number has already registered for this campaign.');
         } else {
-            throw new Error(result.error || 'Verification failed');
+          throw new Error(result.error || 'Verification failed');
         }
         return;
       }
 
-      // Check strictly for success and coupon_code (or coupon as fallback)
       const finalCoupon = result.coupon_code || result.coupon;
-
       if (finalCoupon) {
-          console.log("SETTING COUPON:", finalCoupon);
-          setCouponCode(finalCoupon);
-
-          // GUARD: Prevent Double Redemption (Frontend Ref)
-          if (hasRedeemedRef.current) return;
-          hasRedeemedRef.current = true;
-
-          // IMPORTANT: delay view switch to ensure state commit
-          setTimeout(() => {
-            setView("success");
-          }, 0);
+        setCouponCode(finalCoupon);
+        if (result.discount_value != null) setDiscountValue(result.discount_value);
+        if (hasRedeemedRef.current) return;
+        hasRedeemedRef.current = true;
+        setTimeout(() => setView('success'), 0);
       } else {
-          console.error("Coupon missing or invalid response:", result);
-          alert("Coupon generation failed: Code missing in response.");
+        alert('Coupon generation failed: Code missing in response.');
       }
-
     } catch (error: any) {
-      console.error('Verification/Redemption error:', error);
       alert(error.message || 'An unexpected error occurred.');
     } finally {
       setLoadingAction(false);
     }
   };
 
-  // --- Render Views ---
+  // ── Render Views ─────────────────────────────────────────────────────────────
 
   if (view === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
         <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-        <p className="text-gray-600">Verifying Bottle...</p>
+        <p className="text-gray-600">Verifying QR Code…</p>
       </div>
     );
   }
@@ -257,11 +192,12 @@ export default function Page() {
   if (view === 'error') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
+        <AkuafiLogo />
         <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
           <AlertCircle className="h-8 w-8" />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Error</h1>
-        <p className="text-gray-600">{errorMsg}</p>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+        <p className="text-gray-600 max-w-xs">{errorMsg}</p>
       </div>
     );
   }
@@ -269,11 +205,19 @@ export default function Page() {
   if (view === 'used') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
-        <div className="h-16 w-16 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center mb-4">
-          <QrCode className="h-8 w-8" />
+        <AkuafiLogo />
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-8 w-full max-w-sm">
+          <div className="h-16 w-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <QrCode className="h-8 w-8" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Coupon Already Redeemed</h1>
+          <p className="text-gray-500 text-sm">
+            This QR code has already been used to claim a reward. Each QR code can only be redeemed once.
+          </p>
+          <div className="mt-6 p-3 rounded-lg bg-amber-50 border border-amber-100">
+            <p className="text-xs text-amber-700 font-medium">If you believe this is a mistake, please contact the campaign organiser.</p>
+          </div>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Coupon Already Used</h1>
-        <p className="text-gray-600">This QR code has already been redeemed.</p>
       </div>
     );
   }
@@ -281,130 +225,154 @@ export default function Page() {
   if (view === 'form') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Claim Reward</h1>
-            <p className="text-sm text-gray-500">Enter your details to generate your coupon.</p>
-          </div>
+        <div className="w-full max-w-md">
+          <AkuafiLogo />
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">Claim Your Reward</h1>
+              <p className="text-sm text-gray-500 mt-1">Enter your details to generate your coupon.</p>
+            </div>
 
-          <form onSubmit={otpSent ? handleVerifyAndRedeem : handleSendCode} className="space-y-4">
-            {!otpSent ? (
-              // Step 1: Personal & Address Details
-              <>
-                {/* Name */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Name</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Your Name"
-                      className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
-                      value={formData.name}
-                      onChange={handleNameChange}
-                    />
+            <form onSubmit={otpSent ? handleVerifyAndRedeem : handleSendCode} className="space-y-4">
+              {!otpSent ? (
+                <>
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Name <span className="text-red-500">*</span></label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Your Name"
+                        className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
+                        value={formData.name}
+                        onChange={handleNameChange}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Phone */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Phone Number</label>
-                  <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-1 focus-within:ring-primary">
-                    <div className="bg-gray-100 flex items-center px-3 border-r border-gray-300">
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Phone Number <span className="text-red-500">*</span></label>
+                    <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-1 focus-within:ring-primary">
+                      <div className="bg-gray-100 flex items-center px-3 border-r border-gray-300">
+                        <Phone className="h-3.5 w-3.5 text-gray-500 mr-1" />
                         <span className="text-sm font-medium text-gray-600">+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="9876543210"
+                        className="w-full h-10 px-3 text-sm outline-none"
+                        value={formData.phone}
+                        onChange={handlePhoneChange}
+                      />
                     </div>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="9876543210"
-                      className="w-full h-10 px-3 text-sm outline-none"
-                      value={formData.phone}
-                      onChange={handlePhoneChange}
-                    />
+                    <p className="text-xs text-gray-400 mt-1">10-digit mobile number</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">10-digit mobile number</p>
-                </div>
 
-                {/* Address Section (Simplified) */}
-                <div className="pt-4 border-t border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Location Details</h3>
-                    
-                    <div>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                            <textarea
-                                required
-                                placeholder="Enter your current location / city..."
-                                className="w-full h-20 pl-10 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
-                                value={formData.address}
-                                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                            />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">This validates your coupon claim.</p>
+                  {/* Location — OPTIONAL */}
+                  <div className="pt-3 border-t border-gray-100">
+                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+                      Location <span className="text-gray-400 font-normal normal-case">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <textarea
+                        placeholder="Enter your city / area… (optional)"
+                        className="w-full h-20 pl-10 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                      />
                     </div>
-                </div>
-
-                <Button type="submit" className="w-full mt-4" disabled={loadingAction || formData.phone.length !== 10}>
-                  {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Send Code <Send className="ml-2 h-4 w-4" /></>}
-                </Button>
-              </>
-            ) : (
-              // Step 2: OTP Entry
-              <div className="animate-in slide-in-from-right fade-in duration-300">
-                <div className="mb-4">
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Verification Code</label>
-                  <div className="relative">
-                    <ShieldCheck className="absolute left-3 top-2.5 h-4 w-4 text-green-600" />
-                    <input
-                      type="text"
-                      required
-                      maxLength={6}
-                      placeholder="Enter 6-digit code"
-                      className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none tracking-widest text-center text-lg"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                    />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Sent to +91 {formData.phone}. <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">Change</button>
-                  </p>
-                </div>
 
-                <Button type="submit" className="w-full" disabled={loadingAction || otp.length !== 6}>
-                  {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Verify & Claim <CheckCircle className="ml-2 h-4 w-4" /></>}
-                </Button>
-              </div>
-            )}
-          </form>
+                  <Button type="submit" className="w-full mt-2" disabled={loadingAction || formData.phone.length !== 10}>
+                    {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Send Verification Code</>}
+                  </Button>
+                </>
+              ) : (
+                // OTP Step
+                <div className="animate-in slide-in-from-right fade-in duration-300">
+                  <div className="mb-2 p-3 rounded-lg bg-green-50 border border-green-100 text-center">
+                    <p className="text-xs text-green-700 font-medium">Code sent to +91 {formData.phone}</p>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Verification Code</label>
+                    <div className="relative">
+                      <ShieldCheck className="absolute left-3 top-2.5 h-4 w-4 text-green-600" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        placeholder="Enter 6-digit code"
+                        className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none tracking-widest text-center text-lg"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">
+                        ← Change number
+                      </button>
+                    </p>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loadingAction || otp.length !== 6}>
+                    {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="mr-2 h-4 w-4" /> Verify &amp; Claim Reward</>}
+                  </Button>
+                </div>
+              )}
+            </form>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Render Debug
-  console.log("RENDER STATE:", { view, couponCode });
-
-  // Success
+  // Success View
   if (view === 'success') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center animate-in fade-in zoom-in">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 w-full max-w-sm">
-          <h1 className="text-2xl font-bold mb-4">Success!</h1>
-          <p className="mb-4">Your reward is ready:</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-green-50 to-gray-50 text-center animate-in fade-in zoom-in duration-500">
+        <AkuafiLogo />
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 w-full max-w-sm">
 
-          <div className="border-2 border-dashed border-gray-300 rounded-lg py-3 px-4 text-lg font-mono font-bold text-primary">
-            {couponCode}
+          {/* Success badge */}
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-9 w-9" />
+            </div>
           </div>
 
-          <p className="text-sm text-gray-500 mt-3">
-            Take a screenshot to save.
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">You&apos;re All Set!</h1>
+          <p className="text-sm text-gray-500 mb-6">Your exclusive reward is ready to use.</p>
+
+          {/* Discount highlight */}
+          {discountValue != null && discountValue > 0 && (
+            <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md">
+              <div className="flex items-center justify-center gap-2 mb-0.5">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase tracking-wider">Your Discount</span>
+              </div>
+              <p className="text-4xl font-extrabold">₹{discountValue} <span className="text-xl font-normal">OFF</span></p>
+            </div>
+          )}
+
+          {/* Coupon code */}
+          <div className="mb-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider mb-2 font-medium">Coupon Code</p>
+            <div className="border-2 border-dashed border-primary/40 rounded-xl py-4 px-6 bg-primary/5">
+              <p className="text-2xl font-mono font-bold text-primary tracking-widest">{couponCode}</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400 flex items-center justify-center gap-1 mt-4">
+            📸 Screenshot this page to save your coupon.
           </p>
         </div>
       </div>
     );
   }
-  
-  // Default Return (Should not be reached ideally if states cover all cases, but fallback to null)
+
   return null;
 }
