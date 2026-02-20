@@ -24,38 +24,34 @@ export default function RedemptionsPage() {
 
       try {
         const supabase = createClient();
-        
-        // Fetch from VIEW as requested
+
+        // Use campaign_user_details_v1 — guaranteed to have campaign_name (no UUID fallback)
         const { data, error } = await supabase
-            .from('redemption_details')
-            .select('*')
+            .from('campaign_user_details_v1')
+            .select('campaign_name, user_name, phone, coupon_code, discount_value, status, redeemed_at')
+            .eq('status', 'claimed')
             .order('redeemed_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching redemptions:', error);
-            // Fallback to empty to avoid crash
+            console.error('[Redemptions] fetch error:', error);
             setRedemptions([]);
         } else {
-            console.log('Fetched redemptions (from view):', data?.length);
-            // Map view data to Redemption interface if needed
-            // Interface: id, qr_token, campaign_name, phone, coupon_code, redeemed_at
-            // View likely has: campaign_id (not name?), bottle_id (qr_token?), phone, etc.
-            // We map what we can.
-            const mapped = (data || []).map((row: any) => ({
-                id: row.id,
-                qr_token: row.bottle_id || row.qr_token || 'N/A',
-                campaign_name: row.campaign_name || row.campaign_id || 'Unknown',
+            console.log('[Redemptions] fetched from campaign_user_details_v1:', data?.length);
+            const mapped = (data || []).map((row: any, idx: number) => ({
+                id: String(idx),                         // no raw ID needed
+                qr_token: '',                            // not shown in UI
+                campaign_name: row.campaign_name || 'Unknown Campaign',
                 phone: row.phone || 'N/A',
                 coupon_code: row.coupon_code || '-',
-                coupon_status: row.coupon_status || 'claimed', // Default to claimed if view has data
+                coupon_status: row.status || 'claimed',
                 discount_value: row.discount_value,
                 redeemed_at: row.redeemed_at,
-                user_name: row.name // if view has it
+                user_name: row.user_name,
             }));
             setRedemptions(mapped);
         }
       } catch (err) {
-        console.error('Unexpected error:', err);
+        console.error('[Redemptions] unexpected error:', err);
       } finally {
         if (!silent) setLoading(false);
         else setIsRefreshing(false);
