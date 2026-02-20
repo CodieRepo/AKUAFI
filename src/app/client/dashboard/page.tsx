@@ -122,6 +122,220 @@ function DailyClaimsChart({ data }: { data: { date: string; count: number }[] })
   );
 }
 
+// ─── Smart Suggestions Card ────────────────────────────────────────────────
+type Suggestion = {
+  emoji: string;
+  title: string;
+  body: string;
+  badge: string;
+  badgeCls: string;
+  gradientCls: string;
+  borderCls: string;
+};
+
+function SmartSuggestionsCard({
+  conversionPct, totalQR, totalClaims, uniqueUsers,
+}: { conversionPct: number; totalQR: number; totalClaims: number; uniqueUsers: number }) {
+  const suggestions: Suggestion[] = [];
+
+  if (conversionPct < 2) {
+    suggestions.push({
+      emoji: "📉",
+      title: "Low Conversion",
+      body: "Your campaign conversion is below 2%. Consider increasing coupon value or improving QR visibility.",
+      badge: "< 2% conversion",
+      badgeCls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+      gradientCls: "from-red-50 to-white dark:from-red-950/30 dark:to-slate-900",
+      borderCls: "border-red-100 dark:border-red-900/30",
+    });
+  }
+
+  if (uniqueUsers > 0 && totalClaims > uniqueUsers) {
+    suggestions.push({
+      emoji: "🔁",
+      title: "Repeat Claims Detected",
+      body: "Some users are claiming multiple times. You may want to review campaign targeting.",
+      badge: "Multiple claims",
+      badgeCls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      gradientCls: "from-amber-50 to-white dark:from-amber-950/20 dark:to-slate-900",
+      borderCls: "border-amber-100 dark:border-amber-900/30",
+    });
+  }
+
+  if (totalQR > 500 && totalClaims < 10) {
+    suggestions.push({
+      emoji: "📡",
+      title: "High Reach, Low Engagement",
+      body: "QR scans are high but claims are low. Try clearer CTA messaging near your QR codes.",
+      badge: "High reach",
+      badgeCls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+      gradientCls: "from-blue-50 to-white dark:from-blue-950/20 dark:to-slate-900",
+      borderCls: "border-blue-100 dark:border-blue-900/30",
+    });
+  }
+
+  if (conversionPct >= 5) {
+    suggestions.push({
+      emoji: "🚀",
+      title: "Strong Performance",
+      body: "Your campaign is performing well. Consider scaling QR distribution to grow further.",
+      badge: `${conversionPct.toFixed(1)}% conversion`,
+      badgeCls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      gradientCls: "from-emerald-50 to-white dark:from-emerald-950/20 dark:to-slate-900",
+      borderCls: "border-emerald-100 dark:border-emerald-900/30",
+    });
+  }
+
+  // Fallback if no condition triggered
+  if (suggestions.length === 0) {
+    suggestions.push({
+      emoji: "📊",
+      title: "Getting Started",
+      body: "Keep running your campaigns. Insights will appear once more data is collected.",
+      badge: "Early stage",
+      badgeCls: "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400",
+      gradientCls: "from-gray-50 to-white dark:from-slate-900 dark:to-slate-900",
+      borderCls: "border-gray-100 dark:border-slate-800",
+    });
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+        <span className="text-base">📊</span>
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm">Growth Suggestions</h3>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-slate-800">
+        {suggestions.map((s, i) => (
+          <div
+            key={i}
+            className={`p-4 bg-gradient-to-br ${s.gradientCls} border-l-4 ${s.borderCls} group hover:brightness-95 dark:hover:brightness-110 transition-all duration-200`}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-xl mt-0.5 shrink-0">{s.emoji}</span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{s.title}</p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.badgeCls}`}>{s.badge}</span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">{s.body}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Campaign Health Card ───────────────────────────────────────────────────
+function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
+  const clamped = Math.min(conversionPct, 100);
+  const engagement = conversionPct >= 5 ? "High" : conversionPct >= 2 ? "Medium" : "Low";
+  const engagementCls =
+    engagement === "High"   ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/20"
+    : engagement === "Medium" ? "text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/20"
+    : "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20";
+  const barCls =
+    engagement === "High"   ? "bg-emerald-500"
+    : engagement === "Medium" ? "bg-amber-500"
+    : "bg-red-500";
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-base">📈</span>
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm">Campaign Health</h3>
+      </div>
+
+      <div className="space-y-4">
+        {/* Conversion */}
+        <div>
+          <div className="flex justify-between items-center mb-1.5">
+            <p className="text-xs text-gray-500 dark:text-slate-400">Conversion Rate</p>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{conversionPct.toFixed(1)}%</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${barCls}`}
+              style={{ width: `${Math.max(clamped, conversionPct > 0 ? 3 : 0)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Claim Rate = same as conversion for this context */}
+        <div>
+          <div className="flex justify-between items-center mb-1.5">
+            <p className="text-xs text-gray-500 dark:text-slate-400">Claim Rate</p>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{conversionPct.toFixed(1)}%</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${barCls}`}
+              style={{ width: `${Math.max(clamped, conversionPct > 0 ? 3 : 0)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Engagement level tile */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
+          <div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">Engagement Level</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              {engagement === "High" ? "> 5% conversion" : engagement === "Medium" ? "2–5% conversion" : "< 2% conversion"}
+            </p>
+          </div>
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${engagementCls}`}>{engagement}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Best Campaign Card ─────────────────────────────────────────────────────
+function BestCampaignCard({ campaigns }: { campaigns: CampaignMetricRow[] }) {
+  const ranked = [...campaigns]
+    .filter((c) => c.total_qr > 0)
+    .map((c) => ({
+      ...c,
+      pct: Math.round((c.total_claims / c.total_qr) * 100),
+    }))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 3);
+
+  if (!ranked.length) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+        <span className="text-base">🏆</span>
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm">Best Performing Campaigns</h3>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-slate-800">
+        {ranked.map((c, i) => (
+          <div key={c.campaign_id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
+            <span className="text-sm font-bold text-gray-300 dark:text-slate-600 w-4 shrink-0 text-center">
+              {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{c.campaign_name}</p>
+              <div className="mt-1 h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : "bg-amber-500"}`}
+                  style={{ width: `${Math.min(c.pct, 100)}%` }}
+                />
+              </div>
+            </div>
+            <span className={`text-xs font-bold shrink-0 ${i === 0 ? "text-emerald-600 dark:text-emerald-400" : i === 1 ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"}`}>
+              {c.pct}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type CampaignMetricRow = {
   campaign_id: string;
@@ -460,48 +674,26 @@ export default async function ClientDashboard() {
 
           </div>
 
-          {/* RIGHT (1-col): Coupon Verification + Quick Insights */}
-          <div className="space-y-6">
+          {/* RIGHT (1-col): Smart Suggestions + Campaign Health + Best Campaign + Verify */}
+          <div className="space-y-5">
 
-            {/* Quick Insight */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap className="h-4 w-4 text-amber-500" />
-                <h3 className="font-bold text-gray-900 dark:text-white">Quick Insights</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">Best Campaign</p>
-                    <p className="text-sm font-bold mt-0.5 truncate max-w-[160px]" title={bestCampaign?.campaign_name}>
-                      {bestCampaign?.campaign_name || "—"}
-                    </p>
-                  </div>
-                  <Trophy className="h-5 w-5 text-yellow-500 shrink-0" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-                    <p className="text-[10px] text-gray-400 uppercase">Active</p>
-                    <p className="text-xl font-bold mt-0.5">{activeCampaigns}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-                    <p className="text-[10px] text-gray-400 uppercase">Total</p>
-                    <p className="text-xl font-bold mt-0.5">{campaigns.length}</p>
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Platform Conversion</p>
-                  <p className={`text-2xl font-bold ${
-                    parseFloat(conversionPct) >= 20 ? "text-emerald-500"
-                    : parseFloat(conversionPct) >= 5 ? "text-amber-500"
-                    : "text-red-500"
-                  }`}>{conversionPct}%</p>
-                  <p className="text-xs text-gray-400 mt-1">of QR codes resulted in a claim</p>
-                </div>
-              </div>
-            </div>
+            {/* ── Smart Suggestions ─────────────────────────────────── */}
+            <SmartSuggestionsCard
+              conversionPct={parseFloat(conversionPct)}
+              totalQR={totalQR}
+              totalClaims={totalClaims}
+              uniqueUsers={totalUsers}
+            />
 
-            {/* Coupon Verification — scoped to this client's campaign IDs */}
+            {/* ── Campaign Health ────────────────────────────────────── */}
+            <CampaignHealthCard conversionPct={parseFloat(conversionPct)} />
+
+            {/* ── Best Performing Campaign (only if multiple) ─────────── */}
+            {campaigns.length > 1 && bestCampaign && (
+              <BestCampaignCard campaigns={campaigns} />
+            )}
+
+            {/* ── Coupon Verification ────────────────────────────────── */}
             <CouponVerification campaignIds={campaignIds} />
 
           </div>
