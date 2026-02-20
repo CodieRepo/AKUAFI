@@ -11,7 +11,7 @@ function AkuafiLogo() {
   return (
     <div className="flex justify-center mb-6">
       <Image
-        src="/images/logo.png"
+        src="/logo/akuafi-logo.png"
         alt="Akuafi"
         width={140}
         height={48}
