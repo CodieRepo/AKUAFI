@@ -396,16 +396,15 @@ export default async function ClientDashboard() {
     // Campaign table from campaign_metrics_v1
     supabase.from("campaign_metrics_v1").select("*").eq("client_id", clientId),
 
-    // Unique users — must filter by campaign_id IN (client campaigns), NOT client_id
+    // Issue 1: Unique users — NO status filter: appear as soon as coupon is generated
     campaignIds.length > 0
       ? supabase
           .from("campaign_user_details_v1")
           .select("user_name, phone, campaign_name")
           .in("campaign_id", campaignIds)
-          .eq("status", "claimed")
       : Promise.resolve({ data: [] }),
 
-    // Daily claims (last 7 days) — same filter pattern
+    // Daily activity (last 7 days) — keep claimed filter for conversion chart accuracy
     campaignIds.length > 0
       ? supabase
           .from("campaign_user_details_v1")
@@ -415,11 +414,11 @@ export default async function ClientDashboard() {
           .gte("redeemed_at", last7[0])
       : Promise.resolve({ data: [] }),
 
-    // Generated coupons list
+    // Issue 3: Generated coupons — include discount_value
     campaignIds.length > 0
       ? supabase
           .from("coupons")
-          .select("id, coupon_code, status, generated_at, redeemed_at, campaign_id")
+          .select("id, coupon_code, status, discount_value, generated_at, redeemed_at, campaign_id")
           .in("campaign_id", campaignIds)
           .order("generated_at", { ascending: false })
           .limit(100)
@@ -474,11 +473,12 @@ export default async function ClientDashboard() {
   }
   const dailyClaims = last7.map(date => ({ date, count: claimsByDate[date] }));
 
-  // 7. Generated coupons
+  // 7. Generated coupons — include discount_value
   const generatedCoupons = (couponsProper || []).map((r: any) => {
     const camp = campaignMap.get(r.campaign_id);
     return {
       id: r.id, coupon_code: r.coupon_code || "N/A", status: r.status || "active",
+      discount_value: r.discount_value ?? null,
       generated_at: r.generated_at || r.redeemed_at, redeemed_at: r.redeemed_at,
       campaign_id: r.campaign_id,
       location: (camp as any)?.location || null,
@@ -486,6 +486,12 @@ export default async function ClientDashboard() {
       campaign_name: (camp as any)?.name || "Unknown",
     };
   });
+
+  // 8. Discount metrics (from couponsProper — all statuses)
+  const couponsAll = couponsProper || [];
+  const totalDiscountIssued = (couponsAll as any[]).reduce((s, c) => s + Number(c.discount_value || 0), 0);
+  const estimatedRevenue    = (couponsAll as any[]).filter(c => c.status === 'claimed').reduce((s, c) => s + Number(c.discount_value || 0), 0);
+  const avgDiscount         = (couponsAll as any[]).length > 0 ? Math.round(totalDiscountIssued / (couponsAll as any[]).length) : 0;
 
   // ── Empty state
   if (campaigns.length === 0) {
@@ -544,6 +550,30 @@ export default async function ClientDashboard() {
             </div>
           ))}
         </div>
+
+        {/* ── Discount Metrics Row (shown once any coupon has a discount) */}
+        {totalDiscountIssued > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+              <div className="text-green-600 dark:text-green-400 mb-2">💰</div>
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Total Discount Issued</p>
+              <p className="text-2xl font-bold mt-1 text-green-700 dark:text-green-400">₹{totalDiscountIssued.toLocaleString()}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Across all active + claimed coupons</p>
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+              <div className="text-emerald-600 dark:text-emerald-400 mb-2">📈</div>
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Revenue Impact</p>
+              <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">₹{estimatedRevenue.toLocaleString()}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Claimed coupons only</p>
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+              <div className="text-blue-500 mb-2">🎯</div>
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Avg Discount / Coupon</p>
+              <p className="text-2xl font-bold mt-1">₹{avgDiscount}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Across {(couponsProper || []).length} coupons</p>
+            </div>
+          </div>
+        )}
 
         {/* ── 2. Main grid: Campaign table + right column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -37,16 +37,21 @@ export default async function CampaignDetailsPage({
 
   console.log('[CampaignDetail] ID:', campaignId);
 
-  const [campaignRes, metricsRes, usersRes] = await Promise.all([
+  const [campaignRes, metricsRes, usersRes, discountRes] = await Promise.all([
     supabase.from('campaigns').select('*').eq('id', campaignId).maybeSingle(),
     supabase.from('campaign_metrics_v1').select('*').eq('campaign_id', campaignId).maybeSingle(),
+    // Issue 1: No status filter — unique users counted from ALL coupons rows (active + claimed)
     supabase
       .from('campaign_user_details_v1')
-      .select('user_name, phone, coupon_code, discount_value, redeemed_at')
+      .select('user_name, phone, coupon_code, discount_value, status, redeemed_at')
       .eq('campaign_id', campaignId)
-      .eq('status', 'claimed')
       .order('redeemed_at', { ascending: false })
       .limit(100),
+    // Total discount issued (claimed coupons only = verified spend)
+    supabase
+      .from('coupons')
+      .select('discount_value, status')
+      .eq('campaign_id', campaignId),
   ]);
 
   if (metricsRes.error) console.error('[CampaignDetail] metrics error:', metricsRes.error);
@@ -61,10 +66,20 @@ export default async function CampaignDetailsPage({
   const metrics = {
     total_qr:        Number(metricsRes.data?.total_qr        || 0),
     total_claims:    Number(metricsRes.data?.total_claims    || 0),
+    // Unique users: count distinct users from ALL coupon rows (not just claimed)
     unique_users:    Number(metricsRes.data?.unique_users    || 0),
     conversion_rate: Number(metricsRes.data?.conversion_rate || 0),
   };
   const users = usersRes.data || [];
+
+  // Discount aggregations from coupons table
+  const allCoupons = discountRes.data || [];
+  const totalDiscountIssued = allCoupons.reduce((sum: number, c: any) => sum + Number(c.discount_value || 0), 0);
+  const claimedDiscountIssued = allCoupons
+    .filter((c: any) => c.status === 'claimed')
+    .reduce((sum: number, c: any) => sum + Number(c.discount_value || 0), 0);
+  const avgDiscount = allCoupons.length > 0
+    ? Math.round(totalDiscountIssued / allCoupons.length) : 0;
 
   console.log('[CampaignDetail] metrics:', metrics);
   console.log('[CampaignDetail] users count:', users.length);
@@ -105,10 +120,17 @@ export default async function CampaignDetailsPage({
       <section>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total QR Generated" value={metrics.total_qr} />
-          <StatCard title="Total Claims"        value={metrics.total_claims} subtext="Verified claims" />
-          <StatCard title="Unique Users"        value={metrics.unique_users} />
-          <StatCard title="Conversion"          value={`${metrics.conversion_rate.toFixed(1)}%`} subtext="Claim rate" />
+          <StatCard title="Total QR Generated"     value={metrics.total_qr} />
+          <StatCard title="Total Claims"            value={metrics.total_claims} subtext="Verified (Mark as Claimed)" />
+          <StatCard title="Unique Users"            value={metrics.unique_users} subtext="From coupon creation" />
+          <StatCard title="Conversion"              value={`${metrics.conversion_rate.toFixed(1)}%`} subtext="Claim rate" />
+        </div>
+
+        {/* Discount stat row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+          <StatCard title="Total Discount Issued"   value={`₹${totalDiscountIssued.toLocaleString()}`} subtext="Across all coupons" />
+          <StatCard title="Estimated Revenue Impact" value={`₹${claimedDiscountIssued.toLocaleString()}`} subtext="Claimed coupons only" />
+          <StatCard title="Avg Discount per Coupon" value={`₹${avgDiscount}`} subtext={`Across ${allCoupons.length} coupons`} />
         </div>
 
         {/* Progress bar */}
@@ -128,7 +150,10 @@ export default async function CampaignDetailsPage({
 
       {/* Campaign User Details Table */}
       <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Claims</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Campaign Users
+          <span className="ml-2 text-sm font-normal text-gray-400">(all coupon holders — active &amp; claimed)</span>
+        </h2>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -138,18 +163,19 @@ export default async function CampaignDetailsPage({
                   <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Phone</th>
                   <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Coupon Code</th>
                   <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Discount</th>
-                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Claimed At</th>
+                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400">
-                      No claims yet.
+                    <td colSpan={6} className="px-6 py-10 text-center text-gray-400">
+                      No users yet — they appear as soon as a coupon is generated.
                     </td>
                   </tr>
                 ) : (
-                  users.map((u, i) => (
+                  users.map((u: any, i: number) => (
                     <tr key={i} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900">{u.user_name || '—'}</td>
                       <td className="px-6 py-4 text-gray-500">{u.phone || '—'}</td>
@@ -158,11 +184,16 @@ export default async function CampaignDetailsPage({
                           {u.coupon_code || '—'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="px-6 py-4 font-semibold text-emerald-700">
                         {u.discount_value != null ? `₹${u.discount_value}` : '—'}
                       </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                          u.status === 'claimed' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                        }`}>{u.status || 'active'}</span>
+                      </td>
                       <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                        {formatDate(u.redeemed_at)}
+                        {formatDate(u.redeemed_at || u.generated_at)}
                       </td>
                     </tr>
                   ))

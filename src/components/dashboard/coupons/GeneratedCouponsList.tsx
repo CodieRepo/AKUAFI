@@ -16,6 +16,7 @@ export interface CouponData {
   id: string;
   coupon_code: string;
   status: 'active' | 'redeemed' | 'expired' | 'claimed';
+  discount_value?: number | null;  // Issue 3: discount amount assigned at generation
   generated_at: string;
   redeemed_at?: string | null;
   expires_at?: string | null;
@@ -35,11 +36,13 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
 
   // 1. Summary Metrics
   const summary = useMemo(() => {
+    const totalDiscount = coupons.reduce((sum, c) => sum + Number(c.discount_value || 0), 0);
     return {
       total: coupons.length,
       active: coupons.filter(c => c.status === 'active').length,
       redeemed: coupons.filter(c => c.status === 'redeemed' || c.status === 'claimed').length,
-      expired: coupons.filter(c => c.status === 'expired').length
+      expired: coupons.filter(c => c.status === 'expired').length,
+      totalDiscount,
     };
   }, [coupons]);
 
@@ -111,6 +114,11 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                  <div className="px-3 py-1 rounded-full bg-blue-50 dark:bg-slate-800 border border-blue-100 dark:border-slate-700 text-xs text-gray-600 dark:text-slate-300">
                     Active: <span className="text-blue-600 dark:text-blue-400 font-bold">{summary.active}</span>
                 </div>
+                {summary.totalDiscount > 0 && (
+                  <div className="px-3 py-1 rounded-full bg-green-50 dark:bg-slate-800 border border-green-100 dark:border-slate-700 text-xs text-gray-600 dark:text-slate-300">
+                    Discount Issued: <span className="text-green-700 dark:text-green-400 font-bold">₹{summary.totalDiscount.toLocaleString()}</span>
+                  </div>
+                )}
             </div>
         </div>
 
@@ -168,6 +176,7 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                         <thead className="bg-gray-100 dark:bg-slate-900/80 sticky top-0 backdrop-blur-sm z-10 text-gray-500 dark:text-slate-400">
                             <tr>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Coupon Code</th>
+                                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Discount</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Location</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Generated</th>
@@ -220,8 +229,11 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                                         <td className="px-6 py-3">
                                             <span className="text-gray-900 dark:text-white text-xs font-medium">{locTag}</span>
                                         </td>
+                                        <td className="px-6 py-3 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                            {coupon.discount_value != null ? `₹${coupon.discount_value}` : '—'}
+                                        </td>
                                         <td className="px-6 py-3">
-                                            {statusBadgex}
+                                            					{statusBadgex}
                                         </td>
                                         <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
                                             {new Date(coupon.generated_at).toLocaleDateString()}
