@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 // import { Button } from '@/components/ui/Button'; // Swapping for raw button as requested for specific styling
 import { Save, Lock, User, Building, Smartphone, Mail, AlertCircle, CheckCircle, Loader2, ShoppingBag } from 'lucide-react';
@@ -61,6 +61,16 @@ export default function ClientSettingsForm({ user, client, campaigns }: ClientSe
             campaigns.map(c => [c.id, String(c.minimum_order_value ?? 0)])
         )
     );
+
+    // Re-sync when campaigns prop updates after router.refresh()
+    // (useState lazy init only runs once; useEffect catches subsequent renders with fresh DB data)
+    useEffect(() => {
+        setMovValues(
+            Object.fromEntries(
+                campaigns.map(c => [c.id, String(c.minimum_order_value ?? 0)])
+            )
+        );
+    }, [campaigns]);
     
     // Profile State
     const [companyName, setCompanyName] = useState(client?.client_name || '');
@@ -189,17 +199,23 @@ export default function ClientSettingsForm({ user, client, campaigns }: ClientSe
         const supabase = createClient();
         try {
             // Execute all campaign updates in parallel
+            // Security: scope by both id AND client_id to prevent cross-client writes
             const updates = campaigns.map(c => {
                 const val = parseFloat(movValues[c.id] || '0');
                 if (isNaN(val) || val < 0) throw new Error(`Invalid value for campaign "${c.name}"`);
                 return supabase
                     .from('campaigns')
                     .update({ minimum_order_value: val })
-                    .eq('id', c.id);
+                    .eq('id', c.id)
+                    .eq('client_id', client?.id)  // Security scope — prevents cross-client writes
+                    .select('id, minimum_order_value') // Confirm persisted value
+                    .single();
             });
             const results = await Promise.all(updates);
             const firstErr = results.find(r => r.error);
             if (firstErr?.error) throw firstErr.error;
+            // Log persisted values for debugging
+            console.log('[MOV Save] Persisted values:', results.map(r => r.data));
             setMessage({ type: 'success', text: 'Campaign order values updated successfully' });
             router.refresh();
         } catch (err: any) {

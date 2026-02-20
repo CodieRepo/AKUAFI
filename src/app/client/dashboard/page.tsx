@@ -1,5 +1,9 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+
+// Force dynamic rendering so minimum_order_value is always fresh from DB
+export const dynamic = "force-dynamic";
+
 import {
   Sparkles,
   Trophy,

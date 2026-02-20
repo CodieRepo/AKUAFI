@@ -2,6 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import ClientSettingsForm from "@/components/client/settings/ClientSettingsForm";
 
+// Force dynamic rendering so DB values are always fresh after save
+export const dynamic = "force-dynamic";
+
 export default async function ClientSettingsPage() {
   const supabase = await createClient();
 
@@ -13,15 +16,14 @@ export default async function ClientSettingsPage() {
     return redirect("/client/login");
   }
 
-  // We fetch client data, but if it's missing (e.g. new user or error),
-  // we SHOULD NOT redirect. The user is authenticated (auth.getUser() passed).
+  // Fetch client record (auth.getUser() already verified)
   const { data: client } = await supabase
     .from("clients")
     .select("id, client_name, phone")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Fetch this client's campaigns for the Minimum Order Value section
+  // Fetch this client's campaigns fresh from DB every render (force-dynamic ensures this)
   const { data: campaigns } = client?.id
     ? await supabase
         .from("campaigns")
