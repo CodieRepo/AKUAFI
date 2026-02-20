@@ -81,6 +81,13 @@ export default async function CampaignDetailsPage(
         .limit(50) // Reasonable limit
   ]);
 
+  if (campaignRes.error) console.error("Campaign fetch error:", campaignRes.error);
+  if (metricsRes.error) console.error("Metrics fetch error:", metricsRes.error);
+  if (usersRes.error) console.error("Users fetch error:", usersRes.error);
+
+  console.log("Metrics View Data:", metricsRes.data);
+  console.log("Users View Data:", usersRes.data);
+
   if (campaignRes.error) {
     console.error("Campaign fetch error:", campaignRes.error);
   }

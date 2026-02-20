@@ -20,10 +20,12 @@ export default function AdminDashboard() {
         const supabase = createClient();
 
         // 1. Fetch Specs from client_dashboard_v1 (Aggregated)
+        console.log("Fetching client_dashboard_v1...");
         const { data: clientsData, error: statsError } = await supabase
           .from('client_dashboard_v1')
           .select('*');
 
+        console.log("client_dashboard_v1 data:", clientsData);
         if (statsError) {
              console.error('Error fetching stats:', statsError);
         }
@@ -36,7 +38,10 @@ export default function AdminDashboard() {
             unique_users: (acc.unique_users || 0) + (curr.unique_users || 0),
         }), { total_campaigns: 0, total_qr: 0, total_claims: 0, unique_users: 0 });
 
+        console.log("Aggregated Stats:", aggregatedStats);
+
         // 2. Fetch Recent Activity from campaign_user_details_v1
+        console.log("Fetching campaign_user_details_v1 (activity)...");
         const { data: activityData, error: activityError } = await supabase
           .from('campaign_user_details_v1')
           .select('*')
@@ -44,6 +49,7 @@ export default function AdminDashboard() {
           .order('redeemed_at', { ascending: false })
           .limit(10);
 
+        console.log("Recent Activity Data:", activityData);
         if (activityError) console.error('Error fetching activity:', activityError);
 
         setStats(aggregatedStats);
