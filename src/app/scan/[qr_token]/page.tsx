@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Send, ShieldCheck, User, Phone, MapPin, Sparkles } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Send, ShieldCheck, User, Phone, MapPin, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import Image from 'next/image';
 
@@ -100,8 +100,6 @@ export default function Page() {
     fetchBottle();
   }, [qr_token]);
 
-  // View States Data
-  const [existingCoupon, setExistingCoupon] = useState<any>(null);
 
   // 2. Send OTP
   const handleSendCode = async (e: React.FormEvent) => {

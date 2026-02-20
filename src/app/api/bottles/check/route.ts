@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const isHardBlocked = Boolean(existingCoupon);
 
     // 3. Increment Scan Count (Fire and Forget)
-    // Only increment if it's the first time scan (bottle not used)
+    // Runs on every scan — analytics counter, does not affect block logic.
     if (bottle.campaign_id) {
       try {
         await supabaseAdmin.rpc('increment_scan_count', { p_campaign_id: bottle.campaign_id });
@@ -60,11 +60,11 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      bottle: bottle,
-      exists: Boolean(isHardBlocked),
-      coupon: existingCoupon
+    return NextResponse.json({
+      success: true,
+      bottle,
+      exists: isHardBlocked,
+      coupon: existingCoupon,
     });
 
   } catch (error) {
