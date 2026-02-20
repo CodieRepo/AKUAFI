@@ -64,21 +64,21 @@ export default async function CampaignDetailsPage(
   // Use Promise.all for parallel fetching
   const [
     campaignRes,
-    totalQrRes,
-    redemptionsRes,
-    uniqueUsersRes
+    metricsRes,
+    usersRes
   ] = await Promise.all([
     // 1. Campaign Details
     supabase.from('campaigns').select('*').eq('id', campaignId).maybeSingle(),
     
-    // 2. Total QR Generated (count from bottles)
-    supabase.from('bottles').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId),
+    // 2. Metrics from View
+    supabase.from('campaign_metrics_v1').select('*').eq('campaign_id', campaignId).maybeSingle(),
 
-    // 3. Total Redemptions (count from redemptions)
-    supabase.from('redemptions').select('*', { count: 'exact', head: true }).eq('campaign_id', campaignId),
-    
-    // 4. Unique Users
-    supabase.from('redemptions').select('user_id').eq('campaign_id', campaignId)
+    // 3. Recent Users Details
+    supabase.from('campaign_user_details_v1')
+        .select('*')
+        .eq('campaign_id', campaignId)
+        .order('redeemed_at', { ascending: false })
+        .limit(50) // Reasonable limit
   ]);
 
   if (campaignRes.error) {
@@ -91,16 +91,13 @@ export default async function CampaignDetailsPage(
   }
 
   const campaign = campaignRes.data;
-  const totalQR = totalQrRes.count || 0;
-  const totalRedemptions = redemptionsRes.count || 0;
-  
-  // Calculate Unique Users manually from the array (since we can't do accurate distinct count with simple head:true)
-  const uniqueUsers = uniqueUsersRes.data 
-    ? new Set(uniqueUsersRes.data.map((r: any) => r.user_id)).size 
-    : 0;
+  const metrics = metricsRes.data || { total_qr: 0, total_claims: 0, unique_users: 0, conversion_rate: 0 };
+  const users = usersRes.data || [];
 
-  // Progress %
-  const progressPercent = totalQR > 0 ? ((totalRedemptions / totalQR) * 100).toFixed(1) : '0.0';
+  const totalQR = metrics.total_qr;
+  const totalClaims = metrics.total_claims;
+  const uniqueUsers = metrics.unique_users;
+  const progressPercent = Number(metrics.conversion_rate).toFixed(1);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -129,9 +126,10 @@ export default async function CampaignDetailsPage(
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border uppercase ${getStatusColor(campaign.status)}`}>
                         {campaign.status}
                     </span>
-                    <span className="text-xs text-gray-400 font-mono flex items-center">
+                    {/* Hiding UUID as requested */}
+                    {/* <span className="text-xs text-gray-400 font-mono flex items-center">
                         <Hash className="h-3 w-3 mr-1" /> {campaign.id}
-                    </span>
+                    </span> */}
                 </div>
             </div>
             <DeleteCampaignButton campaignId={campaign.id} campaignName={campaign.name} />
@@ -149,8 +147,8 @@ export default async function CampaignDetailsPage(
                   colorClass="bg-blue-50 text-blue-600" 
               />
               <StatCard 
-                  title="Total Redemptions" 
-                  value={totalRedemptions.toLocaleString()} 
+                  title="Total Claims" 
+                  value={totalClaims.toLocaleString()} 
                   subtext="Verified Claims"
                   icon={Ticket} 
                   colorClass="bg-orange-50 text-orange-600" 
@@ -163,9 +161,9 @@ export default async function CampaignDetailsPage(
                   colorClass="bg-purple-50 text-purple-600" 
               />
                <StatCard 
-                  title="Progress" 
+                  title="Conversion" 
                   value={`${progressPercent}%`} 
-                  subtext={`of ${totalQR.toLocaleString()} QRs`}
+                  subtext={`Claim Rate`}
                   icon={TrendingUp} 
                   colorClass="bg-green-50 text-green-600" 
               />
@@ -221,6 +219,45 @@ export default async function CampaignDetailsPage(
                         <p className="text-sm text-gray-600 leading-relaxed">{campaign.description}</p>
                     </div>
                   )}
+              </div>
+
+               {/* 5. USER ACTIVITY TABLE */}
+               <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Claims</h3>
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupon</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Claimed At</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {users.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
+                                            No claims yet.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    users.map((u: any, i: number) => (
+                                        <tr key={i} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.user_name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.phone}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                                <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs">{u.coupon_code}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(u.redeemed_at)}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                  </div>
               </div>
           </section>
 

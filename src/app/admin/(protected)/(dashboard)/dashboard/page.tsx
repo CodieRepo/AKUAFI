@@ -19,29 +19,34 @@ export default function AdminDashboard() {
         setLoading(true);
         const supabase = createClient();
 
-        // 1. Fetch Stats from View
-        const { data: statsData, error: statsError } = await supabase
-          .from('dashboard_stats')
-          .select('*')
-          .single();
+        // 1. Fetch Specs from client_dashboard_v1 (Aggregated)
+        const { data: clientsData, error: statsError } = await supabase
+          .from('client_dashboard_v1')
+          .select('*');
 
         if (statsError) {
              console.error('Error fetching stats:', statsError);
-             // Fallback if view doesn't exist or errors, manual count (safety net)
-             // But strict constraints say "Backend provides... view", so we trust it.
-             // If it fails, we show 0.
         }
 
-        // 2. Fetch Recent Activity from View
+        // Aggregate stats locally for Super Admin View
+        const aggregatedStats = (clientsData || []).reduce((acc: any, curr: any) => ({
+            total_campaigns: (acc.total_campaigns || 0) + (curr.total_campaigns || 0),
+            total_qr: (acc.total_qr || 0) + (curr.total_qr || 0),
+            total_claims: (acc.total_claims || 0) + (curr.total_claims || 0),
+            unique_users: (acc.unique_users || 0) + (curr.unique_users || 0),
+        }), { total_campaigns: 0, total_qr: 0, total_claims: 0, unique_users: 0 });
+
+        // 2. Fetch Recent Activity from campaign_user_details_v1
         const { data: activityData, error: activityError } = await supabase
-          .from('redemption_details')
+          .from('campaign_user_details_v1')
           .select('*')
+          .eq('status', 'claimed') 
           .order('redeemed_at', { ascending: false })
           .limit(10);
 
         if (activityError) console.error('Error fetching activity:', activityError);
 
-        setStats(statsData);
+        setStats(aggregatedStats);
         setRecentActivity(activityData || []);
 
       } catch (err: any) {
@@ -92,7 +97,7 @@ export default function AdminDashboard() {
             value={stats?.total_campaigns ?? 0} 
             icon={<Megaphone className="h-6 w-6" />}
             loading={loading}
-            trend={{ value: "12%", direction: "up" }} // Dummy trend as requested
+            trend={{ value: "12%", direction: "up" }} 
         />
         <StatCard 
             label="Total QR Generated" 
@@ -101,15 +106,15 @@ export default function AdminDashboard() {
             loading={loading}
         />
         <StatCard 
-            label="Total Redemptions" 
-            value={stats?.total_redemptions ?? 0} 
+            label="Total Claims" 
+            value={stats?.total_claims ?? 0} 
             icon={<ScanLine className="h-6 w-6" />}
             loading={loading}
             trend={{ value: "5%", direction: "up" }}
         />
         <StatCard 
             label="Unique Redeemers" 
-            value={stats?.unique_redeemers ?? 0} 
+            value={stats?.unique_users ?? 0} 
             icon={<Users className="h-6 w-6" />}
             loading={loading}
             trend={{ value: "8%", direction: "up" }}
@@ -119,7 +124,7 @@ export default function AdminDashboard() {
       {/* Recent Activity Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-            <h3 className="font-bold text-gray-900 dark:text-white">Recent Redemptions</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white">Recent Activity</h3>
             <Link href="/admin/redemptions" className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
                 View All <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
@@ -142,8 +147,8 @@ export default function AdminDashboard() {
                         <tr>
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Time</th>
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Campaign</th>
-                            <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Bottle ID</th>
                             <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">User</th>
+                            <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Coupon</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -164,29 +169,16 @@ export default function AdminDashboard() {
                                     })}
                                 </td>
                                 <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-200">
-                                    {/* View might return campaign_id, logic needs join or view should have name. 
-                                        Reviewing prompt: "redemption_details view: ... campaign_id, bottle_id ... name, phone".
-                                        Wait, "name" in redemption_details usually refers to USER name. 
-                                        Does it have campaign name? 
-                                        Prompt says: "3) Campaigns Page ... 4) Redemptions Page: Table columns: User Name, Phone, Campaign ID..."
-                                        The view definition in prompt: "id, redeemed_at, name, phone, campaign_id, bottle_id".
-                                        It does NOT explicitly say "campaign_name".
-                                        I should display campaign_id or fetch campaign name. 
-                                        The Dashboard "Recent Activity" in previous file showed "campaigns ( name )".
-                                        If I use the VIEW, I might strictly get what's in the view.
-                                        I'll display Campaign ID for now, or if the view is smart it might have it.
-                                        Safe bet: Display Campaign ID, formatted nicely.
-                                    */}
-                                    <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                        {item.campaign_id?.split('-')[0] ?? 'Unknown'}...
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-mono text-xs">
-                                    {item.bottle_id?.substring(0, 8)}...
+                                    {item.campaign_name || 'Unknown'}
                                 </td>
                                 <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                                    <div className="font-medium">{item.name}</div>
+                                    <div className="font-medium">{item.user_name || 'N/A'}</div>
                                     <div className="text-xs text-gray-400">{item.phone}</div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                        {item.coupon_code}
+                                    </span>
                                 </td>
                             </motion.tr>
                         ))}
