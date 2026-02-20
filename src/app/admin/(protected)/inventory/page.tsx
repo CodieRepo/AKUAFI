@@ -49,36 +49,46 @@ function AddBatchModal({
     setError('');
     try {
       const supabase = createClient();
-      const { error: err } = await supabase.from('inventory_batches').insert({
-        client_id: form.client_id,
-        batch_name: form.batch_name.trim(),
-        total_bottles: qty,
-        remaining_bottles: qty,
-        status: 'active',
-      });
-      if (err) throw err;
 
-      // Log as dispatched
-      const { data: batch } = await supabase
+      // INSERT and immediately return the new row's id
+      const { data: newBatch, error: batchErr } = await supabase
         .from('inventory_batches')
+        .insert({
+          client_id: form.client_id,
+          batch_name: form.batch_name.trim(),
+          total_bottles: qty,
+          remaining_bottles: qty,
+          status: 'active',
+        })
         .select('id')
-        .eq('client_id', form.client_id)
-        .eq('batch_name', form.batch_name.trim())
-        .maybeSingle();
+        .single();
 
-      if (batch?.id) {
-        await supabase.from('inventory_logs').insert({
-          batch_id: batch.id,
+      if (batchErr) {
+        // Log full Supabase error for debugging
+        console.error('[Inventory] batch insert error:', JSON.stringify(batchErr, null, 2));
+        const detail = batchErr.code ? ` (code: ${batchErr.code})` : '';
+        const hint   = batchErr.hint  ? ` — ${batchErr.hint}` : '';
+        throw new Error(`${batchErr.message}${detail}${hint}`);
+      }
+
+      // Log the initial dispatch using the returned id (no race condition)
+      if (newBatch?.id) {
+        const { error: logErr } = await supabase.from('inventory_logs').insert({
+          batch_id: newBatch.id,
           action_type: 'dispatched',
           quantity: qty,
           note: 'Initial dispatch',
         });
+        if (logErr) {
+          // Non-fatal: batch was created, just log the error
+          console.error('[Inventory] dispatch log error:', JSON.stringify(logErr, null, 2));
+        }
       }
 
       onCreated();
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Failed to create batch.');
+      setError(err?.message || 'Failed to create batch. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -179,8 +189,10 @@ export default function InventoryPage() {
       setBatches(rows);
       setClients(clientData || []);
     } catch (err: any) {
-      setError('Failed to load inventory data.');
-      console.error('[Inventory]', err);
+      // Show the actual Supabase error message if available
+      const msg = err?.message || 'Failed to load inventory data.';
+      setError(msg);
+      console.error('[Inventory] load error:', JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
     }

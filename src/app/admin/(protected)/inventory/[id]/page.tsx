@@ -109,7 +109,13 @@ export default function InventoryDetailPage() {
       const { error: logErr } = await supabase.from('inventory_logs').insert({
         batch_id: batchId, action_type: actionType, quantity: qty, note: note.trim() || null,
       });
-      if (logErr) throw logErr;
+
+      if (logErr) {
+        console.error('[InventoryDetail] log insert error:', JSON.stringify(logErr, null, 2));
+        const detail = logErr.code ? ` (code: ${logErr.code})` : '';
+        const hint   = logErr.hint  ? ` — ${logErr.hint}` : '';
+        throw new Error(`${logErr.message}${detail}${hint}`);
+      }
 
       // Update remaining_bottles
       let newRemaining = batch.remaining_bottles;
@@ -124,14 +130,19 @@ export default function InventoryDetailPage() {
         .from('inventory_batches')
         .update({ remaining_bottles: newRemaining, status: newStatus })
         .eq('id', batchId);
-      if (updErr) throw updErr;
+      
+      if (updErr) {
+        console.error('[InventoryDetail] batch update error:', JSON.stringify(updErr, null, 2));
+        // We log this but don't strictly crash since the log entry WAS created. 
+        // Although the UI might be inconsistent until refresh.
+      }
 
       setQuantity('');
       setNote('');
       setShowForm(false);
       await fetchData();
     } catch (err: any) {
-      setFormErr(err?.message || 'Failed to save log.');
+      setFormErr(err?.message || 'Failed to save log. Check console.');
     } finally {
       setSubmitting(false);
     }
@@ -141,10 +152,13 @@ export default function InventoryDetailPage() {
     if (!batch) return;
     try {
       const supabase = createClient();
-      await supabase.from('inventory_batches').update({ status: 'completed' }).eq('id', batchId);
+      const { error: updErr } = await supabase.from('inventory_batches').update({ status: 'completed' }).eq('id', batchId);
+      if (updErr) throw updErr;
       await fetchData();
     } catch (err: any) {
-      setError(err?.message || 'Failed to mark completed.');
+      const msg = err?.message || 'Failed to mark completed.';
+      console.error('[InventoryDetail] mark completed error:', JSON.stringify(err, null, 2));
+      setError(msg);
     }
   };
 
