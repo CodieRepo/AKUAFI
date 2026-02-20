@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
-import { Users, Megaphone, QrCode, ScanLine, ChevronRight } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
 
 type ClientRow = {
   client_id: string;
@@ -12,26 +11,137 @@ type ClientRow = {
   total_qr: number;
   total_claims: number;
   unique_users: number;
-  conversion_rate: number;
 };
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
         {typeof value === 'number' ? value.toLocaleString() : value}
       </p>
     </div>
   );
 }
 
+// ── Pure SVG bar chart — zero dependencies ─────────────────────────────────
+function BarChart({ data }: { data: ClientRow[] }) {
+  if (!data.length) return null;
+
+  const BAR_W   = 28;   // width of each bar group pair
+  const GAP     = 20;   // gap between groups
+  const HEIGHT  = 220;  // chart area height
+  const PADDING = { top: 16, bottom: 40, left: 48, right: 16 };
+
+  const maxVal = Math.max(...data.flatMap(d => [d.total_qr, d.total_claims]), 1);
+
+  const totalW = data.length * (BAR_W * 2 + GAP) + PADDING.left + PADDING.right;
+  const svgW   = Math.max(totalW, 400);
+  const svgH   = HEIGHT + PADDING.top + PADDING.bottom;
+
+  const scale = (v: number) => (v / maxVal) * HEIGHT;
+
+  // Y-axis ticks
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => Math.round(t * maxVal));
+
+  const COLORS = { qr: '#3b82f6', claims: '#10b981' };
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg width={svgW} height={svgH} aria-label="QR vs Claims bar chart">
+        {/* Y-axis gridlines + labels */}
+        {ticks.map((tick, i) => {
+          const y = PADDING.top + HEIGHT - scale(tick);
+          return (
+            <g key={i}>
+              <line
+                x1={PADDING.left} x2={svgW - PADDING.right}
+                y1={y} y2={y}
+                stroke="#e5e7eb" strokeWidth={1}
+              />
+              <text x={PADDING.left - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#9ca3af">
+                {tick >= 1000 ? `${(tick / 1000).toFixed(0)}k` : tick}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Bars */}
+        {data.map((d, i) => {
+          const x = PADDING.left + i * (BAR_W * 2 + GAP);
+          const qrH     = scale(d.total_qr);
+          const claimsH = scale(d.total_claims);
+
+          return (
+            <g key={d.client_id}>
+              {/* QR bar */}
+              <rect
+                x={x} y={PADDING.top + HEIGHT - qrH}
+                width={BAR_W} height={qrH}
+                rx={4} fill={COLORS.qr} fillOpacity={0.85}
+              />
+              <text
+                x={x + BAR_W / 2} y={PADDING.top + HEIGHT - qrH - 4}
+                textAnchor="middle" fontSize={9} fill={COLORS.qr}
+              >
+                {d.total_qr > 0 ? d.total_qr.toLocaleString() : ''}
+              </text>
+
+              {/* Claims bar */}
+              <rect
+                x={x + BAR_W + 2} y={PADDING.top + HEIGHT - claimsH}
+                width={BAR_W} height={claimsH}
+                rx={4} fill={COLORS.claims} fillOpacity={0.85}
+              />
+              <text
+                x={x + BAR_W + 2 + BAR_W / 2}
+                y={PADDING.top + HEIGHT - claimsH - 4}
+                textAnchor="middle" fontSize={9} fill={COLORS.claims}
+              >
+                {d.total_claims > 0 ? d.total_claims.toLocaleString() : ''}
+              </text>
+
+              {/* Client name label */}
+              <text
+                x={x + BAR_W}
+                y={svgH - 8}
+                textAnchor="middle" fontSize={10} fill="#6b7280"
+              >
+                {d.client_name.length > 10 ? d.client_name.slice(0, 9) + '…' : d.client_name}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* X-axis baseline */}
+        <line
+          x1={PADDING.left} x2={svgW - PADDING.right}
+          y1={PADDING.top + HEIGHT} y2={PADDING.top + HEIGHT}
+          stroke="#d1d5db" strokeWidth={1}
+        />
+      </svg>
+
+      {/* Legend */}
+      <div className="flex gap-6 mt-3 ml-12">
+        <span className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="inline-block w-3 h-3 rounded-sm bg-blue-500" />
+          QR Generated
+        </span>
+        <span className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="inline-block w-3 h-3 rounded-sm bg-emerald-500" />
+          Claims
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]   = useState<string | null>(null);
 
-  // Derived totals — computed directly from the clients array, no complex reduce
   const totalClients   = clients.length;
   const totalCampaigns = clients.reduce((s, c) => s + Number(c.total_campaigns || 0), 0);
   const totalQR        = clients.reduce((s, c) => s + Number(c.total_qr        || 0), 0);
@@ -44,39 +154,30 @@ export default function AdminDashboard() {
         setLoading(true);
         const supabase = createClient();
 
-        // Fetch all client analytics in one query from the view
-        const { data: viewData, error: viewErr } = await supabase
-          .from('client_dashboard_v1')
-          .select('*');
+        const [{ data: viewData, error: viewErr }, { data: clientsData, error: clientsErr }] =
+          await Promise.all([
+            supabase.from('client_dashboard_v1').select('*'),
+            supabase.from('clients').select('id, client_name'),
+          ]);
 
-        if (viewErr) throw viewErr;
-
-        // Enrich with client names — join clients table
-        const { data: clientsData, error: clientsErr } = await supabase
-          .from('clients')
-          .select('id, client_name');
-
+        if (viewErr)    throw viewErr;
         if (clientsErr) throw clientsErr;
 
-        // Build a lookup: client_id → client_name
         const nameMap: Record<string, string> = {};
         (clientsData || []).forEach(c => { nameMap[c.id] = c.client_name; });
 
-        // Merge name into view rows
         const merged: ClientRow[] = (viewData || []).map(row => ({
           client_id:       row.client_id,
-          client_name:     nameMap[row.client_id] || 'Unknown Client',
+          client_name:     nameMap[row.client_id] || 'Unknown',
           total_campaigns: Number(row.total_campaigns || 0),
           total_qr:        Number(row.total_qr        || 0),
           total_claims:    Number(row.total_claims    || 0),
           unique_users:    Number(row.unique_users    || 0),
-          conversion_rate: Number(row.conversion_rate || 0),
         }));
 
-        console.log('[AdminDashboard] clients merged:', merged);
         setClients(merged);
       } catch (err: any) {
-        console.error('[AdminDashboard] error:', err);
+        console.error('[AdminDashboard]', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -85,102 +186,52 @@ export default function AdminDashboard() {
     load();
   }, []);
 
-  if (error) {
-    return <div className="p-8 text-center text-red-500">Error: {error}</div>;
-  }
+  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 py-2">
+
+      {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">All clients and their campaign analytics</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Platform-wide analytics across all clients
+        </p>
       </div>
 
-      {/* Top Stats */}
+      {/* Top Stat Cards */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+            <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard label="Total Clients"    value={totalClients}   />
-          <StatCard label="Total Campaigns"  value={totalCampaigns} />
-          <StatCard label="Total QR"         value={totalQR}        />
-          <StatCard label="Total Claims"     value={totalClaims}    />
-          <StatCard label="Unique Users"     value={uniqueUsers}    />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <StatCard label="Total Clients"   value={totalClients}   />
+          <StatCard label="Total Campaigns" value={totalCampaigns} />
+          <StatCard label="QR Generated"    value={totalQR}        />
+          <StatCard label="Total Claims"    value={totalClaims}    />
+          <StatCard label="Unique Users"    value={uniqueUsers}    />
         </div>
       )}
 
-      {/* Clients Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="font-bold text-gray-900 dark:text-white">Clients</h2>
+      {/* Analytics Chart */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <BarChart2 className="h-5 w-5 text-blue-500" />
+          <h2 className="font-bold text-gray-900 dark:text-white">QR Generated vs Claims — Per Client</h2>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400">
-              <tr>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Client Name</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Campaigns</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">QR Generated</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Claims</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Unique Users</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {loading ? (
-                [...Array(3)].map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    {[...Array(6)].map((__, j) => (
-                      <td key={j} className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : clients.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
-                    <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                    No clients found.
-                  </td>
-                </tr>
-              ) : (
-                clients.map(client => (
-                  <tr key={client.client_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
-                      {client.client_name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.total_campaigns.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.total_qr.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.total_claims.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.unique_users.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/clients/${client.client_id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm font-medium"
-                      >
-                        View <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="h-64 bg-gray-50 dark:bg-gray-700/30 rounded-lg animate-pulse" />
+        ) : clients.length === 0 ? (
+          <div className="h-40 flex items-center justify-center text-sm text-gray-400">
+            No client data available yet.
+          </div>
+        ) : (
+          <BarChart data={clients} />
+        )}
       </div>
     </div>
   );
