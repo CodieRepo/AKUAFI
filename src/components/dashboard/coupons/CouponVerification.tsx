@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Search, CheckCircle, XCircle, AlertCircle, Loader2, ScanLine } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
-export default function CouponVerification() {
+export default function CouponVerification({ campaignIds = [] }: { campaignIds?: string[] }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired'>('idle');
@@ -27,16 +27,8 @@ export default function CouponVerification() {
       setCode(value);
   };
 
-  /* 
-    Enhanced Verify Logic:
-    1. Check 'redemptions' (Primary source for User Scans/Redemptions)
-    2. Check 'coupons' (Secondary source for Pre-generated/Active codes)
-    3. Merge & Display
-  */
   const handleVerify = async () => {
     if (!code || code.length < MIN_LENGTH) return;
-    
-    // Final Trim
     const cleanCode = code.trim();
     setLoading(true);
     setStatus('idle');
@@ -44,63 +36,63 @@ export default function CouponVerification() {
 
     try {
         const supabase = createClient();
-        
-        // Query COUPONS table primarily (Source of Truth)
-        const { data, error } = await supabase
-            .from('coupons')
-            .select('id, coupon_code, status, generated_at, redeemed_at, campaign_id, discount_value')
-            .eq('coupon_code', cleanCode)
-            .maybeSingle();
 
-        if (!data) {
-             console.log('[Verify Coupon] No record found in coupons for:', cleanCode);
-             setStatus('invalid');
-             setLoading(false);
-             return;
-        }
+        // Security: query via campaign_user_details_v1 scoped to this client's campaigns
+        const query = supabase
+            .from('campaign_user_details_v1')
+            .select('coupon_code, status, campaign_name, campaign_id, phone, user_name, redeemed_at, discount_value')
+            .eq('coupon_code', cleanCode);
 
-        let finalDisplayStatus: 'idle' | 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
-        
-        if (data.status === 'active') finalDisplayStatus = 'valid';
-        else if (data.status === 'claimed' || data.status === 'redeemed') finalDisplayStatus = 'redeemed';
-        else if (data.status === 'expired') finalDisplayStatus = 'expired';
+        // If campaignIds provided, restrict to this client's campaigns
+        const { data: rows, error } = campaignIds.length > 0
+            ? await query.in('campaign_id', campaignIds).maybeSingle()
+            : await query.maybeSingle();
 
-        // Fetch Campaign Details Manually
-        let campaignName = 'Unknown Campaign';
-        let location = null;
-        let generatedAt = data.generated_at || data.redeemed_at;
-
-        if (data.campaign_id) {
-            const { data: camp } = await supabase
-                .from('campaigns')
-                .select('name, location, campaign_date')
-                .eq('id', data.campaign_id) 
-                .single();
-            
-            if (camp) {
-                campaignName = camp.name;
-                location = camp.location;
-                if (!generatedAt) generatedAt = camp.campaign_date;
+        if (!rows) {
+            // Check if coupon exists at all (for better error message)
+            if (campaignIds.length > 0) {
+                const { data: global } = await supabase
+                    .from('coupons')
+                    .select('id')
+                    .eq('coupon_code', cleanCode)
+                    .maybeSingle();
+                if (global) {
+                    // Exists but not in client's campaigns
+                    setCouponData({ notOwned: true });
+                    setStatus('invalid');
+                    setLoading(false);
+                    return;
+                }
             }
+            setStatus('invalid');
+            setLoading(false);
+            return;
         }
+
+        const data = rows as any;
+        let finalStatus: 'valid' | 'invalid' | 'redeemed' | 'expired' = 'invalid';
+        if (data.status === 'active')                                      finalStatus = 'valid';
+        else if (data.status === 'claimed' || data.status === 'redeemed') finalStatus = 'redeemed';
+        else if (data.status === 'expired')                                finalStatus = 'expired';
 
         setCouponData({
-            ...data,
-            campaign_name: campaignName,
-            location: location,
-            generated_at: generatedAt,
-            status: finalDisplayStatus
+            coupon_code:   cleanCode,
+            campaign_name: data.campaign_name || 'Unknown Campaign',
+            campaign_id:   data.campaign_id,
+            discount_value: data.discount_value,
+            generated_at:  null,   // not in view
+            redeemed_at:   data.redeemed_at,
+            location:      null,
+            status:        finalStatus,
         });
-        setStatus(finalDisplayStatus);
+        setStatus(finalStatus);
 
-        // setStatus is called above
     } catch (err) {
         console.error(err);
         setStatus('invalid');
     } finally {
         setLoading(false);
     }
-
   };
 
   const handleClaim = async () => {
@@ -285,9 +277,13 @@ export default function CouponVerification() {
                   <div className="flex items-start gap-3">
                       <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
                       <div className="space-y-1">
-                          <p className="font-bold text-red-900 dark:text-red-100">Invalid Coupon</p>
+                          <p className="font-bold text-red-900 dark:text-red-100">
+                            {couponData?.notOwned ? 'Not Your Coupon' : 'Invalid Coupon'}
+                          </p>
                           <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                              The code <span className="font-mono font-medium">{code}</span> does not exist or is invalid.
+                            {couponData?.notOwned
+                              ? 'This coupon does not belong to your campaigns.'
+                              : <>The code <span className="font-mono font-medium">{code}</span> does not exist or is invalid.</>}
                           </p>
                       </div>
                   </div>
