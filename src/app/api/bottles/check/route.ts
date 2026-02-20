@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true, 
       bottle: bottle,
-      exists: isHardBlocked,
+      exists: Boolean(isHardBlocked),
       coupon: existingCoupon
     });
 

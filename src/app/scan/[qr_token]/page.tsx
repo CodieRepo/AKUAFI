@@ -82,9 +82,9 @@ export default function Page() {
         const data = result.bottle;
         setBottle(data);
 
-        // Only switch to 'used' view if the backend signals a HARD block
-        if (result.exists && result.coupon) {
-          setExistingCoupon(result.coupon);
+        // Only switch to 'used' view if the backend explicitly signals a HARD block
+        if (result.exists === true) {
+          setExistingCoupon(result.coupon || null);
           setView('used');
           return;
         }
