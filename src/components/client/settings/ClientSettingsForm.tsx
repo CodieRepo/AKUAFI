@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 // import { Button } from '@/components/ui/Button'; // Swapping for raw button as requested for specific styling
-import { Save, Lock, User, Building, Smartphone, Mail, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, Lock, User, Building, Smartphone, Mail, AlertCircle, CheckCircle, Loader2, ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // Production Ready Input with strict dark mode contrast (User Requirement 2)
@@ -38,14 +38,29 @@ function SimpleInput({ label, icon: Icon, type = "text", error, ...props }: any)
     )
 }
 
+interface CampaignMOVRow {
+    id: string;
+    name: string;
+    minimum_order_value: number | null;
+}
+
 interface ClientSettingsFormProps {
     user: any;
     client: any;
+    campaigns: CampaignMOVRow[];
 }
 
-export default function ClientSettingsForm({ user, client }: ClientSettingsFormProps) {
+export default function ClientSettingsForm({ user, client, campaigns }: ClientSettingsFormProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [movLoading, setMovLoading] = useState(false);
+
+    // MOV state — keyed by campaign id
+    const [movValues, setMovValues] = useState<Record<string, string>>(
+        () => Object.fromEntries(
+            campaigns.map(c => [c.id, String(c.minimum_order_value ?? 0)])
+        )
+    );
     
     // Profile State
     const [companyName, setCompanyName] = useState(client?.client_name || '');
@@ -164,6 +179,33 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
             setMessage({ type: 'error', text: err.message || 'Failed to update password' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    // ── MOV save handler — updates campaigns table per-campaign
+    const handleMOVUpdate = async () => {
+        setMovLoading(true);
+        setMessage(null);
+        const supabase = createClient();
+        try {
+            // Execute all campaign updates in parallel
+            const updates = campaigns.map(c => {
+                const val = parseFloat(movValues[c.id] || '0');
+                if (isNaN(val) || val < 0) throw new Error(`Invalid value for campaign "${c.name}"`);
+                return supabase
+                    .from('campaigns')
+                    .update({ minimum_order_value: val })
+                    .eq('id', c.id);
+            });
+            const results = await Promise.all(updates);
+            const firstErr = results.find(r => r.error);
+            if (firstErr?.error) throw firstErr.error;
+            setMessage({ type: 'success', text: 'Campaign order values updated successfully' });
+            router.refresh();
+        } catch (err: any) {
+            setMessage({ type: 'error', text: err.message || 'Failed to update order values' });
+        } finally {
+            setMovLoading(false);
         }
     };
 
@@ -301,6 +343,55 @@ export default function ClientSettingsForm({ user, client }: ClientSettingsFormP
                     </button>
                  </div>
             </div>
+
+            {/* Campaign Minimum Order Value Section */}
+            {campaigns.length > 0 && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 md:p-8 shadow-sm">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                            <ShoppingBag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Campaign Revenue Settings</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Set minimum order value per campaign to unlock revenue estimates</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {campaigns.map(c => (
+                            <div key={c.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{c.name}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Minimum order value for revenue calculation</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">₹</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={movValues[c.id] ?? '0'}
+                                        onChange={e => setMovValues(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                        className="w-32 bg-slate-900 text-white placeholder:text-slate-400 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-8 flex justify-end border-t border-gray-100 dark:border-slate-800 pt-6">
+                        <button
+                            onClick={handleMOVUpdate}
+                            disabled={movLoading}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-2 rounded-lg transition flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {movLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                            Save Order Values
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Account Info — dev only, not visible in production */}
             {process.env.NODE_ENV === 'development' && (

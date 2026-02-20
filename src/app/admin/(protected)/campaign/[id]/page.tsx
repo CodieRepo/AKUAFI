@@ -81,6 +81,13 @@ export default async function CampaignDetailsPage({
   const avgDiscount = allCoupons.length > 0
     ? Math.round(totalDiscountIssued / allCoupons.length) : 0;
 
+  // Analytics metrics
+  const impressions = allCoupons.length; // Total coupons generated (all statuses)
+  const claimedCount = allCoupons.filter((c: any) => c.status === 'claimed').length;
+  const minimumOrderValue = Number(campaign.minimum_order_value || 0);
+  // Estimated Revenue: claimed coupons × minimum order value
+  const estimatedRevenueByMOV = claimedCount * minimumOrderValue;
+
   console.log('[CampaignDetail] metrics:', metrics);
   console.log('[CampaignDetail] users count:', users.length);
 
@@ -131,6 +138,21 @@ export default async function CampaignDetailsPage({
           <StatCard title="Total Discount Issued"   value={`₹${totalDiscountIssued.toLocaleString()}`} subtext="Across all coupons" />
           <StatCard title="Estimated Revenue Impact" value={`₹${claimedDiscountIssued.toLocaleString()}`} subtext="Claimed coupons only" />
           <StatCard title="Avg Discount per Coupon" value={`₹${avgDiscount}`} subtext={`Across ${allCoupons.length} coupons`} />
+        </div>
+
+        {/* Analytics row: Impressions · MOV · Revenue by MOV */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+          <StatCard title="Impressions" value={impressions} subtext="Total coupons generated" />
+          <StatCard
+            title="Minimum Order Value"
+            value={minimumOrderValue > 0 ? `₹${minimumOrderValue.toLocaleString()}` : '— Not set'}
+            subtext={minimumOrderValue > 0 ? 'Per order for revenue calc' : 'Set in Client Settings'}
+          />
+          <StatCard
+            title="Estimated Revenue Impact (MOV)"
+            value={minimumOrderValue > 0 ? `₹${estimatedRevenueByMOV.toLocaleString()}` : '₹0'}
+            subtext={minimumOrderValue > 0 ? `${claimedCount} claimed × ₹${minimumOrderValue}` : 'Set minimum order value to calculate'}
+          />
         </div>
 
         {/* Progress bar */}

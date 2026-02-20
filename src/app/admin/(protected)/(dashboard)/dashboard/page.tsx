@@ -13,6 +13,10 @@ type ClientRow = {
   unique_users: number;
 };
 
+type PlatformRevenue = {
+  total: number;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function claimRateColor(rate: number) {
   if (rate >= 15) return '#10b981'; // green
@@ -227,6 +231,7 @@ export default function AdminDashboard() {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
+  const [platformRevenue, setPlatformRevenue] = useState<number>(0);
 
   const totalClients   = clients.length;
   const totalCampaigns = clients.reduce((s, c) => s + Number(c.total_campaigns || 0), 0);
@@ -239,13 +244,24 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const supabase = createClient();
-        const [{ data: viewData, error: viewErr }, { data: clientsData, error: clientsErr }] =
+        const [{ data: viewData, error: viewErr }, { data: clientsData, error: clientsErr }, { data: revenueData }] =
           await Promise.all([
             supabase.from('client_dashboard_v1').select('*'),
             supabase.from('clients').select('id, client_name'),
+            // Platform Revenue: sum of (claimed coupons × campaign.minimum_order_value)
+            supabase
+              .from('coupons')
+              .select('status, campaigns(minimum_order_value)')
+              .eq('status', 'claimed'),
           ]);
         if (viewErr)    throw viewErr;
         if (clientsErr) throw clientsErr;
+
+        // Aggregate platform revenue from join result
+        const rev = (revenueData || []).reduce((sum: number, c: any) =>
+          sum + Number(c.campaigns?.minimum_order_value || 0), 0
+        );
+        setPlatformRevenue(rev);
 
         const nameMap: Record<string, string> = {};
         (clientsData || []).forEach(c => { nameMap[c.id] = c.client_name; });
@@ -282,16 +298,17 @@ export default function AdminDashboard() {
 
       {/* Stat Cards */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard label="Total Clients"   value={totalClients}   />
           <StatCard label="Total Campaigns" value={totalCampaigns} />
           <StatCard label="QR Generated"    value={totalQR}        />
           <StatCard label="Total Claims"    value={totalClaims}    />
           <StatCard label="Unique Users"    value={uniqueUsers}    />
+          <StatCard label="Platform Revenue Impact" value={platformRevenue > 0 ? `₹${platformRevenue.toLocaleString()}` : '₹0'} />
         </div>
       )}
 

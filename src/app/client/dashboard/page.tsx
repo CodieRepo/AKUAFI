@@ -376,7 +376,7 @@ export default async function ClientDashboard() {
   // Step 1: Get client record + campaign IDs first (required for subsequent view queries)
   const { data: campaignsData } = await supabase
     .from("campaigns")
-    .select("id, name, location, campaign_date")
+    .select("id, name, location, campaign_date, minimum_order_value")
     .eq("client_id", clientId);
 
   const campaignIds = (campaignsData || []).map((c: any) => c.id);
@@ -493,6 +493,20 @@ export default async function ClientDashboard() {
   const estimatedRevenue    = (couponsAll as any[]).filter(c => c.status === 'claimed').reduce((s, c) => s + Number(c.discount_value || 0), 0);
   const avgDiscount         = (couponsAll as any[]).length > 0 ? Math.round(totalDiscountIssued / (couponsAll as any[]).length) : 0;
 
+  // 9. Analytics metrics (display-only, no DB change)
+  // Impressions = total coupons generated (all statuses)
+  const impressions = (couponsAll as any[]).length;
+  // Estimated Reach = total QR × 2.3 (industry multiplier for physical QR exposure)
+  const estimatedReach = Math.round(totalQR * 2.3);
+  // Estimated Revenue by MOV = sum of (campaign.minimum_order_value) for each claimed coupon
+  const estimatedRevenueByMOV = (couponsAll as any[]).reduce((sum: number, c: any) => {
+    if (c.status !== 'claimed') return sum;
+    const camp = campaignMap.get(c.campaign_id) as any;
+    return sum + Number(camp?.minimum_order_value || 0);
+  }, 0);
+  // Whether any campaign has MOV configured (drives helper text display)
+  const hasMOVConfigured = (campaignsData || []).some((c: any) => Number(c.minimum_order_value || 0) > 0);
+
   // ── Empty state
   if (campaigns.length === 0) {
     return (
@@ -574,6 +588,44 @@ export default async function ClientDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── Analytics Metrics Row: Impressions · Reach · Revenue */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Impressions */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+            <div className="text-violet-500 mb-2">👁️</div>
+            <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Impressions</p>
+            <p className="text-2xl font-bold mt-1">{fmt(impressions)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Total coupons generated</p>
+          </div>
+
+          {/* Estimated Reach */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+            <div className="text-blue-500 mb-2">📡</div>
+            <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Reach</p>
+            <p className="text-2xl font-bold mt-1">{fmt(estimatedReach)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">QR scans × 2.3 exposure factor</p>
+          </div>
+
+          {/* Estimated Revenue (MOV-based) */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+            <div className="text-emerald-500 mb-2">💵</div>
+            <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Revenue</p>
+            {hasMOVConfigured ? (
+              <>
+                <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                  ₹{estimatedRevenueByMOV.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Claimed coupons × min order value</p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold mt-1 text-gray-300 dark:text-slate-600">₹0</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">Set minimum order value to unlock revenue estimate</p>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* ── 2. Main grid: Campaign table + right column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
