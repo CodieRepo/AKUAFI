@@ -176,8 +176,8 @@ export default function GeneratedCouponsList({ coupons = [] }: GeneratedCouponsL
                         <thead className="bg-gray-100 dark:bg-slate-900/80 sticky top-0 backdrop-blur-sm z-10 text-gray-500 dark:text-slate-400">
                             <tr>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Coupon Code</th>
-                                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Discount</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Location</th>
+                                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Discount</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Generated</th>
                                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Redeemed</th>

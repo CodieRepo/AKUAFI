@@ -611,7 +611,7 @@ export default async function ClientDashboard() {
             <div className="text-blue-500 mb-2">📡</div>
             <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Reach</p>
             <p className="text-2xl font-bold mt-1">{fmt(estimatedReach)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">QR scans × 2.3 exposure factor</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Projected audience exposure based on QR distribution</p>
           </div>
 
           {/* Estimated Revenue (MOV-based) */}
@@ -623,7 +623,7 @@ export default async function ClientDashboard() {
                 <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
                   ₹{estimatedRevenueByMOV.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Claimed coupons × min order value</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Estimated minimum revenue from redeemed offers</p>
               </>
             ) : (
               <>
