@@ -81,7 +81,7 @@ export default function PremiumStatCard({
 
     if (isNaN(numericValue)) return;
 
-    let start = 0;
+    const start = 0;
     const end = numericValue;
     const duration = 800; // 800ms as requested
     const startTime = performance.now();
