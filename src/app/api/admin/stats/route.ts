@@ -11,41 +11,46 @@ export async function GET(request: Request) {
         await verifyAdmin();
     } catch (authError: any) {
         console.error('[API] Auth failed:', authError.message);
-        // Force 401/403 based on error message or default to 401 for safety if it was an auth attempt
         const status = authError.message.includes('Forbidden') ? 403 : 401;
         return NextResponse.json({ error: authError.message }, { status });
     }
 
     // Parallel queries for dashboard stats
-    // 1. Campaign Counts
-    const { count: totalCampaigns, error: cErr } = await getSupabaseAdmin()
+    const [
+      { count: totalCampaigns, error: cErr },
+      { count: activeCampaigns },
+      { count: totalBottles },
+      { count: totalRedeemed },
+      { data: recentActivity },
+      // Platform Revenue: fetch claimed coupons with campaign MOV via admin client (bypasses RLS)
+      { data: claimedWithMOV },
+    ] = await Promise.all([
+      // 1. Campaign Counts
+      getSupabaseAdmin()
         .from('campaigns')
-        .select('*', { count: 'exact', head: true });
-        
-    if (cErr) throw new Error(`DB Error (Campaigns): ${cErr.message}`);
+        .select('*', { count: 'exact', head: true }),
 
-    // 2. Active Campaigns
-    const now = new Date().toISOString();
-    const { count: activeCampaigns } = await getSupabaseAdmin()
+      // 2. Active Campaigns
+      getSupabaseAdmin()
         .from('campaigns')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active')
-        .lte('start_date', now)
-        .gte('end_date', now);
+        .lte('start_date', new Date().toISOString())
+        .gte('end_date', new Date().toISOString()),
 
-    // 3. Bottles Generated
-    const { count: totalBottles } = await getSupabaseAdmin()
+      // 3. Bottles Generated
+      getSupabaseAdmin()
         .from('bottles')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true }),
 
-    // 4. Total Redemptions
-    const { count: totalRedeemed } = await getSupabaseAdmin()
+      // 4. Total Redemptions (claimed + redeemed statuses)
+      getSupabaseAdmin()
         .from('coupons')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'redeemed');
+        .eq('status', 'redeemed'),
 
-    // 5. Recent Activity
-    const { data: recentActivity } = await getSupabaseAdmin()
+      // 5. Recent Activity
+      getSupabaseAdmin()
         .from('redemptions')
         .select(`
             redeemed_at,
@@ -57,19 +62,34 @@ export async function GET(request: Request) {
             )
         `)
         .order('redeemed_at', { ascending: false })
-        .limit(5);
+        .limit(5),
+
+      // 6. Platform Revenue: claimed coupons joined to campaigns for MOV
+      //    Uses admin client — bypasses RLS, ensuring campaigns.minimum_order_value is readable
+      getSupabaseAdmin()
+        .from('coupons')
+        .select('campaign_id, campaigns(minimum_order_value)')
+        .eq('status', 'claimed'),
+    ]);
+
+    if (cErr) throw new Error(`DB Error (Campaigns): ${cErr.message}`);
+
+    // Aggregate platform revenue: SUM(claimed × minimum_order_value)
+    const platformRevenue = (claimedWithMOV || []).reduce((sum: number, c: any) =>
+      sum + Number(c.campaigns?.minimum_order_value || 0), 0
+    );
 
     return NextResponse.json({
         total_campaigns: totalCampaigns || 0,
         active_campaigns: activeCampaigns || 0,
         total_qr_generated: totalBottles || 0,
         total_redeemed: totalRedeemed || 0,
-        recent_activity: recentActivity || []
+        recent_activity: recentActivity || [],
+        platform_revenue: platformRevenue,
     });
 
   } catch (error: any) {
     console.error('[API] Stats Error:', error);
-    // Ensure we don't accidentally return 400 for server errors
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

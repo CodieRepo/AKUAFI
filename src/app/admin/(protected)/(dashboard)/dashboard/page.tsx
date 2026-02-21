@@ -244,24 +244,19 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const supabase = createClient();
-        const [{ data: viewData, error: viewErr }, { data: clientsData, error: clientsErr }, { data: revenueData }] =
+        const [{ data: viewData, error: viewErr }, { data: clientsData }, statsRes] =
           await Promise.all([
             supabase.from('client_dashboard_v1').select('*'),
             supabase.from('clients').select('id, client_name'),
-            // Platform Revenue: sum of (claimed coupons × campaign.minimum_order_value)
-            supabase
-              .from('coupons')
-              .select('status, campaigns(minimum_order_value)')
-              .eq('status', 'claimed'),
+            // Fetch platform revenue from server-side API (uses supabaseAdmin — bypasses RLS)
+            // The client-side join query `campaigns(minimum_order_value)` was returning null
+            // because RLS on the campaigns table blocks the browser client from reading it.
+            fetch('/api/admin/stats').then(r => r.json()),
           ]);
-        if (viewErr)    throw viewErr;
-        if (clientsErr) throw clientsErr;
+        if (viewErr) throw viewErr;
 
-        // Aggregate platform revenue from join result
-        const rev = (revenueData || []).reduce((sum: number, c: any) =>
-          sum + Number(c.campaigns?.minimum_order_value || 0), 0
-        );
-        setPlatformRevenue(rev);
+        // Revenue comes from the server-side API (supabaseAdmin bypasses RLS)
+        setPlatformRevenue(Number(statsRes?.platform_revenue || 0));
 
         const nameMap: Record<string, string> = {};
         (clientsData || []).forEach(c => { nameMap[c.id] = c.client_name; });
