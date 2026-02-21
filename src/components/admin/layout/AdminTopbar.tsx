@@ -2,8 +2,6 @@
 
 import { Moon, Sun, Bell } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button'; // Keeping Button if needed, or removing if not used. simpler to just use button element for toggles
-import { cn } from '@/lib/utils';
 
 export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isDark, setIsDark] = useState(false);
@@ -13,13 +11,17 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void 
     const saved = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    if (saved === 'dark' || (!saved && prefersDark)) {
-        setIsDark(true);
-        document.documentElement.classList.add('dark');
+    const shouldUseDark = saved === 'dark' || (!saved && prefersDark);
+    if (shouldUseDark) {
+      document.documentElement.classList.add('dark');
     } else {
-        setIsDark(false);
-        document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
     }
+
+    const timer = setTimeout(() => {
+      setIsDark(shouldUseDark);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleTheme = () => {
@@ -45,6 +47,18 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void 
       </div>
 
       <div className="flex items-center gap-4">
+        {onMenuClick ? (
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Open sidebar menu"
+          >
+            <span className="block h-0.5 w-5 bg-current" />
+            <span className="mt-1 block h-0.5 w-5 bg-current" />
+            <span className="mt-1 block h-0.5 w-5 bg-current" />
+          </button>
+        ) : null}
+
         {/* Dark Mode Toggle */}
         <button 
             onClick={toggleTheme}

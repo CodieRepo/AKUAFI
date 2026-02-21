@@ -44,11 +44,17 @@ function LoginForm() {
         // Use replace to prevent back-navigation to login
         router.replace("/admin/dashboard");
       }
-    } catch (err: any) {
+    } catch (err: { message?: string } | Error | string | unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (typeof err === "object" && err !== null && "message" in err
+              ? (err as { message: string }).message
+              : null) || "Failed to login";
       console.error("Login error:", err);
       // Clean up local session if auth failed partially
       await supabase.auth.signOut();
-      setError(err.message || "Failed to login");
+      setError(msg);
     } finally {
       setLoading(false);
     }

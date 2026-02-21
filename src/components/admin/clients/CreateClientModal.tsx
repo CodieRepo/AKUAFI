@@ -93,8 +93,14 @@ export default function CreateClientModal({
 
       // Simple alert as fallback/toast replacement for now
       alert("Client created successfully!");
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : (typeof err === "object" && err !== null && "message" in err
+              ? (err as { message?: string }).message
+              : null) || "Something went wrong";
+      setError(message);
     } finally {
       setLoading(false);
     }
