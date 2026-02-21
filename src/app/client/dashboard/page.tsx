@@ -458,6 +458,8 @@ export default async function ClientDashboard() {
   const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
   const totalScans = campaigns.reduce((sum, c) => sum + Number(c.total_scans || 0), 0);
   const topPerformingCampaignByScans = [...campaigns].sort((a, b) => b.total_scans - a.total_scans)[0];
+  const getCampaignEstimatedRevenue = (campaign: CampaignMetricRow) =>
+    campaign.minimum_order_value > 0 ? campaign.total_claims * campaign.minimum_order_value : 0;
 
   // 5. Unique users — aggregate claim count per phone
   const userMap = new Map<string, UniqueUserRow>();
@@ -511,17 +513,11 @@ export default async function ClientDashboard() {
   const impressions = totalQR;
   // Estimated Reach = total_bottles_distributed × 2.3
   const estimatedReach = Math.round(totalBottlesDistributed * 2.3);
-  // Estimated Revenue = total_coupons_generated × min_order_value
-  // Applied campaign-wise to preserve per-campaign MOV: Σ(campaign_total_qr × campaign_minimum_order_value)
-  const defaultMinOrderValue = Number((campaignsData || []).find((c: any) => Number(c.minimum_order_value || 0) > 0)?.minimum_order_value || 0);
-  const estimatedRevenueByMOV = campaigns.some((c) => c.minimum_order_value > 0)
-    ? campaigns.reduce((sum, c) => {
-        if (c.minimum_order_value <= 0) return sum;
-        return sum + (c.total_qr * c.minimum_order_value);
-      }, 0)
-    : (totalCouponsGenerated * defaultMinOrderValue);
-  // Whether any campaign has MOV configured (drives helper text display)
-  const hasMOVConfigured = (campaignsData || []).some((c: any) => Number(c.minimum_order_value || 0) > 0);
+  // Estimated Revenue = Sum of per-campaign estimated revenue values shown in table
+  const estimatedRevenueByMOV = campaigns.reduce(
+    (sum, campaign) => sum + getCampaignEstimatedRevenue(campaign),
+    0,
+  );
 
   // ── Empty state
   if (campaigns.length === 0) {
@@ -627,19 +623,10 @@ export default async function ClientDashboard() {
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
             <div className="text-emerald-500 mb-2">💵</div>
             <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Revenue</p>
-            {hasMOVConfigured ? (
-              <>
-                <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
-                  ₹{estimatedRevenueByMOV.toLocaleString()}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Revenue is estimated using the number of coupons marked as claimed by the client × respective campaign minimum order value.</p>
-              </>
-            ) : (
-              <>
-                <p className="text-2xl font-bold mt-1 text-gray-300 dark:text-slate-600">₹0</p>
-                <p className="text-[10px] text-amber-500 mt-0.5">Admin must set minimum order value in campaign settings</p>
-              </>
-            )}
+            <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+              ₹{estimatedRevenueByMOV.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Aggregated across all active campaigns.</p>
           </div>
         </div>
 
@@ -694,7 +681,6 @@ export default async function ClientDashboard() {
                   <thead className="bg-gray-50 dark:bg-slate-900/60 text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-6 py-3">Campaign</th>
-                      <th className="px-6 py-3 text-right">QR</th>
                       <th className="px-6 py-3 text-right">Impressions</th>
                       <th className="px-6 py-3 text-right">Claims</th>
                       <th className="px-6 py-3 text-right">Users</th>
@@ -713,7 +699,6 @@ export default async function ClientDashboard() {
                             <p className="font-medium text-gray-900 dark:text-white">{c.campaign_name}</p>
                           </td>
                           <td className="px-6 py-4 text-right font-mono">{fmt(c.total_qr)}</td>
-                          <td className="px-6 py-4 text-right font-mono">{fmt(c.total_qr)}</td>
                           <td className="px-6 py-4 text-right font-mono">{fmt(c.total_claims)}</td>
                           <td className="px-6 py-4 text-right font-mono">{fmt(c.unique_users)}</td>
                           <td className="px-6 py-4 text-right">
@@ -729,7 +714,7 @@ export default async function ClientDashboard() {
                           <td className="px-6 py-4 text-right">
                             {c.minimum_order_value > 0 ? (
                               <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                                ₹{(c.total_claims * c.minimum_order_value).toLocaleString()}
+                                ₹{getCampaignEstimatedRevenue(c).toLocaleString()}
                               </span>
                             ) : (
                               <span className="text-xs text-gray-400 dark:text-slate-500">Order value not configured</span>
