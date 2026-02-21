@@ -116,13 +116,6 @@ export default async function ClientDetailPage({
     }
   }
 
-  // Total Estimated Revenue = SUM(claimedCount × MOV) across all campaigns — read-only
-  let totalEstimatedRevenue = 0;
-  for (const [campId, mov] of movMap.entries()) {
-    const claimed = claimedCountMap.get(campId) || 0;
-    totalEstimatedRevenue += claimed * mov;
-  }
-
   const campaignList: (Metrics & { estimated_revenue: number })[] = (
     campaigns || []
   ).map((c: CampaignMetric) => {
@@ -138,6 +131,12 @@ export default async function ClientDetailPage({
       estimated_revenue: claimed * mov,
     };
   });
+
+  // Total Estimated Revenue = sum of the per-campaign estimated revenue values shown in the table
+  const totalEstimatedRevenue = campaignList.reduce(
+    (sum, campaign) => sum + campaign.estimated_revenue,
+    0,
+  );
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
@@ -165,7 +164,7 @@ export default async function ClientDetailPage({
           label="Conversion"
           value={`${stats.conversion_rate.toFixed(1)}%`}
         />
-        {/* Total Estimated Revenue — claimed coupons × admin-set MOV, read-only */}
+        {/* Total Estimated Revenue � sum of per-campaign estimated revenue values */}
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 shadow-sm">
           <p className="text-sm font-medium text-emerald-700">
             Total Estimated Revenue
@@ -174,7 +173,7 @@ export default async function ClientDetailPage({
             ₹{totalEstimatedRevenue.toLocaleString()}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
-            Claimed × min order value
+            Aggregated across all active campaigns.
           </p>
         </div>
       </div>
@@ -270,3 +269,5 @@ export default async function ClientDetailPage({
     </div>
   );
 }
+
+
