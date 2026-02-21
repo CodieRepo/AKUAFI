@@ -123,13 +123,17 @@ export default function InventoryDetailPage() {
     try {
       const supabase = createClient();
 
-      // Insert log
-      const { error: logErr } = await supabase.from("inventory_logs").insert({
-        batch_id: batchId,
-        action_type: actionType,
-        quantity: qty,
-        note: note.trim() || null,
-      });
+      // Insert log and return inserted row for immediate UI state sync
+      const { data: insertedLog, error: logErr } = await supabase
+        .from("inventory_logs")
+        .insert({
+          batch_id: batchId,
+          action_type: actionType,
+          quantity: qty,
+          note: note.trim() || null,
+        })
+        .select("id, action_type, quantity, note, created_at")
+        .single();
 
       if (logErr) {
         console.error(
@@ -163,12 +167,35 @@ export default function InventoryDetailPage() {
         );
         // We log this but don't strictly crash since the log entry WAS created.
         // Although the UI might be inconsistent until refresh.
+        await fetchData();
+      } else {
+        const normalizedLog: LogRow | null = insertedLog
+          ? {
+              id: String(insertedLog.id),
+              action_type: String(insertedLog.action_type),
+              quantity: Number(insertedLog.quantity),
+              note: insertedLog.note ? String(insertedLog.note) : null,
+              created_at: String(insertedLog.created_at),
+            }
+          : null;
+
+        setBatch((prev) =>
+          prev
+            ? {
+                ...prev,
+                remaining_bottles: newRemaining,
+                status: newStatus,
+              }
+            : prev,
+        );
+        if (normalizedLog) {
+          setLogs((prev) => [normalizedLog, ...prev]);
+        }
       }
 
       setQuantity("");
       setNote("");
       setShowForm(false);
-      await fetchData();
     } catch (err: { message?: string } | Error | string | unknown) {
       const errorMsg =
         err instanceof Error
@@ -228,14 +255,13 @@ export default function InventoryDetailPage() {
     );
   }
 
+  const usedCount = Math.max(0, batch.total_bottles - batch.remaining_bottles);
+  const remainingCount = Math.max(0, batch.remaining_bottles);
   const usedPct =
     batch.total_bottles > 0
-      ? Math.round(
-          ((batch.total_bottles - batch.remaining_bottles) /
-            batch.total_bottles) *
-            100,
-        )
+      ? Math.round((usedCount / batch.total_bottles) * 100)
       : 0;
+  const remainingPct = Math.max(0, 100 - usedPct);
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -309,30 +335,43 @@ export default function InventoryDetailPage() {
             </p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {batch.remaining_bottles.toLocaleString()}
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">
+              {remainingCount.toLocaleString()}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">
               Remaining
             </p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {(batch.total_bottles - batch.remaining_bottles).toLocaleString()}
+            <p className="text-2xl font-bold text-orange-600 dark:text-orange-300">
+              {usedCount.toLocaleString()}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">
               Used
             </p>
           </div>
         </div>
-        <div className="mt-4 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-500 rounded-full transition-all"
-            style={{ width: `${100 - usedPct}%` }}
-          />
+        <div className="mt-4 h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden border border-gray-300 dark:border-gray-700">
+          <div className="h-full flex">
+            <div
+              className="h-full bg-orange-500 dark:bg-orange-400 transition-all"
+              style={{ width: `${usedPct}%` }}
+            />
+            <div
+              className="h-full bg-emerald-500 dark:bg-emerald-400 transition-all"
+              style={{ width: `${remainingPct}%` }}
+            />
+          </div>
         </div>
-        <p className="text-xs text-gray-400 mt-1 text-right">
-          {100 - usedPct}% remaining
+        <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+          {batch.total_bottles.toLocaleString()} dispatched |{" "}
+          <span className="font-semibold text-orange-600 dark:text-orange-300">
+            {usedCount.toLocaleString()} used
+          </span>{" "}
+          |{" "}
+          <span className="font-semibold text-emerald-600 dark:text-emerald-300">
+            {remainingCount.toLocaleString()} remaining
+          </span>
         </p>
       </div>
 
