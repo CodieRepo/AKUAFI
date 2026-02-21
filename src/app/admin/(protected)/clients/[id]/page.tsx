@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -58,7 +58,7 @@ export default async function ClientDetailPage({
 
   if (!clientData) return notFound();
 
-  // 2. Step A — parallel fetch: dashboard summary + campaign metrics + campaign MOV
+  // 2. Step A â€” parallel fetch: dashboard summary + campaign metrics + campaign MOV
   const [{ data: dashRow }, { data: campaigns }, { data: campaignsWithMOV }] =
     await Promise.all([
       supabase
@@ -90,7 +90,7 @@ export default async function ClientDetailPage({
     conversion_rate: Number(dashRow?.conversion_rate || 0),
   };
 
-  // Build MOV map: campaign_id → minimum_order_value
+  // Build MOV map: campaign_id â†’ minimum_order_value
   const movMap = new Map<string, number>(
     (campaignsWithMOV || []).map((c: Campaign) => [
       c.id,
@@ -101,7 +101,7 @@ export default async function ClientDetailPage({
     (c: Campaign) => c.id as string,
   );
 
-  // 3. Step B — fetch claimed coupons per campaign (only run if we have campaign IDs)
+  // 3. Step B â€” fetch claimed coupons per campaign (only run if we have campaign IDs)
   const claimedCountMap = new Map<string, number>();
   if (campaignIds.length > 0) {
     const { data: claimedCoupons } = await supabase
@@ -154,7 +154,7 @@ export default async function ClientDetailPage({
         <p className="text-sm text-gray-500 mt-1">Client analytics overview</p>
       </div>
 
-      {/* Stat Cards — 6 card grid */}
+      {/* Stat Cards â€” 6 card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Campaigns" value={stats.total_campaigns} />
         <StatCard label="QR Generated" value={stats.total_qr} />
@@ -164,13 +164,13 @@ export default async function ClientDetailPage({
           label="Conversion"
           value={`${stats.conversion_rate.toFixed(1)}%`}
         />
-        {/* Total Estimated Revenue � sum of per-campaign estimated revenue values */}
+        {/* Total Estimated Revenue — sum of per-campaign estimated revenue values */}
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 shadow-sm">
           <p className="text-sm font-medium text-emerald-700">
             Total Estimated Revenue
           </p>
           <p className="mt-1 text-3xl font-bold text-emerald-800">
-            ₹{totalEstimatedRevenue.toLocaleString()}
+            â‚¹{totalEstimatedRevenue.toLocaleString()}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
             Aggregated across all active campaigns.
@@ -245,10 +245,10 @@ export default async function ClientDetailPage({
                     <td className="px-6 py-4">
                       {c.estimated_revenue > 0 ? (
                         <span className="font-semibold text-emerald-700">
-                          ₹{c.estimated_revenue.toLocaleString()}
+                          â‚¹{c.estimated_revenue.toLocaleString()}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-gray-400">â€”</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -269,5 +269,6 @@ export default async function ClientDetailPage({
     </div>
   );
 }
+
 
 
