@@ -30,6 +30,15 @@ function formatDate(dateStr: string | null) {
   });
 }
 
+function formatINR(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function StatCard({
   title,
   value,
@@ -195,17 +204,17 @@ export default async function CampaignDetailsPage({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <StatCard
             title="Total Discount Issued"
-            value={`₹${totalDiscountIssued.toLocaleString()}`}
+            value={formatINR(totalDiscountIssued)}
             subtext="Across all coupons"
           />
           <StatCard
             title="Estimated Revenue Impact"
-            value={`₹${claimedDiscountIssued.toLocaleString()}`}
+            value={formatINR(claimedDiscountIssued)}
             subtext="Claimed coupons only"
           />
           <StatCard
             title="Avg Discount per Coupon"
-            value={`₹${avgDiscount}`}
+            value={formatINR(avgDiscount)}
             subtext={`Across ${allCoupons.length} coupons`}
           />
         </div>
@@ -221,7 +230,7 @@ export default async function CampaignDetailsPage({
             title="Minimum Order Value"
             value={
               minimumOrderValue > 0
-                ? `₹${minimumOrderValue.toLocaleString()}`
+                ? formatINR(minimumOrderValue)
                 : "— Not set"
             }
             subtext={
@@ -234,12 +243,12 @@ export default async function CampaignDetailsPage({
             title="Estimated Revenue Impact (MOV)"
             value={
               minimumOrderValue > 0
-                ? `₹${estimatedRevenueByMOV.toLocaleString()}`
-                : "₹0"
+                ? formatINR(estimatedRevenueByMOV)
+                : formatINR(0)
             }
             subtext={
               minimumOrderValue > 0
-                ? `${claimedCount} claimed × ₹${minimumOrderValue}`
+                ? `${claimedCount} claimed × ${formatINR(minimumOrderValue)}`
                 : "Set minimum order value to calculate"
             }
           />
@@ -322,7 +331,7 @@ export default async function CampaignDetailsPage({
                       </td>
                       <td className="px-6 py-4 font-semibold text-emerald-700">
                         {u.discount_value != null
-                          ? `₹${u.discount_value}`
+                          ? formatINR(u.discount_value)
                           : "—"}
                       </td>
                       <td className="px-6 py-4">

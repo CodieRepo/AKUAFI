@@ -22,6 +22,15 @@ interface RedemptionTableProps {
   loading?: boolean;
 }
 
+function formatINR(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export default function RedemptionTable({ redemptions, loading }: RedemptionTableProps) {
   if (loading && redemptions.length === 0) {
     return (
@@ -100,7 +109,7 @@ export default function RedemptionTable({ redemptions, loading }: RedemptionTabl
                         {r.coupon_code && r.coupon_code !== '-' ? (
                             <span className="font-mono font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded border border-green-100 dark:border-green-900/30 text-sm">
                                 {r.coupon_code}
-                                {r.discount_value ? <span className="ml-1.5 font-normal text-xs text-green-600 dark:text-green-500">₹{r.discount_value}</span> : ''}
+                                {r.discount_value ? <span className="ml-1.5 font-normal text-xs text-green-600 dark:text-green-500">{formatINR(r.discount_value)}</span> : ''}
                             </span>
                         ) : (
                             <span className="text-gray-400 text-sm">—</span>

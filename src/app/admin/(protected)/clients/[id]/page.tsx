@@ -30,6 +30,15 @@ type Metrics = {
   conversion_rate: number;
 };
 
+function formatINR(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function StatCard({
   label,
   value,
@@ -196,7 +205,7 @@ export default async function ClientDetailPage({
             Total Estimated Revenue
           </p>
           <p className="mt-1 text-3xl font-bold text-emerald-800">
-            â‚¹{totalEstimatedRevenue.toLocaleString()}
+            {formatINR(totalEstimatedRevenue)}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
             Aggregated across all active campaigns.
@@ -275,7 +284,7 @@ export default async function ClientDetailPage({
                       {c.estimated_revenue > 0 ? (
                         <div className="flex flex-col gap-1">
                           <span className="font-semibold text-emerald-700">
-                            â‚¹{c.estimated_revenue.toLocaleString()}
+                            {formatINR(c.estimated_revenue)}
                           </span>
                           <span className="inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
                             MOV set

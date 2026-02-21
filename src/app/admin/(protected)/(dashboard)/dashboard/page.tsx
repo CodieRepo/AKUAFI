@@ -20,6 +20,15 @@ function claimRateColor(rate: number) {
   return "#ef4444"; // red
 }
 
+function formatINR(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function StatCard({
   label,
   value,
@@ -549,11 +558,7 @@ export default function AdminDashboard() {
           />
           <StatCard
             label="Platform Revenue Impact"
-            value={
-              platformRevenue > 0
-                ? `₹${platformRevenue.toLocaleString()}`
-                : "₹0"
-            }
+            value={formatINR(Math.max(platformRevenue, 0))}
             hint="Aggregated across all active campaigns."
           />
         </div>
