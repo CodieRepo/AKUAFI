@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/Button";
 import { Loader2, QrCode, CheckCircle, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+interface Campaign {
+  id: string;
+  name: string;
+}
+
 export default function QRGeneratorPage() {
-  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [progress, setProgress] = useState<{
@@ -105,10 +110,16 @@ export default function QRGeneratorPage() {
         status: "All batches completed successfully!",
       });
       // alert("Generation Complete! Please check your downloads folder."); // Using UI feedback instead
-    } catch (error: any) {
-      alert(`Error: ${error.message}`);
+    } catch (error: { message?: string } | Error | string | unknown) {
+      const msg =
+        error instanceof Error
+          ? error.message
+          : (typeof error === "object" && error !== null && "message" in error
+              ? (error as { message: string }).message
+              : null) || "Unknown error";
+      alert(`Error: ${msg}`);
       setProgress((prev) =>
-        prev ? { ...prev, status: `Failed: ${error.message}` } : null,
+        prev ? { ...prev, status: `Failed: ${msg}` } : null,
       );
     } finally {
       setLoading(false);
