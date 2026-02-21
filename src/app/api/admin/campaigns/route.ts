@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     // Optimized Query: Select new fields + counters
     const { data, error } = await getSupabaseAdmin()
       .from('campaigns')
-      .select('id, name, status, total_scans, redeemed_count, created_at, location, campaign_date, client_id')
+      .select('id, name, status, total_scans, redeemed_count, created_at, location, campaign_date, client_id, minimum_order_value')
       .in('status', ['draft', 'active', 'paused', 'completed'])
       .order('created_at', { ascending: false });
 
@@ -45,13 +45,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Cannot create campaign entirely in the past' }, { status: 400 });
     }
 
-    // STRICT SCHEMA INSERT (Updated)
+    // STRICT SCHEMA INSERT — minimum_order_value merged in (optional, defaults to 0)
     const payload = {
         name: body.name,
         description: body.description,
         client_id: body.client_id,
-        location: body.location.trim(), // New Field
-        campaign_date: body.campaign_date || null, // New Field (Optional)
+        location: body.location.trim(),
+        campaign_date: body.campaign_date || null,
         status: 'draft',
         start_date: body.start_date,
         end_date: body.end_date,
@@ -61,6 +61,8 @@ export async function POST(request: Request) {
         coupon_type: body.coupon_type,
         coupon_min_value: body.coupon_min_value,
         coupon_max_value: body.coupon_max_value,
+        // MOV — set by admin, optional (defaults to 0)
+        minimum_order_value: Number(body.minimum_order_value) || 0,
         created_at: new Date().toISOString()
     };
 

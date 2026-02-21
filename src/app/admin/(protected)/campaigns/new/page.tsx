@@ -32,6 +32,7 @@ export default function NewCampaignPage() {
     coupon_prefix: '',
     coupon_length: 6,
     discount_type: 'fixed',
+    minimum_order_value: '', // Admin-set MOV for revenue analytics
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +114,8 @@ export default function NewCampaignPage() {
             coupon_length: Number(formData.coupon_length),
             coupon_type: formData.coupon_type,
             discount_type: formData.discount_type,
+            // Admin-controlled MOV — optional, defaults to 0
+            minimum_order_value: Number(formData.minimum_order_value) || 0,
         })
       });
 
@@ -357,6 +360,36 @@ export default function NewCampaignPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
                     * Defines the range or fixed value of the coupon reward.
                 </p>
+
+                {/* Minimum Order Value — admin sets for revenue analytics */}
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 mb-4">
+                        <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revenue Analytics</h3>
+                        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                    </div>
+                    <div className="max-w-xs">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Minimum Order Value (₹)
+                            <span className="ml-2 text-[10px] font-normal text-gray-400">(optional)</span>
+                        </label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                            <input
+                                name="minimum_order_value"
+                                type="number"
+                                min="0"
+                                step="1"
+                                className="w-full h-11 pl-8 pr-4 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-950 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                placeholder="e.g. 299"
+                                value={formData.minimum_order_value}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                            Used to calculate estimated revenue: claimed coupons × this value.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div className="p-8 flex items-center justify-end gap-4 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 rounded-b-xl">

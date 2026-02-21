@@ -40,12 +40,27 @@ export default async function ClientDetailPage({
 
   if (!clientData) return notFound();
 
-  // 2. Client-level stats from view
-  const { data: dashRow } = await supabase
-    .from('client_dashboard_v1')
-    .select('*')
-    .eq('client_id', clientId)
-    .maybeSingle();
+  // 2. Step A — parallel fetch: dashboard summary + campaign metrics + campaign MOV
+  const [{ data: dashRow }, { data: campaigns }, { data: campaignsWithMOV }] =
+    await Promise.all([
+      supabase
+        .from('client_dashboard_v1')
+        .select('*')
+        .eq('client_id', clientId)
+        .maybeSingle(),
+
+      supabase
+        .from('campaign_metrics_v1')
+        .select('campaign_id, campaign_name, total_qr, total_claims, unique_users, conversion_rate')
+        .eq('client_id', clientId)
+        .order('total_claims', { ascending: false }),
+
+      // MOV from base campaigns table (read-only, no write)
+      supabase
+        .from('campaigns')
+        .select('id, minimum_order_value')
+        .eq('client_id', clientId),
+    ]);
 
   const stats = {
     total_campaigns: Number(dashRow?.total_campaigns || 0),
@@ -55,23 +70,47 @@ export default async function ClientDetailPage({
     conversion_rate: Number(dashRow?.conversion_rate || 0),
   };
 
-  // 3. Campaign list for this client from campaign_metrics_v1
-  const { data: campaigns, error: campErr } = await supabase
-    .from('campaign_metrics_v1')
-    .select('campaign_id, campaign_name, total_qr, total_claims, unique_users, conversion_rate')
-    .eq('client_id', clientId)
-    .order('total_claims', { ascending: false });
+  // Build MOV map: campaign_id → minimum_order_value
+  const movMap = new Map<string, number>(
+    (campaignsWithMOV || []).map((c: any) => [c.id, Number(c.minimum_order_value || 0)])
+  );
+  const campaignIds = (campaignsWithMOV || []).map((c: any) => c.id as string);
 
-  if (campErr) console.error('[ClientDetail] campaigns error:', campErr);
+  // 3. Step B — fetch claimed coupons per campaign (only run if we have campaign IDs)
+  const claimedCountMap = new Map<string, number>();
+  if (campaignIds.length > 0) {
+    const { data: claimedCoupons } = await supabase
+      .from('coupons')
+      .select('campaign_id')
+      .eq('status', 'claimed')
+      .in('campaign_id', campaignIds);
 
-  const campaignList: Metrics[] = (campaigns || []).map(c => ({
-    campaign_id:     c.campaign_id,
-    campaign_name:   c.campaign_name,
-    total_qr:        Number(c.total_qr        || 0),
-    total_claims:    Number(c.total_claims    || 0),
-    unique_users:    Number(c.unique_users    || 0),
-    conversion_rate: Number(c.conversion_rate || 0),
-  }));
+    for (const coupon of (claimedCoupons || []) as any[]) {
+      const prev = claimedCountMap.get(coupon.campaign_id) || 0;
+      claimedCountMap.set(coupon.campaign_id, prev + 1);
+    }
+  }
+
+  // Total Estimated Revenue = SUM(claimedCount × MOV) across all campaigns — read-only
+  let totalEstimatedRevenue = 0;
+  for (const [campId, mov] of movMap.entries()) {
+    const claimed = claimedCountMap.get(campId) || 0;
+    totalEstimatedRevenue += claimed * mov;
+  }
+
+  const campaignList: (Metrics & { estimated_revenue: number })[] = (campaigns || []).map((c: any) => {
+    const claimed = claimedCountMap.get(c.campaign_id) || 0;
+    const mov = movMap.get(c.campaign_id) || 0;
+    return {
+      campaign_id:       c.campaign_id,
+      campaign_name:     c.campaign_name,
+      total_qr:          Number(c.total_qr        || 0),
+      total_claims:      Number(c.total_claims    || 0),
+      unique_users:      Number(c.unique_users    || 0),
+      conversion_rate:   Number(c.conversion_rate || 0),
+      estimated_revenue: claimed * mov,
+    };
+  });
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
@@ -87,13 +126,21 @@ export default async function ClientDetailPage({
         <p className="text-sm text-gray-500 mt-1">Client analytics overview</p>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Stat Cards — 6 card grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Campaigns"    value={stats.total_campaigns} />
         <StatCard label="QR Generated" value={stats.total_qr} />
         <StatCard label="Claims"       value={stats.total_claims} />
         <StatCard label="Unique Users" value={stats.unique_users} />
         <StatCard label="Conversion"   value={`${stats.conversion_rate.toFixed(1)}%`} />
+        {/* Total Estimated Revenue — claimed coupons × admin-set MOV, read-only */}
+        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 shadow-sm">
+          <p className="text-sm font-medium text-emerald-700">Total Estimated Revenue</p>
+          <p className="mt-1 text-3xl font-bold text-emerald-800">
+            ₹{totalEstimatedRevenue.toLocaleString()}
+          </p>
+          <p className="text-xs text-emerald-600 mt-1">Claimed × min order value</p>
+        </div>
       </div>
 
       {/* Campaigns Table */}
@@ -111,13 +158,14 @@ export default async function ClientDetailPage({
                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Claims</th>
                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Unique Users</th>
                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Conversion</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Est. Revenue</th>
                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {campaignList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-6 py-10 text-center text-gray-400">
                     No campaigns found for this client.
                   </td>
                 </tr>
@@ -129,6 +177,15 @@ export default async function ClientDetailPage({
                     <td className="px-6 py-4 text-gray-600">{c.total_claims.toLocaleString()}</td>
                     <td className="px-6 py-4 text-gray-600">{c.unique_users.toLocaleString()}</td>
                     <td className="px-6 py-4 text-gray-600">{c.conversion_rate.toFixed(1)}%</td>
+                    <td className="px-6 py-4">
+                      {c.estimated_revenue > 0 ? (
+                        <span className="font-semibold text-emerald-700">
+                          ₹{c.estimated_revenue.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <Link
                         href={`/admin/campaign/${c.campaign_id}`}

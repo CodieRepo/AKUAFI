@@ -23,15 +23,6 @@ export default async function ClientSettingsPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Fetch this client's campaigns fresh from DB every render (force-dynamic ensures this)
-  const { data: campaigns } = client?.id
-    ? await supabase
-        .from("campaigns")
-        .select("id, name, minimum_order_value")
-        .eq("client_id", client.id)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
   return (
     <div className="max-w-[1600px] mx-auto p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
       <div>
@@ -39,7 +30,7 @@ export default async function ClientSettingsPage() {
         <p className="text-gray-500 dark:text-gray-400 mt-2">Manage your account preferences and security.</p>
       </div>
 
-      <ClientSettingsForm user={user} client={client} campaigns={campaigns || []} />
+      <ClientSettingsForm user={user} client={client} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+﻿import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
 // Force dynamic rendering so minimum_order_value is always fresh from DB
@@ -348,6 +348,7 @@ type CampaignMetricRow = {
   total_claims: number;
   unique_users: number;
   status?: string;
+  minimum_order_value: number;
 };
 type UniqueUserRow = {
   user_name: string | null;
@@ -439,12 +440,14 @@ export default async function ClientDashboard() {
 
   // 4. Campaign rows
   const campaigns: CampaignMetricRow[] = (campaignMetrics || []).map((r: any) => ({
-    campaign_id:   r.campaign_id || r.id,
-    campaign_name: r.campaign_name || r.name || "—",
-    total_qr:      Number(r.total_qr     || 0),
-    total_claims:  Number(r.total_claims || 0),
-    unique_users:  Number(r.unique_users || 0),
-    status:        r.status,
+    campaign_id:         r.campaign_id || r.id,
+    campaign_name:       r.campaign_name || r.name || "—",
+    total_qr:            Number(r.total_qr     || 0),
+    total_claims:        Number(r.total_claims || 0),
+    unique_users:        Number(r.unique_users || 0),
+    status:              r.status,
+    // Pull MOV from campaigns table data (already fetched in campaignMap)
+    minimum_order_value: Number((campaignMap.get(r.campaign_id || r.id) as any)?.minimum_order_value || 0),
   }));
 
   const bestCampaign = [...campaigns].sort((a, b) => b.total_claims - a.total_claims)[0];
@@ -625,7 +628,7 @@ export default async function ClientDashboard() {
             ) : (
               <>
                 <p className="text-2xl font-bold mt-1 text-gray-300 dark:text-slate-600">₹0</p>
-                <p className="text-[10px] text-amber-500 mt-0.5">Set minimum order value to unlock revenue estimate</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">Admin must set minimum order value in campaign settings</p>
               </>
             )}
           </div>
@@ -651,6 +654,8 @@ export default async function ClientDashboard() {
                       <th className="px-6 py-3 text-right">Claims</th>
                       <th className="px-6 py-3 text-right">Users</th>
                       <th className="px-6 py-3 text-right" title="Claims / QR Generated">Conversion</th>
+                    
+                        <th className="px-6 py-3 text-right">Est. Revenue</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
@@ -674,6 +679,15 @@ export default async function ClientDashboard() {
                                 <div className={`h-full rounded-full ${barColor(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                               </div>
                             </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {c.minimum_order_value > 0 ? (
+                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                ₹{(c.total_claims * c.minimum_order_value).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400 dark:text-slate-500">Order value not configured</span>
+                            )}
                           </td>
                         </tr>
                       );
