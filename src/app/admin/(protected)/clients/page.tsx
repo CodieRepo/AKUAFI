@@ -1,10 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { Users, Plus, ChevronRight } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
-import CreateClientModal from '@/components/admin/clients/CreateClientModal';
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Users, Plus, ChevronRight } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import CreateClientModal from "@/components/admin/clients/CreateClientModal";
+
+interface ClientDashboard {
+  client_id: string;
+  total_campaigns: number;
+  total_qr: number;
+  total_claims: number;
+  unique_users: number;
+}
 
 type ClientRow = {
   id: string;
@@ -17,9 +25,9 @@ type ClientRow = {
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientRow[]>([]);
-  const [isLoading, setIsLoading]   = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const fetchClients = useCallback(async () => {
     try {
@@ -27,49 +35,57 @@ export default function ClientsPage() {
       const supabase = createClient();
 
       // Fetch clients list and analytics view in parallel
-      const [{ data: clientsData, error: clientsErr }, { data: viewData, error: viewErr }] =
-        await Promise.all([
-          supabase.from('clients').select('id, client_name'),
-          supabase.from('client_dashboard_v1').select('*'),
-        ]);
+      const [
+        { data: clientsData, error: clientsErr },
+        { data: viewData, error: viewErr },
+      ] = await Promise.all([
+        supabase.from("clients").select("id, client_name"),
+        supabase.from("client_dashboard_v1").select("*"),
+      ]);
 
       if (clientsErr) throw clientsErr;
-      if (viewErr)    throw viewErr;
+      if (viewErr) throw viewErr;
 
       // Build analytics lookup by client_id
-      const analyticsMap: Record<string, any> = {};
-      (viewData || []).forEach(row => { analyticsMap[row.client_id] = row; });
+      const analyticsMap: Record<string, ClientDashboard> = {};
+      (viewData || []).forEach((row) => {
+        analyticsMap[row.client_id] = row;
+      });
 
       // Merge
-      const merged: ClientRow[] = (clientsData || []).map(c => {
+      const merged: ClientRow[] = (clientsData || []).map((c) => {
         const a = analyticsMap[c.id] || {};
         return {
-          id:              c.id,
-          client_name:     c.client_name,
+          id: c.id,
+          client_name: c.client_name,
           total_campaigns: Number(a.total_campaigns || 0),
-          total_qr:        Number(a.total_qr        || 0),
-          total_claims:    Number(a.total_claims    || 0),
-          unique_users:    Number(a.unique_users    || 0),
+          total_qr: Number(a.total_qr || 0),
+          total_claims: Number(a.total_claims || 0),
+          unique_users: Number(a.unique_users || 0),
         };
       });
 
       setClients(merged);
-    } catch (err: any) {
-      setError('Failed to load clients');
-      console.error('[ClientsPage]', err);
+    } catch (err: Error | string | unknown) {
+      setError("Failed to load clients");
+      console.error("[ClientsPage]", err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchClients(); }, [fetchClients]);
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header — Create Client button preserved */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clients</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Clients
+          </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Manage client accounts and campaign analytics
           </p>
@@ -85,14 +101,37 @@ export default function ClientsPage() {
 
       {/* Analytics Table */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-
         {/* Totals summary bar */}
         {!isLoading && clients.length > 0 && (
           <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 flex gap-8 text-xs text-gray-500 dark:text-gray-400">
-            <span><span className="font-semibold text-gray-700 dark:text-gray-200">{clients.length}</span> clients</span>
-            <span><span className="font-semibold text-gray-700 dark:text-gray-200">{clients.reduce((s,c)=>s+c.total_campaigns,0).toLocaleString()}</span> campaigns</span>
-            <span><span className="font-semibold text-gray-700 dark:text-gray-200">{clients.reduce((s,c)=>s+c.total_qr,0).toLocaleString()}</span> QR generated</span>
-            <span><span className="font-semibold text-gray-700 dark:text-gray-200">{clients.reduce((s,c)=>s+c.total_claims,0).toLocaleString()}</span> claims</span>
+            <span>
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {clients.length}
+              </span>{" "}
+              clients
+            </span>
+            <span>
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {clients
+                  .reduce((s, c) => s + c.total_campaigns, 0)
+                  .toLocaleString()}
+              </span>{" "}
+              campaigns
+            </span>
+            <span>
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {clients.reduce((s, c) => s + c.total_qr, 0).toLocaleString()}
+              </span>{" "}
+              QR generated
+            </span>
+            <span>
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {clients
+                  .reduce((s, c) => s + c.total_claims, 0)
+                  .toLocaleString()}
+              </span>{" "}
+              claims
+            </span>
           </div>
         )}
 
@@ -100,12 +139,24 @@ export default function ClientsPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Client Name</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Campaigns</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">QR Generated</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Claims</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Unique Users</th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Action</th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                  Client Name
+                </th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                  Campaigns
+                </th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                  QR Generated
+                </th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                  Claims
+                </th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                  Unique Users
+                </th>
+                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -121,7 +172,12 @@ export default function ClientsPage() {
                 ))
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-red-500">{error}</td>
+                  <td
+                    colSpan={6}
+                    className="px-6 py-8 text-center text-red-500"
+                  >
+                    {error}
+                  </td>
                 </tr>
               ) : clients.length === 0 ? (
                 <tr>
@@ -133,7 +189,7 @@ export default function ClientsPage() {
                   </td>
                 </tr>
               ) : (
-                clients.map(client => (
+                clients.map((client) => (
                   <tr
                     key={client.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
