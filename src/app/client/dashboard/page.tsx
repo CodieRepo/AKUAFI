@@ -632,7 +632,7 @@ export default async function ClientDashboard() {
                 <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
                   ₹{estimatedRevenueByMOV.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Estimated from total coupons generated × minimum order value</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Revenue is estimated using the number of coupons marked as claimed by the client × respective campaign minimum order value.</p>
               </>
             ) : (
               <>
