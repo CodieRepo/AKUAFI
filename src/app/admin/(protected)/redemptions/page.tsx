@@ -44,17 +44,30 @@ export default function RedemptionsPage() {
           "[Redemptions] fetched from campaign_user_details_v1:",
           data?.length,
         );
-        const mapped = (data || []).map((row: any, idx: number) => ({
-          id: String(idx), // no raw ID needed
-          qr_token: "", // not shown in UI
-          campaign_name: row.campaign_name || "Unknown Campaign",
-          phone: row.phone || "N/A",
-          coupon_code: row.coupon_code || "-",
-          coupon_status: row.status || "claimed",
-          discount_value: row.discount_value,
-          redeemed_at: row.redeemed_at,
-          user_name: row.user_name,
-        }));
+        const mapped = (data || []).map(
+          (
+            row: {
+              campaign_name?: string;
+              phone?: string;
+              coupon_code?: string;
+              status?: string;
+              discount_value?: number | null;
+              redeemed_at?: string | null;
+              user_name?: string;
+            },
+            idx: number,
+          ) => ({
+            id: String(idx), // no raw ID needed
+            qr_token: "", // not shown in UI
+            campaign_name: row.campaign_name || "Unknown Campaign",
+            phone: row.phone || "N/A",
+            coupon_code: row.coupon_code || "-",
+            coupon_status: row.status || "claimed",
+            discount_value: row.discount_value ?? undefined,
+            redeemed_at: row.redeemed_at || "",
+            user_name: row.user_name,
+          }),
+        );
         setRedemptions(mapped);
       }
     } catch (err) {
