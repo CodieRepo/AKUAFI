@@ -347,6 +347,7 @@ type CampaignMetricRow = {
   total_qr: number;
   total_claims: number;
   unique_users: number;
+  total_scans: number;
   status?: string;
   minimum_order_value: number;
 };
@@ -381,7 +382,7 @@ export default async function ClientDashboard() {
   // Step 1: Get client record + campaign IDs first (required for subsequent view queries)
   const { data: campaignsData } = await supabase
     .from("campaigns")
-    .select("id, name, location, campaign_date, minimum_order_value")
+    .select("id, name, location, campaign_date, minimum_order_value, total_scans")
     .eq("client_id", clientId);
 
   const campaignIds = (campaignsData || []).map((c: any) => c.id);
@@ -436,6 +437,8 @@ export default async function ClientDashboard() {
   const totalQR        = Number(metrics?.total_qr        || 0);
   const totalClaims    = Number(metrics?.total_claims    || 0);
   const totalUsers     = Number(metrics?.unique_users    || 0);
+  const totalBottlesDistributed = Number(metrics?.total_bottles_distributed || totalQR);
+  const totalCouponsGenerated = Number(metrics?.total_coupons_generated || totalQR);
   const conversionPct  = totalQR > 0 ? ((totalClaims / totalQR) * 100).toFixed(1) : "0.0";
 
   // 4. Campaign rows
@@ -445,6 +448,7 @@ export default async function ClientDashboard() {
     total_qr:            Number(r.total_qr     || 0),
     total_claims:        Number(r.total_claims || 0),
     unique_users:        Number(r.unique_users || 0),
+    total_scans:         Number((campaignMap.get(r.campaign_id || r.id) as any)?.total_scans || 0),
     status:              r.status,
     // Pull MOV from campaigns table data (already fetched in campaignMap)
     minimum_order_value: Number((campaignMap.get(r.campaign_id || r.id) as any)?.minimum_order_value || 0),
@@ -452,6 +456,8 @@ export default async function ClientDashboard() {
 
   const bestCampaign = [...campaigns].sort((a, b) => b.total_claims - a.total_claims)[0];
   const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
+  const totalScans = campaigns.reduce((sum, c) => sum + Number(c.total_scans || 0), 0);
+  const topPerformingCampaignByScans = [...campaigns].sort((a, b) => b.total_scans - a.total_scans)[0];
 
   // 5. Unique users — aggregate claim count per phone
   const userMap = new Map<string, UniqueUserRow>();
@@ -501,16 +507,19 @@ export default async function ClientDashboard() {
   const avgDiscount         = (couponsAll as any[]).length > 0 ? Math.round(totalDiscountIssued / (couponsAll as any[]).length) : 0;
 
   // 9. Analytics metrics (display-only, no DB change)
-  // Impressions = total coupons generated (all statuses)
-  const impressions = (couponsAll as any[]).length;
-  // Estimated Reach = total QR × 2.3 (industry multiplier for physical QR exposure)
-  const estimatedReach = Math.round(totalQR * 2.3);
-  // Estimated Revenue by MOV = sum of (campaign.minimum_order_value) for each claimed coupon
-  const estimatedRevenueByMOV = (couponsAll as any[]).reduce((sum: number, c: any) => {
-    if (c.status !== 'claimed') return sum;
-    const camp = campaignMap.get(c.campaign_id) as any;
-    return sum + Number(camp?.minimum_order_value || 0);
-  }, 0);
+  // Impressions = total QR generated across all campaigns
+  const impressions = totalQR;
+  // Estimated Reach = total_bottles_distributed × 2.3
+  const estimatedReach = Math.round(totalBottlesDistributed * 2.3);
+  // Estimated Revenue = total_coupons_generated × min_order_value
+  // Applied campaign-wise to preserve per-campaign MOV: Σ(campaign_total_qr × campaign_minimum_order_value)
+  const defaultMinOrderValue = Number((campaignsData || []).find((c: any) => Number(c.minimum_order_value || 0) > 0)?.minimum_order_value || 0);
+  const estimatedRevenueByMOV = campaigns.some((c) => c.minimum_order_value > 0)
+    ? campaigns.reduce((sum, c) => {
+        if (c.minimum_order_value <= 0) return sum;
+        return sum + (c.total_qr * c.minimum_order_value);
+      }, 0)
+    : (totalCouponsGenerated * defaultMinOrderValue);
   // Whether any campaign has MOV configured (drives helper text display)
   const hasMOVConfigured = (campaignsData || []).some((c: any) => Number(c.minimum_order_value || 0) > 0);
 
@@ -623,7 +632,7 @@ export default async function ClientDashboard() {
                 <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
                   ₹{estimatedRevenueByMOV.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Estimated minimum revenue from redeemed offers</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Estimated from total coupons generated × minimum order value</p>
               </>
             ) : (
               <>
@@ -633,6 +642,41 @@ export default async function ClientDashboard() {
             )}
           </div>
         </div>
+
+        {/* ── My Earnings */}
+        <section className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-emerald-500" />
+            <h2 className="font-bold text-gray-900 dark:text-white">My Earnings</h2>
+          </div>
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Total Bottles Distributed</p>
+              <p className="text-2xl font-bold mt-1">{fmt(totalBottlesDistributed)}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Total Scans</p>
+              <p className="text-2xl font-bold mt-1">{fmt(totalScans)}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Revenue Generated</p>
+              <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">₹{estimatedRevenueByMOV.toLocaleString()}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Top Performing Campaign</p>
+              <p className="text-sm font-semibold mt-2 truncate text-gray-900 dark:text-white">
+                {topPerformingCampaignByScans?.campaign_name || "—"}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                {fmt(topPerformingCampaignByScans?.total_scans || 0)} scans
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Impressions</p>
+              <p className="text-2xl font-bold mt-1">{fmt(impressions)}</p>
+            </div>
+          </div>
+        </section>
 
         {/* ── 2. Main grid: Campaign table + right column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -651,6 +695,7 @@ export default async function ClientDashboard() {
                     <tr>
                       <th className="px-6 py-3">Campaign</th>
                       <th className="px-6 py-3 text-right">QR</th>
+                      <th className="px-6 py-3 text-right">Impressions</th>
                       <th className="px-6 py-3 text-right">Claims</th>
                       <th className="px-6 py-3 text-right">Users</th>
                       <th className="px-6 py-3 text-right" title="Claims / QR Generated">Conversion</th>
@@ -667,6 +712,7 @@ export default async function ClientDashboard() {
                           <td className="px-6 py-4">
                             <p className="font-medium text-gray-900 dark:text-white">{c.campaign_name}</p>
                           </td>
+                          <td className="px-6 py-4 text-right font-mono">{fmt(c.total_qr)}</td>
                           <td className="px-6 py-4 text-right font-mono">{fmt(c.total_qr)}</td>
                           <td className="px-6 py-4 text-right font-mono">{fmt(c.total_claims)}</td>
                           <td className="px-6 py-4 text-right font-mono">{fmt(c.unique_users)}</td>

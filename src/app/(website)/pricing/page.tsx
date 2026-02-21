@@ -185,7 +185,7 @@ export default function Pricing() {
               Why Our Pricing Is Custom
             </h2>
             <p className="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">
-              Cookie-cutter plans don't work for physical advertising. Your
+              Cookie-cutter plans don&apos;t work for physical advertising. Your
               costs are optimized based on these key factors:
             </p>
           </div>
