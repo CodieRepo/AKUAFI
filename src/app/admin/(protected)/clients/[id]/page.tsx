@@ -30,13 +30,22 @@ type Metrics = {
   conversion_rate: number;
 };
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  subtext,
+}: {
+  label: string;
+  value: string | number;
+  subtext?: string;
+}) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
       <p className="text-sm font-medium text-gray-500">{label}</p>
       <p className="mt-1 text-3xl font-bold text-gray-900">
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
+      {subtext ? <p className="mt-2 text-[10px] text-gray-400">{subtext}</p> : null}
     </div>
   );
 }
@@ -156,13 +165,30 @@ export default async function ClientDetailPage({
 
       {/* Stat Cards â€” 6 card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Campaigns" value={stats.total_campaigns} />
-        <StatCard label="QR Generated" value={stats.total_qr} />
-        <StatCard label="Claims" value={stats.total_claims} />
-        <StatCard label="Unique Users" value={stats.unique_users} />
+        <StatCard
+          label="Campaigns"
+          value={stats.total_campaigns}
+          subtext="Total campaigns for this client"
+        />
+        <StatCard
+          label="QR Generated"
+          value={stats.total_qr}
+          subtext="Total campaign impressions"
+        />
+        <StatCard
+          label="Claims"
+          value={stats.total_claims}
+          subtext="Successful coupon claims"
+        />
+        <StatCard
+          label="Unique Users"
+          value={stats.unique_users}
+          subtext="Distinct claiming users"
+        />
         <StatCard
           label="Conversion"
           value={`${stats.conversion_rate.toFixed(1)}%`}
+          subtext="Claims as percentage of QR generated"
         />
         {/* Total Estimated Revenue — sum of per-campaign estimated revenue values */}
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 shadow-sm">
@@ -203,7 +229,10 @@ export default async function ClientDetailPage({
                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
                   Conversion
                 </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                <th
+                  className="px-6 py-3 font-medium text-xs uppercase tracking-wider"
+                  title="Per-campaign estimated revenue"
+                >
                   Est. Revenue
                 </th>
                 <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
@@ -244,11 +273,18 @@ export default async function ClientDetailPage({
                     </td>
                     <td className="px-6 py-4">
                       {c.estimated_revenue > 0 ? (
-                        <span className="font-semibold text-emerald-700">
-                          â‚¹{c.estimated_revenue.toLocaleString()}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-semibold text-emerald-700">
+                            â‚¹{c.estimated_revenue.toLocaleString()}
+                          </span>
+                          <span className="inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
+                            MOV set
+                          </span>
+                        </div>
                       ) : (
-                        <span className="text-xs text-gray-400">â€”</span>
+                        <span className="inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
+                          Config missing
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4">

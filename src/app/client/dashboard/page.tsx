@@ -20,14 +20,6 @@ import GeneratedCouponsList from "@/components/dashboard/coupons/GeneratedCoupon
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmt(n: number) { return n.toLocaleString("en-IN"); }
-function fmtDate(s: string) {
-  if (!s) return "-";
-  return new Date(s).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
 function getLast7Days() {
   const out: string[] = [];
   for (let i = 6; i >= 0; i--) {
@@ -438,7 +430,6 @@ export default async function ClientDashboard() {
   const totalClaims    = Number(metrics?.total_claims    || 0);
   const totalUsers     = Number(metrics?.unique_users    || 0);
   const totalBottlesDistributed = Number(metrics?.total_bottles_distributed || totalQR);
-  const totalCouponsGenerated = Number(metrics?.total_coupons_generated || totalQR);
   const conversionPct  = totalQR > 0 ? ((totalClaims / totalQR) * 100).toFixed(1) : "0.0";
 
   // 4. Campaign rows
@@ -455,7 +446,6 @@ export default async function ClientDashboard() {
   }));
 
   const bestCampaign = [...campaigns].sort((a, b) => b.total_claims - a.total_claims)[0];
-  const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
   const totalScans = campaigns.reduce((sum, c) => sum + Number(c.total_scans || 0), 0);
   const topPerformingCampaignByScans = [...campaigns].sort((a, b) => b.total_scans - a.total_scans)[0];
   const getCampaignEstimatedRevenue = (campaign: CampaignMetricRow) =>
@@ -563,16 +553,28 @@ export default async function ClientDashboard() {
         {/* ── 1. Top Metric Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
-            { label: "Campaigns",  value: fmt(totalCampaigns), icon: <Zap className="h-4 w-4" />,          color: "text-violet-500" },
-            { label: "QR Generated", value: fmt(totalQR),     icon: <QrCode className="h-4 w-4" />,        color: "text-blue-500" },
-            { label: "Total Claims", value: fmt(totalClaims), icon: <CheckCircle2 className="h-4 w-4" />,  color: "text-emerald-500" },
-            { label: "Unique Users", value: fmt(totalUsers),  icon: <Users className="h-4 w-4" />,         color: "text-amber-500" },
-            { label: "Conversion",  value: `${conversionPct}%`, icon: <TrendingUp className="h-4 w-4" />, color: "text-pink-500" },
-          ].map(({ label, value, icon, color }) => (
+            { label: "Campaigns", value: fmt(totalCampaigns), icon: <Zap className="h-4 w-4" />, color: "text-violet-500", hint: "Total campaigns created for this client." },
+            { label: "QR Generated", value: fmt(totalQR), icon: <QrCode className="h-4 w-4" />, color: "text-blue-500", hint: "Total QR generated across campaigns." },
+            { label: "Total Claims", value: fmt(totalClaims), icon: <CheckCircle2 className="h-4 w-4" />, color: "text-emerald-500", hint: "Total successful coupon claims." },
+            { label: "Unique Users", value: fmt(totalUsers), icon: <Users className="h-4 w-4" />, color: "text-amber-500", hint: "Distinct users who claimed at least once." },
+            { label: "Conversion", value: `${conversionPct}%`, icon: <TrendingUp className="h-4 w-4" />, color: "text-pink-500", hint: "Claims divided by impressions." },
+          ].map(({ label, value, icon, color, hint }) => (
             <div key={label} className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
-              <div className={`${color} mb-2`}>{icon}</div>
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">{label}</p>
-              <p className="text-2xl font-bold mt-1">{value}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p
+                    className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider"
+                    title={hint}
+                  >
+                    {label}
+                  </p>
+                  <p className="text-2xl font-bold mt-1">{value}</p>
+                </div>
+                <div className={`p-2 rounded-lg bg-gray-50 dark:bg-slate-800 ${color}`}>
+                  {icon}
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">{hint}</p>
             </div>
           ))}
         </div>
@@ -604,7 +606,10 @@ export default async function ClientDashboard() {
         {/* ── Analytics Metrics Row: Impressions · Reach · Revenue */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Impressions */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+          <div
+            className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+            title="Total impressions across all campaigns"
+          >
             <div className="text-violet-500 mb-2">👁️</div>
             <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Impressions</p>
             <p className="text-2xl font-bold mt-1">{fmt(impressions)}</p>
@@ -612,7 +617,10 @@ export default async function ClientDashboard() {
           </div>
 
           {/* Estimated Reach */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+          <div
+            className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+            title="Projected reach based on current distribution"
+          >
             <div className="text-blue-500 mb-2">📡</div>
             <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Reach</p>
             <p className="text-2xl font-bold mt-1">{fmt(estimatedReach)}</p>
@@ -620,7 +628,10 @@ export default async function ClientDashboard() {
           </div>
 
           {/* Estimated Revenue (MOV-based) */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
+          <div
+            className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+            title="Revenue estimate aggregated from all campaign rows"
+          >
             <div className="text-emerald-500 mb-2">💵</div>
             <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">Estimated Revenue</p>
             <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
@@ -664,6 +675,14 @@ export default async function ClientDashboard() {
             </div>
           </div>
         </section>
+
+        <div className="flex items-center gap-3 pt-1">
+          <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800" />
+          <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-slate-500">
+            Campaign Analysis
+          </p>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800" />
+        </div>
 
         {/* ── 2. Main grid: Campaign table + right column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -713,11 +732,18 @@ export default async function ClientDashboard() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             {c.minimum_order_value > 0 ? (
-                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                                ₹{getCampaignEstimatedRevenue(c).toLocaleString()}
-                              </span>
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                  ₹{getCampaignEstimatedRevenue(c).toLocaleString()}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                  MOV set
+                                </span>
+                              </div>
                             ) : (
-                              <span className="text-xs text-gray-400 dark:text-slate-500">Order value not configured</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                MOV missing
+                              </span>
                             )}
                           </td>
                         </tr>

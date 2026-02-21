@@ -20,7 +20,15 @@ function claimRateColor(rate: number) {
   return "#ef4444"; // red
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+}) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
@@ -29,6 +37,11 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
       <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
+      {hint ? (
+        <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -484,9 +497,14 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 py-2">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Dashboard Overview
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Dashboard Overview
+          </h1>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            Live
+          </span>
+        </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Platform-wide analytics across all clients
         </p>
@@ -504,11 +522,31 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatCard label="Total Clients" value={totalClients} />
-          <StatCard label="Total Campaigns" value={totalCampaigns} />
-          <StatCard label="QR Generated" value={totalQR} />
-          <StatCard label="Total Claims" value={totalClaims} />
-          <StatCard label="Unique Users" value={uniqueUsers} />
+          <StatCard
+            label="Total Clients"
+            value={totalClients}
+            hint="Clients currently onboarded."
+          />
+          <StatCard
+            label="Total Campaigns"
+            value={totalCampaigns}
+            hint="All campaigns created across clients."
+          />
+          <StatCard
+            label="QR Generated"
+            value={totalQR}
+            hint="Total impressions available platform-wide."
+          />
+          <StatCard
+            label="Total Claims"
+            value={totalClaims}
+            hint="All successful claims across clients."
+          />
+          <StatCard
+            label="Unique Users"
+            value={uniqueUsers}
+            hint="Distinct users who claimed at least once."
+          />
           <StatCard
             label="Platform Revenue Impact"
             value={
@@ -516,6 +554,7 @@ export default function AdminDashboard() {
                 ? `₹${platformRevenue.toLocaleString()}`
                 : "₹0"
             }
+            hint="Aggregated across all active campaigns."
           />
         </div>
       )}
@@ -528,7 +567,7 @@ export default function AdminDashboard() {
             <h2 className="font-bold text-gray-900 dark:text-white">
               QR Generated vs Claims — Per Client
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5" title="Volume view by client">
               Side-by-side volume comparison across all clients
             </p>
           </div>
@@ -552,7 +591,7 @@ export default function AdminDashboard() {
             <h2 className="font-bold text-gray-900 dark:text-white">
               Claim Rate % — Conversion per Client
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5" title="Sorted highest to lowest">
               Sorted best to worst ·{" "}
               <span className="text-red-400">&lt;5% Low</span> ·{" "}
               <span className="text-amber-500">5–15% Medium</span> ·{" "}
@@ -579,7 +618,7 @@ export default function AdminDashboard() {
             <h2 className="font-bold text-gray-900 dark:text-white">
               Platform Growth Overview
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5" title="Trendline for platform totals">
               Cumulative QR vs Claims across all clients
             </p>
           </div>
