@@ -129,8 +129,12 @@ export default function NewCampaignPage() {
 
       router.push("/admin/campaigns");
       router.refresh();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: Error | string | unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError(String(error) || "Unknown error");
+      }
     } finally {
       setLoading(false);
     }
