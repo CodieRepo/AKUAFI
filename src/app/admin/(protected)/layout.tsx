@@ -9,11 +9,11 @@ export default async function ProtectedAdminLayout({
   children: React.ReactNode;
 }) {
   try {
-    const { user } = await verifyAdmin();
+    await verifyAdmin();
     // Pass user details to layout components if needed, or fetching inside them.
     // Assuming components handle their own state or receive props.
     // For now, wrapping children with standard shell structure.
-  } catch (error) {
+  } catch {
     redirect("/admin/login?error=unauthorized");
   }
 
