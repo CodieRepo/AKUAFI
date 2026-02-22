@@ -11,6 +11,7 @@ import {
   Mail,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { formatUtcToIst } from "@/lib/formatTimestamp";
 
 type QueryDetail = {
   id: string;
@@ -197,7 +198,7 @@ export default function ContactQueryDetailPage() {
                 Received
               </p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                {new Date(query.created_at).toLocaleString("en-IN")}
+                {formatUtcToIst(query.created_at)}
               </p>
             </div>
           </div>

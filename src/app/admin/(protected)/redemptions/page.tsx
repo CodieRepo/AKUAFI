@@ -8,6 +8,7 @@ import RedemptionTable, {
 } from "@/components/admin/redemptions/RedemptionTable";
 import { StatCard } from "@/components/admin/ui/StatCard";
 import { Button } from "@/components/ui/Button";
+import { istDateKey } from "@/lib/formatTimestamp";
 
 export default function RedemptionsPage() {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
@@ -121,17 +122,18 @@ export default function RedemptionsPage() {
 
     // 3. Date Range
     if (dateRange !== "all") {
-      const now = new Date();
-      const todayStart = new Date(now.setHours(0, 0, 0, 0));
+      const todayKey = istDateKey(new Date());
+      const last7Keys = new Set<string>();
+      for (let i = 0; i <= 7; i++) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const key = istDateKey(d);
+        if (key) last7Keys.add(key);
+      }
 
       filtered = filtered.filter((r) => {
-        const rDate = new Date(r.redeemed_at);
-        if (dateRange === "today") return rDate >= todayStart;
-        if (dateRange === "7days") {
-          const sevenDaysAgo = new Date(todayStart);
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          return rDate >= sevenDaysAgo;
-        }
+        const key = istDateKey(r.redeemed_at);
+        if (dateRange === "today") return key === todayKey;
+        if (dateRange === "7days") return last7Keys.has(key);
         return true;
       });
     }

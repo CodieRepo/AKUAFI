@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { formatToISTDate, formatUtcToIst } from "@/lib/formatTimestamp";
 
 type Batch = {
   id: string;
@@ -299,8 +300,7 @@ export default function InventoryDetailPage() {
               </span>
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Dispatched:{" "}
-              {new Date(batch.dispatched_at).toLocaleDateString("en-IN")}
+              Dispatched: {formatToISTDate(batch.dispatched_at)}
             </p>
           </div>
 
@@ -502,7 +502,7 @@ export default function InventoryDetailPage() {
                       {l.note || "—"}
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {new Date(l.created_at).toLocaleString("en-IN")}
+                      {formatUtcToIst(l.created_at)}
                     </td>
                   </tr>
                 ))

@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatToIST } from "@/lib/formatTimestamp";
+import { formatUtcToIst } from "@/lib/formatTimestamp";
 
 export interface Campaign {
   id: string;
@@ -32,9 +32,13 @@ export interface Campaign {
 
 function formatDateTag(dateString: string | null) {
   if (!dateString) return "";
-  return new Date(dateString).toLocaleString("en-IN", {
-    month: "short",
+  return formatUtcToIst(dateString, {
     year: "numeric",
+    day: undefined,
+    hour: undefined,
+    minute: undefined,
+    second: undefined,
+    month: "short",
   });
 }
 

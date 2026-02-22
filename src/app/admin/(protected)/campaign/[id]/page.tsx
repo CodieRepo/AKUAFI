@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { ArrowLeft } from "lucide-react";
 import DeleteCampaignButton from "@/components/admin/campaign/DeleteCampaignButton";
+import { formatUtcToIst } from "@/lib/formatTimestamp";
 
 interface Coupon {
   discount_value: number | null;
@@ -21,8 +22,8 @@ interface CampaignUser {
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-IN", {
-    day: "numeric",
+  return formatUtcToIst(dateStr, {
+    day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
@@ -229,9 +230,7 @@ export default async function CampaignDetailsPage({
           <StatCard
             title="Minimum Order Value"
             value={
-              minimumOrderValue > 0
-                ? formatINR(minimumOrderValue)
-                : "— Not set"
+              minimumOrderValue > 0 ? formatINR(minimumOrderValue) : "— Not set"
             }
             subtext={
               minimumOrderValue > 0

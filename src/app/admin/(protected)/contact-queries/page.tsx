@@ -9,6 +9,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { formatToISTDate, istDateKey } from "@/lib/formatTimestamp";
 
 type QueryRow = {
   id: string;
@@ -58,10 +59,10 @@ export default function ContactQueriesPage() {
     fetchQueries();
   }, [fetchQueries]);
 
-  const today = new Date().toDateString();
+  const today = istDateKey(new Date());
   const totalQueries = queries.length;
   const todayQueries = queries.filter(
-    (q) => new Date(q.created_at).toDateString() === today,
+    (q) => istDateKey(q.created_at) === today,
   ).length;
   const unreadQueries = queries.filter((q) => q.status === "new").length;
   const repliedQueries = queries.filter((q) => q.status === "replied").length;
@@ -209,7 +210,7 @@ export default function ContactQueriesPage() {
                       {q.interest}
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {new Date(q.created_at).toLocaleDateString("en-IN")}
+                      {formatToISTDate(q.created_at)}
                     </td>
                     <td className="px-6 py-4">
                       <span

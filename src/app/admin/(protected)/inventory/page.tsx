@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { formatToISTDate } from "@/lib/formatTimestamp";
 
 type BatchRow = {
   id: string;
@@ -445,7 +446,7 @@ export default function InventoryPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        {new Date(b.dispatched_at).toLocaleDateString("en-IN")}
+                        {formatToISTDate(b.dispatched_at)}
                       </td>
                       <td className="px-6 py-4">
                         <span

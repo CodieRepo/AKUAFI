@@ -1,190 +1,83 @@
-/**
- * Timezone Helper Library for AKUAFI
- *
- * CRITICAL: All timestamps are stored in UTC in the database.
- * This library provides consistent formatting for IST (Asia/Kolkata) display on the frontend.
- *
- * Policy:
- *   - Database: Always UTC (NOW() in Postgres, UTC ISO strings from APIs)
- *   - API Responses: Always return ISO 8601 UTC timestamps (Z suffix)
- *   - Frontend: Convert UTC → IST using these helpers for display only
- *   - No timezone conversion in SQL/RPC (use v_now TIMESTAMPTZ := NOW() in PL/pgSQL)
- */
+const IST_TZ = "Asia/Kolkata";
 
-/**
- * Format a UTC timestamp for display in IST (Asia/Kolkata)
- *
- * @param utcDateString - ISO 8601 UTC timestamp (e.g., "2026-02-22T10:30:00Z")
- * @param format - Display format: 'short', 'medium', 'long' (default: 'medium')
- * @returns Formatted string in IST, or '-' if input is empty
- *
- * @example
- * formatToIST("2026-02-22T10:30:00Z", "short")
- * // => "22/2/26, 4:00 PM" (IST)
- *
- * formatToIST("2026-02-22T10:30:00Z", "medium")
- * // => "Feb 22, 2026, 4:00 PM" (IST)
- */
+function isLikelyPreformatted(s: string): boolean {
+  return /[A-Za-z]{3,}|,/.test(s);
+}
+
+function parseTemporalInput(input: string | Date): Date | null {
+  if (typeof input === "string" && isLikelyPreformatted(input)) {
+    return null;
+  }
+
+  const date = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+export function formatUtcToIst(
+  input: string | Date | null | undefined,
+  opts?: Intl.DateTimeFormatOptions,
+): string {
+  if (!input) return "—";
+
+  if (typeof input === "string" && isLikelyPreformatted(input)) {
+    return input;
+  }
+
+  const date = parseTemporalInput(input);
+  if (!date) return "—";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: IST_TZ,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    ...opts,
+  }).format(date);
+}
+
+export function istDateKey(input: string | Date | null | undefined): string {
+  if (!input) return "";
+
+  const date = parseTemporalInput(input);
+  if (!date) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: IST_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
+}
+
 export function formatToIST(
-  utcDateString: string | null | undefined,
+  input: string | Date | null | undefined,
   format: "short" | "medium" | "long" = "medium",
 ): string {
-  if (!utcDateString) return "-";
-
-  try {
-    const date = new Date(utcDateString);
-
-    // Validate date
-    if (isNaN(date.getTime())) return "-";
-
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: "Asia/Kolkata",
+  if (format === "short") {
+    return formatUtcToIst(input, {
       year: "2-digit",
-      month:
-        format === "long" ? "long" : format === "short" ? "2-digit" : "short",
+      month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       hour12: true,
-    };
-
-    return date.toLocaleString("en-IN", options);
-  } catch {
-    return "-";
+    });
   }
-}
 
-/**
- * Format a UTC timestamp for display in IST (date only, no time)
- *
- * @param utcDateString - ISO 8601 UTC timestamp
- * @returns Formatted date string in IST, or '-' if input is empty
- *
- * @example
- * formatToISTDate("2026-02-22T10:30:00Z")
- * // => "22 Feb 2026"
- */
-export function formatToISTDate(
-  utcDateString: string | null | undefined,
-): string {
-  if (!utcDateString) return "-";
-
-  try {
-    const date = new Date(utcDateString);
-
-    // Validate date
-    if (isNaN(date.getTime())) return "-";
-
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-    };
-
-    return date.toLocaleString("en-IN", options);
-  } catch {
-    return "-";
-  }
-}
-
-/**
- * Format a UTC timestamp for display in IST (time only, no date)
- *
- * @param utcDateString - ISO 8601 UTC timestamp
- * @returns Formatted time string in IST, or '-' if input is empty
- *
- * @example
- * formatToISTTime("2026-02-22T10:30:00Z")
- * // => "4:00:00 PM"
- */
-export function formatToISTTime(
-  utcDateString: string | null | undefined,
-): string {
-  if (!utcDateString) return "-";
-
-  try {
-    const date = new Date(utcDateString);
-
-    // Validate date
-    if (isNaN(date.getTime())) return "-";
-
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    };
-
-    return date.toLocaleString("en-IN", options);
-  } catch {
-    return "-";
-  }
-}
-
-/**
- * Format a UTC timestamp for display in IST (compact format for tables/lists)
- *
- * @param utcDateString - ISO 8601 UTC timestamp
- * @returns Formatted compact string in IST, or '-' if input is empty
- *
- * @example
- * formatToISTCompact("2026-02-22T10:30:00Z")
- * // => "22 Feb 2026, 4:00 PM"
- */
-export function formatToISTCompact(
-  utcDateString: string | null | undefined,
-): string {
-  if (!utcDateString) return "-";
-
-  try {
-    const date = new Date(utcDateString);
-
-    // Validate date
-    if (isNaN(date.getTime())) return "-";
-
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    };
-
-    return date.toLocaleString("en-IN", options);
-  } catch {
-    return "-";
-  }
-}
-
-/**
- * Format a UTC timestamp for display in IST (verbose format for details/modals)
- *
- * @param utcDateString - ISO 8601 UTC timestamp
- * @returns Formatted verbose string in IST, or '-' if input is empty
- *
- * @example
- * formatToISTVerbose("2026-02-22T10:30:00Z")
- * // => "Monday, 22 February 2026 at 4:00:00 PM IST"
- */
-export function formatToISTVerbose(
-  utcDateString: string | null | undefined,
-): string {
-  if (!utcDateString) return "-";
-
-  try {
-    const date = new Date(utcDateString);
-
-    // Validate date
-    if (isNaN(date.getTime())) return "-";
-
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: "Asia/Kolkata",
-      weekday: "long",
+  if (format === "long") {
+    return formatUtcToIst(input, {
       year: "numeric",
       month: "long",
       day: "2-digit",
@@ -192,13 +85,77 @@ export function formatToISTVerbose(
       minute: "2-digit",
       second: "2-digit",
       hour12: true,
-    };
-
-    const formatted = date.toLocaleString("en-IN", options);
-    return `${formatted} IST`;
-  } catch {
-    return "-";
+    });
   }
+
+  return formatUtcToIst(input, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
+
+export function formatToISTDate(
+  input: string | Date | null | undefined,
+): string {
+  return formatUtcToIst(input, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: undefined,
+    minute: undefined,
+    second: undefined,
+  });
+}
+
+export function formatToISTTime(
+  input: string | Date | null | undefined,
+): string {
+  return formatUtcToIst(input, {
+    year: undefined,
+    month: undefined,
+    day: undefined,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
+
+export function formatToISTCompact(
+  input: string | Date | null | undefined,
+): string {
+  return formatUtcToIst(input, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: undefined,
+    hour12: true,
+  });
+}
+
+export function formatToISTVerbose(
+  input: string | Date | null | undefined,
+): string {
+  const formatted = formatUtcToIst(input, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  if (formatted === "—") return formatted;
+  return `${formatted} IST`;
 }
 
 /**
@@ -234,7 +191,8 @@ export function isFutureIST(utcDateString: string | null | undefined): boolean {
   if (!utcDateString) return false;
 
   try {
-    const date = new Date(utcDateString);
+    const date = parseTemporalInput(utcDateString);
+    if (!date) return false;
     return date > new Date();
   } catch {
     return false;
@@ -251,7 +209,8 @@ export function isPastIST(utcDateString: string | null | undefined): boolean {
   if (!utcDateString) return false;
 
   try {
-    const date = new Date(utcDateString);
+    const date = parseTemporalInput(utcDateString);
+    if (!date) return false;
     return date < new Date();
   } catch {
     return false;
@@ -267,10 +226,11 @@ export function isPastIST(utcDateString: string | null | undefined): boolean {
 export function getTimeRemaining(
   utcDateString: string | null | undefined,
 ): string {
-  if (!utcDateString) return "-";
+  if (!utcDateString) return "—";
 
   try {
-    const targetDate = new Date(utcDateString);
+    const targetDate = parseTemporalInput(utcDateString);
+    if (!targetDate) return "—";
     const now = new Date();
     const diff = targetDate.getTime() - now.getTime();
 
@@ -288,6 +248,6 @@ export function getTimeRemaining(
     }
     return `${minutes} minute${minutes > 1 ? "s" : ""}`;
   } catch {
-    return "-";
+    return "—";
   }
 }

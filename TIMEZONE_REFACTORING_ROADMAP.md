@@ -1,18 +1,33 @@
 # AKUAFI Timezone Refactoring Roadmap
 
-**Status**: Ready for Frontend Component Updates  
+**Status**: ✅ Completed (Closed)  
 **Created**: February 22, 2026
+
+**Completion Note**: Timezone handling is now contractually enforced via CI guard.
+
+- Guard script: [scripts/check-timezone-contract.js](scripts/check-timezone-contract.js)
+- Run command: `npm run check:timezone-contract`
 
 ---
 
 ## Quick Summary
 
-| Layer        | Status          | Details                                      |
-| ------------ | --------------- | -------------------------------------------- |
-| **Database** | ✅ PASS         | UTC only, no AT TIME ZONE conversions        |
-| **RPC**      | ✅ PASS         | `v_now TIMESTAMPTZ := NOW()` → UTC           |
-| **API**      | ✅ PASS         | `new Date().toISOString()` → UTC ISO strings |
-| **Frontend** | ⚠️ NEEDS UPDATE | Inconsistent toLocaleDateString() calls      |
+| Layer        | Status  | Details                                      |
+| ------------ | ------- | -------------------------------------------- |
+| **Database** | ✅ PASS | UTC only, no AT TIME ZONE conversions        |
+| **RPC**      | ✅ PASS | `v_now TIMESTAMPTZ := NOW()` → UTC           |
+| **API**      | ✅ PASS | `new Date().toISOString()` → UTC ISO strings |
+| **Frontend** | ✅ PASS | Single formatter contract enforced           |
+
+---
+
+## Final State (Completed)
+
+- UTC remains single source of truth in DB and API payloads.
+- Final UI formatting uses centralized timezone helpers in [src/lib/formatTimestamp.ts](src/lib/formatTimestamp.ts).
+- IST day grouping uses `istDateKey(...)` instead of UTC string slicing.
+- Legacy redemptions endpoint semantics were corrected/deprecated to avoid misleading timestamps.
+- Regression guard enforces the contract on future changes.
 
 ---
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatToISTDate, formatToIST } from "@/lib/formatTimestamp";
+import { formatToISTDate, formatUtcToIst } from "@/lib/formatTimestamp";
 import { Button } from "@/components/ui/Button";
 import {
   Search,
@@ -306,19 +306,7 @@ export default function CouponVerification({
                 <div className="flex justify-between">
                   <span className="opacity-70">Redeemed:</span>
                   <span className="font-medium text-right">
-                    {(() => {
-                      const formatted = formatToIST(
-                        couponData.redeemed_at,
-                        "medium",
-                      );
-                      console.log(
-                        "[DEBUG] CouponVerification.tsx - Formatted IST:",
-                        formatted,
-                        "input was:",
-                        couponData.redeemed_at,
-                      );
-                      return formatted;
-                    })()}
+                    {formatUtcToIst(couponData.redeemed_at)}
                   </span>
                 </div>
               )}

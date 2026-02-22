@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
 import GeneratedCouponsList from "@/components/dashboard/coupons/GeneratedCouponsList";
+import { formatUtcToIst, istDateKey } from "@/lib/formatTimestamp";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmt(n: number) {
@@ -25,11 +26,23 @@ function fmt(n: number) {
 function getLast7Days() {
   const out: string[] = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    out.push(d.toISOString().split("T")[0]);
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const key = istDateKey(d);
+    if (key) out.push(key);
   }
   return out;
+}
+function weekdayLabelFromIstDateKey(dateKey: string) {
+  if (!dateKey) return "";
+  return formatUtcToIst(`${dateKey}T00:00:00+05:30`, {
+    year: undefined,
+    month: undefined,
+    day: undefined,
+    hour: undefined,
+    minute: undefined,
+    second: undefined,
+    weekday: "short",
+  });
 }
 function claimLabel(pct: number) {
   if (pct >= 20)
@@ -227,9 +240,7 @@ function DailyClaimsChart({
                 fontSize={9}
                 fill="#9ca3af"
               >
-                {new Date(d.date).toLocaleDateString("en-IN", {
-                  weekday: "short",
-                })}
+                {weekdayLabelFromIstDateKey(d.date)}
               </text>
             </g>
           );
@@ -706,7 +717,7 @@ export default async function ClientDashboard() {
     claimsByDate[d] = 0;
   });
   for (const r of (dailyClaimsRaw || []) as any[]) {
-    const day = (r.redeemed_at || "").slice(0, 10);
+    const day = istDateKey(r.redeemed_at || "");
     if (day && claimsByDate[day] !== undefined) claimsByDate[day]++;
   }
   const dailyClaims = last7.map((date) => ({

@@ -1,7 +1,7 @@
 # AKUAFI Timezone Audit & Remediation Plan
 
 **Date**: February 22, 2026  
-**Status**: Phase-1 Stabilization (Timezone Compliance)
+**Status**: ✅ Resolved (Closed)
 
 ---
 
@@ -10,9 +10,40 @@
 ✅ **Database Layer**: Confirmed UTC-only (no AT TIME ZONE conversions)  
 ✅ **RPC Layer** (`claim_coupon_atomic`): Confirmed UTC (v_now TIMESTAMPTZ := NOW())  
 ✅ **API Responses**: Confirmed UTC ISO 8601 (new Date().toISOString())  
-⚠️ **Frontend Display**: Inconsistent timezone formatting → Needs standardization
+✅ **Frontend Display**: Standardized to single UTC → IST UI conversion path
 
-**Action**: Centralize frontend timestamp formatting via `@/lib/formatTimestamp.ts`
+**Final Contract References**:
+
+- [src/lib/formatTimestamp.ts](src/lib/formatTimestamp.ts)
+- [scripts/check-timezone-contract.js](scripts/check-timezone-contract.js)
+- [package.json](package.json) (`check:timezone-contract`)
+
+---
+
+## Root Cause → Fix → Prevention
+
+### Root Cause
+
+- UTC storage was correct, but timestamp display and day-binning logic were split across multiple UI files.
+- Some pages used direct locale formatting and UTC day slicing, creating inconsistent IST output across screens.
+- A legacy admin redemptions route could mislead by mapping semantic fields inconsistently.
+
+### Fix
+
+- Enforced single conversion point in UI via `formatUtcToIst(...)` and `istDateKey(...)` in [src/lib/formatTimestamp.ts](src/lib/formatTimestamp.ts).
+- Kept DB/API payloads in UTC ISO and removed duplicate conversion patterns from page/component renderers.
+- Switched analytics day-grouping to IST keys (`YYYY-MM-DD` in Asia/Kolkata).
+- Updated legacy redemptions endpoint semantics to avoid false `redeemed_at` meaning.
+
+### Prevention
+
+- Added timezone contract guard: [scripts/check-timezone-contract.js](scripts/check-timezone-contract.js).
+- Added script: `check:timezone-contract` in [package.json](package.json).
+- Guard blocks:
+  - Direct `new Date(...).toLocale*` timestamp formatting outside formatter.
+  - UTC day-key extraction via `toISOString().split("T")[0]`.
+
+**Closure**: Existing and new records now display correctly in IST without DB mutation, with no double timezone conversion.
 
 ---
 
