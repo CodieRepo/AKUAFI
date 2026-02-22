@@ -139,28 +139,28 @@ export default function ContactQueriesPage() {
         <AdminStatCard
           label="Total Queries"
           value={totalQueries}
-          icon={MessageSquare}
+          icon={<MessageSquare className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-blue-600 dark:text-blue-400"
           description="All time inquiries"
         />
         <AdminStatCard
           label="Today's Queries"
           value={todayQueries}
-          icon={Calendar}
+          icon={<Calendar className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-violet-600 dark:text-violet-400"
           description="Received today"
         />
         <AdminStatCard
           label="Unread"
           value={unreadQueries}
-          icon={Mail}
+          icon={<Mail className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-amber-600 dark:text-amber-400"
           description="Awaiting review"
         />
         <AdminStatCard
           label="Replied"
           value={repliedQueries}
-          icon={CheckCircle}
+          icon={<CheckCircle className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-green-600 dark:text-green-400"
           description="Response sent"
         />
@@ -186,7 +186,7 @@ export default function ContactQueriesPage() {
       {/* Queries Table */}
       {filtered.length === 0 ? (
         <AdminEmptyState
-          icon={MessageSquare}
+          icon={<MessageSquare className="h-8 w-8" strokeWidth={1.5} />}
           title={filter === "all" ? "No queries yet" : `No ${filter} queries`}
           description={
             filter === "all"

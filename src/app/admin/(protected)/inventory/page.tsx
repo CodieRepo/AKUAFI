@@ -363,28 +363,28 @@ export default function InventoryPage() {
         <AdminStatCard
           label="Total Dispatched"
           value={totalDispatched.toLocaleString()}
-          icon={Box}
+          icon={<Box className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-blue-600 dark:text-blue-400"
           description="Bottles sent to clients"
         />
         <AdminStatCard
           label="Total Remaining"
           value={totalRemaining.toLocaleString()}
-          icon={Boxes}
+          icon={<Boxes className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-green-600 dark:text-green-400"
           description="Available in stock"
         />
         <AdminStatCard
           label="Active Batches"
           value={activeBatches}
-          icon={Package}
+          icon={<Package className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-amber-600 dark:text-amber-400"
           description="Currently in use"
         />
         <AdminStatCard
           label="Completed Batches"
           value={completedBatches}
-          icon={CheckCircle}
+          icon={<CheckCircle className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-gray-600 dark:text-gray-400"
           description="Fully dispatched"
         />
@@ -393,7 +393,7 @@ export default function InventoryPage() {
       {/* Batches Table */}
       {batches.length === 0 ? (
         <AdminEmptyState
-          icon={Package}
+          icon={<Package className="h-8 w-8" strokeWidth={1.5} />}
           title="No batches yet"
           description="Create your first batch to start tracking inventory"
           action={

@@ -187,7 +187,7 @@ export default function RedemptionsPage() {
         <AdminStatCard
           label="Total Redemptions"
           value={totalScans}
-          icon={QrCode}
+          icon={<QrCode className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-blue-600 dark:text-blue-400"
           loading={loading}
           description="All-time claims"
@@ -195,7 +195,7 @@ export default function RedemptionsPage() {
         <AdminStatCard
           label="Unique Users"
           value={uniqueUsers}
-          icon={Smartphone}
+          icon={<Smartphone className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-purple-600 dark:text-purple-400"
           loading={loading}
           description="Distinct phone numbers"

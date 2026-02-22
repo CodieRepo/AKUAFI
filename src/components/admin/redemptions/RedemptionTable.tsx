@@ -69,7 +69,7 @@ export default function RedemptionTable({
   if (redemptions.length === 0) {
     return (
       <AdminEmptyState
-        icon={QrCode}
+        icon={<QrCode className="h-8 w-8" strokeWidth={1.5} />}
         title="No redemptions found"
         description="Try adjusting your filters or wait for new scans to appear"
       />

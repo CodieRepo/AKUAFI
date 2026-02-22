@@ -519,42 +519,42 @@ export default function AdminDashboard() {
           <AdminStatCard
             label="Total Clients"
             value={totalClients}
-            icon={Users}
+            icon={<Users className="h-5 w-5" strokeWidth={2.5} />}
             iconColor="text-blue-600 dark:text-blue-400"
             description="Active clients"
           />
           <AdminStatCard
             label="Campaigns"
             value={totalCampaigns}
-            icon={Megaphone}
+            icon={<Megaphone className="h-5 w-5" strokeWidth={2.5} />}
             iconColor="text-purple-600 dark:text-purple-400"
             description="All campaigns"
           />
           <AdminStatCard
             label="QR Generated"
             value={totalQR}
-            icon={QrCode}
+            icon={<QrCode className="h-5 w-5" strokeWidth={2.5} />}
             iconColor="text-indigo-600 dark:text-indigo-400"
             description="Total codes"
           />
           <AdminStatCard
             label="Total Claims"
             value={totalClaims}
-            icon={Ticket}
+            icon={<Ticket className="h-5 w-5" strokeWidth={2.5} />}
             iconColor="text-green-600 dark:text-green-400"
             description="Successful claims"
           />
           <AdminStatCard
             label="Unique Users"
             value={uniqueUsers}
-            icon={UserCheck}
+            icon={<UserCheck className="h-5 w-5" strokeWidth={2.5} />}
             iconColor="text-amber-600 dark:text-amber-400"
             description="Distinct users"
           />
           <AdminStatCard
             label="Revenue Impact"
             value={formatINR(platformRevenue)}
-            icon={DollarSign}
+            icon={<DollarSign className="h-5 w-5" strokeWidth={2.5} />}
             iconColor="text-emerald-600 dark:text-emerald-400"
             description="Estimated revenue"
           />

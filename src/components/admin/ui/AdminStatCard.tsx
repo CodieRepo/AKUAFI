@@ -1,14 +1,13 @@
 "use client";
 
 import { ReactNode } from "react";
-import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminCard } from "./AdminCard";
 
 interface AdminStatCardProps {
   label: string;
   value: string | number;
-  icon?: LucideIcon;
+  icon?: ReactNode;
   iconColor?: string;
   trend?: {
     value: string;
@@ -45,7 +44,7 @@ export function AdminStatCard({
               iconColor,
             )}
           >
-            <Icon className="h-5 w-5" strokeWidth={2.5} />
+            {Icon}
           </div>
         )}
       </div>

@@ -105,7 +105,7 @@ export default function CampaignTable({
   if (campaigns.length === 0) {
     return (
       <AdminEmptyState
-        icon={QrCode}
+        icon={<QrCode className="h-8 w-8" strokeWidth={1.5} />}
         title="No campaigns yet"
         description="Create your first campaign to get started with QR code generation"
       />

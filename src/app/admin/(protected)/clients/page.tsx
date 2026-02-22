@@ -196,7 +196,7 @@ export default function ClientsPage() {
         </AdminCard>
       ) : clients.length === 0 ? (
         <AdminEmptyState
-          icon={Users}
+          icon={<Users className="h-8 w-8" strokeWidth={1.5} />}
           title="No clients yet"
           description="Create your first client to get started with campaign management"
           action={

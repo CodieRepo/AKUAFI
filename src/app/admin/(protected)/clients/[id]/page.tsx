@@ -186,35 +186,35 @@ export default async function ClientDetailPage({
         <AdminStatCard
           label="Campaigns"
           value={stats.total_campaigns}
-          icon={Megaphone}
+          icon={<Megaphone className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-purple-600 dark:text-purple-400"
           description="Total campaigns for this client"
         />
         <AdminStatCard
           label="QR Generated"
           value={stats.total_qr}
-          icon={QrCode}
+          icon={<QrCode className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-blue-600 dark:text-blue-400"
           description="Total campaign impressions"
         />
         <AdminStatCard
           label="Claims"
           value={stats.total_claims}
-          icon={Ticket}
+          icon={<Ticket className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-green-600 dark:text-green-400"
           description="Successful coupon claims"
         />
         <AdminStatCard
           label="Unique Users"
           value={stats.unique_users}
-          icon={UserCheck}
+          icon={<UserCheck className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-indigo-600 dark:text-indigo-400"
           description="Distinct claiming users"
         />
         <AdminStatCard
           label="Conversion"
           value={`${stats.conversion_rate.toFixed(1)}%`}
-          icon={TrendingUp}
+          icon={<TrendingUp className="h-5 w-5" strokeWidth={2.5} />}
           iconColor="text-amber-600 dark:text-amber-400"
           description="Claims as % of QR generated"
         />
