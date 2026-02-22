@@ -24,13 +24,19 @@ export default async function ClientSettingsPage() {
     .maybeSingle();
 
   return (
-    <div className="max-w-[1600px] mx-auto p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Manage your account preferences and security.</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="max-w-5xl mx-auto px-6 py-12 md:p-12 space-y-8 animate-in fade-in duration-700">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
+            Settings
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 text-lg">
+            Manage your account preferences and security
+          </p>
+        </div>
 
-      <ClientSettingsForm user={user} client={client} />
+        <ClientSettingsForm user={user} client={client} />
+      </div>
     </div>
   );
 }

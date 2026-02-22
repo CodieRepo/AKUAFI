@@ -390,10 +390,10 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
         : "bg-red-500";
 
   return (
-    <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm p-6">
-      <div className="flex items-center gap-2.5 mb-5">
-        <span className="text-lg">📈</span>
-        <h3 className="font-bold text-gray-900 dark:text-white">
+    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-lg p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-2xl">📈</span>
+        <h3 className="font-bold text-slate-900 dark:text-white text-lg">
           Campaign Health
         </h3>
       </div>
@@ -402,14 +402,14 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
         {/* Conversion */}
         <div>
           <div className="flex justify-between items-center mb-2">
-            <p className="text-xs font-medium text-gray-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
               Conversion Rate
             </p>
-            <span className="text-sm font-bold text-gray-900 dark:text-white">
+            <span className="text-sm font-bold text-slate-900 dark:text-white">
               {conversionPct.toFixed(1)}%
             </span>
           </div>
-          <div className="h-2.5 w-full rounded-full bg-gray-100 dark:bg-slate-700/50 overflow-hidden">
+          <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800/50 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ${barCls}`}
               style={{
@@ -422,14 +422,14 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
         {/* Claim Rate = same as conversion for this context */}
         <div>
           <div className="flex justify-between items-center mb-2">
-            <p className="text-xs font-medium text-gray-600 dark:text-slate-400">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
               Claim Rate
             </p>
-            <span className="text-sm font-bold text-gray-900 dark:text-white">
+            <span className="text-sm font-bold text-slate-900 dark:text-white">
               {conversionPct.toFixed(1)}%
             </span>
           </div>
-          <div className="h-2.5 w-full rounded-full bg-gray-100 dark:bg-slate-700/50 overflow-hidden">
+          <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800/50 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ${barCls}`}
               style={{
@@ -440,12 +440,12 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
         </div>
 
         {/* Engagement level tile */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/80 dark:bg-slate-800/40 border border-gray-200/50 dark:border-white/5">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/80 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
           <div>
-            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-500 uppercase tracking-[0.1em] mb-1">
+            <p className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">
               Engagement Level
             </p>
-            <p className="text-xs text-gray-600 dark:text-slate-400">
+            <p className="text-xs text-slate-700 dark:text-slate-400">
               {engagement === "High"
                 ? "> 5% conversion"
                 : engagement === "Medium"
@@ -478,29 +478,29 @@ function BestCampaignCard({ campaigns }: { campaigns: CampaignMetricRow[] }) {
   if (!ranked.length) return null;
 
   return (
-    <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
-        <span className="text-lg">🏆</span>
-        <h3 className="font-bold text-gray-900 dark:text-white">
+    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-lg overflow-hidden">
+      <div className="px-7 py-5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3">
+        <span className="text-2xl">🏆</span>
+        <h3 className="font-bold text-slate-900 dark:text-white text-lg">
           Best Performing Campaigns
         </h3>
       </div>
-      <div className="divide-y divide-gray-200/50 dark:divide-white/5">
+      <div className="divide-y divide-slate-200/50 dark:divide-slate-800/50">
         {ranked.map((c, i) => (
           <div
             key={c.campaign_id}
-            className="flex items-center gap-3 px-6 py-4 hover:bg-white/40 dark:hover:bg-white/[0.02] transition-all duration-200"
+            className="flex items-center gap-4 px-7 py-5 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-200"
           >
-            <span className="text-base font-bold text-gray-300 dark:text-slate-600 w-5 shrink-0 text-center">
+            <span className="text-lg font-bold w-6 shrink-0 text-center">
               {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1.5">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate mb-2">
                 {c.campaign_name}
               </p>
-              <div className="mt-1.5 h-2 w-full bg-gray-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+              <div className="mt-2 h-2 w-full bg-slate-100 dark:bg-slate-800/50 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : "bg-amber-500"}`}
+                  className={`h-full rounded-full transition-all duration-500 ${i === 0 ? "bg-gradient-to-r from-emerald-500 to-emerald-600" : i === 1 ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gradient-to-r from-amber-500 to-amber-600"}`}
                   style={{ width: `${Math.min(c.pct, 100)}%` }}
                 />
               </div>
@@ -762,28 +762,28 @@ export default async function ClientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50/30 dark:from-black dark:via-slate-950 dark:to-slate-900 text-gray-900 dark:text-white font-sans">
-      <div className="max-w-[1600px] mx-auto px-6 sm:px-8 py-8 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
+      <div className="max-w-[1600px] mx-auto px-6 sm:px-8 py-10 space-y-8 animate-in fade-in duration-700">
         {/* ── Header */}
-        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2">
-          <div>
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25">
-                <Sparkles className="h-4 w-4" />
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30">
+                <Sparkles className="h-5 w-5" />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
                 Dashboard
               </span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent">
               {client.client_name}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-2 mt-2">
-              <span className="relative flex h-2 w-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-sm shadow-emerald-500/50" />
               </span>
-              Live analytics
+              Live analytics powered by Akuafi
             </p>
           </div>
         </header>
@@ -829,25 +829,27 @@ export default async function ClientDashboard() {
           ].map(({ label, value, icon, color, hint }) => (
             <div
               key={label}
-              className="group relative bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
+              className="group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 hover:border-slate-300/80 dark:hover:border-slate-700/80 transition-all duration-300"
             >
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="min-w-0 flex-1">
                   <p
-                    className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3"
+                    className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3"
                     title={hint}
                   >
                     {label}
                   </p>
-                  <p className="text-3xl font-bold tracking-tight">{value}</p>
+                  <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+                    {value}
+                  </p>
                 </div>
                 <div
-                  className={`p-2.5 rounded-xl bg-gray-50/80 dark:bg-slate-800/60 ${color} group-hover:scale-110 transition-transform duration-200`}
+                  className={`p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/80 ${color} group-hover:scale-110 transition-transform duration-300 shadow-sm`}
                 >
                   {icon}
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 dark:text-slate-500 leading-relaxed">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-relaxed">
                 {hint}
               </p>
             </div>
@@ -857,39 +859,39 @@ export default async function ClientDashboard() {
         {/* ── Discount Metrics Row (shown once any coupon has a discount) */}
         {totalDiscountIssued > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <div className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200">
-              <div className="text-2xl mb-3">💰</div>
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
+            <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              <div className="text-3xl mb-3">💰</div>
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Total Discount Issued
               </p>
-              <p className="text-3xl font-bold tracking-tight text-green-700 dark:text-green-400">
+              <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-green-700 to-green-500 dark:from-green-400 dark:to-green-300 bg-clip-text text-transparent">
                 ₹{totalDiscountIssued.toLocaleString()}
               </p>
-              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
                 Across all active + claimed coupons
               </p>
             </div>
-            <div className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200">
-              <div className="text-2xl mb-3">📈</div>
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
+            <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              <div className="text-3xl mb-3">📈</div>
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Estimated Revenue Impact
               </p>
-              <p className="text-3xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
+              <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-emerald-700 to-emerald-500 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
                 ₹{estimatedRevenue.toLocaleString()}
               </p>
-              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
                 Claimed coupons only
               </p>
             </div>
-            <div className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200">
-              <div className="text-2xl mb-3">🎯</div>
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
+            <div className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              <div className="text-3xl mb-3">🎯</div>
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Avg Discount / Coupon
               </p>
-              <p className="text-3xl font-bold tracking-tight">
+              <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                 ₹{avgDiscount}
               </p>
-              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
                 Across {(couponsProper || []).length} coupons
               </p>
             </div>
@@ -900,149 +902,153 @@ export default async function ClientDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {/* Impressions */}
           <div
-            className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
+            className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
             title="Total impressions across all campaigns"
           >
-            <div className="text-2xl mb-3">👁️</div>
-            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
+            <div className="text-3xl mb-3">👁️</div>
+            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
               Impressions
             </p>
-            <p className="text-3xl font-bold tracking-tight">
+            <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
               {fmt(impressions)}
             </p>
-            <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
               Total QR views across campaigns
             </p>
           </div>
 
           {/* Estimated Reach */}
           <div
-            className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
+            className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
             title="Projected reach based on current distribution"
           >
-            <div className="text-2xl mb-3">📡</div>
-            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
+            <div className="text-3xl mb-3">📡</div>
+            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
               Estimated Reach
             </p>
-            <p className="text-3xl font-bold tracking-tight">
+            <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
               {fmt(estimatedReach)}
             </p>
-            <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
               Projected audience exposure based on QR distribution
             </p>
           </div>
 
           {/* Estimated Revenue (MOV-based) */}
           <div
-            className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
+            className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
             title="Revenue estimate aggregated from all campaign rows"
           >
-            <div className="text-2xl mb-3">💵</div>
-            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
+            <div className="text-3xl mb-3">💵</div>
+            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
               Estimated Revenue
             </p>
-            <p className="text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+            <p className="text-3xl font-bold tracking-tight bg-gradient-to-br from-emerald-700 to-emerald-500 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
               ₹{estimatedRevenueByMOV.toLocaleString()}
             </p>
-            <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
+            <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-2">
               Aggregated across all active campaigns.
             </p>
           </div>
         </div>
 
         {/* ── My Earnings */}
-        <section className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
-          <div className="px-7 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
-            <TrendingUp className="h-5 w-5 text-emerald-500" />
-            <h2 className="font-bold text-gray-900 dark:text-white text-lg">
+        <section className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-50 via-white to-emerald-50 dark:from-slate-800/50 dark:via-slate-900/50 dark:to-slate-800/50 px-8 py-6 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <h2 className="font-bold text-slate-900 dark:text-white text-xl">
               My Earnings
             </h2>
           </div>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
+          <div className="p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 bg-slate-50/80 dark:bg-slate-950/50 hover:bg-white dark:hover:bg-slate-900/80 shadow-sm hover:shadow-lg transition-all duration-300">
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Total Bottles Distributed
               </p>
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="text-2xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                 {fmt(totalBottlesDistributed)}
               </p>
             </div>
-            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 bg-slate-50/80 dark:bg-slate-950/50 hover:bg-white dark:hover:bg-slate-900/80 shadow-sm hover:shadow-lg transition-all duration-300">
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Total Scans
               </p>
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="text-2xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                 {fmt(totalScans)}
               </p>
             </div>
-            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 bg-slate-50/80 dark:bg-slate-950/50 hover:bg-white dark:hover:bg-slate-900/80 shadow-sm hover:shadow-lg transition-all duration-300">
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Revenue Generated
               </p>
-              <p className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
+              <p className="text-2xl font-bold tracking-tight bg-gradient-to-br from-emerald-700 to-emerald-500 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
                 ₹{estimatedRevenueByMOV.toLocaleString()}
               </p>
             </div>
-            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 bg-slate-50/80 dark:bg-slate-950/50 hover:bg-white dark:hover:bg-slate-900/80 shadow-sm hover:shadow-lg transition-all duration-300">
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Top Performing Campaign
               </p>
-              <p className="text-sm font-semibold mt-2 truncate text-gray-900 dark:text-white">
+              <p className="text-sm font-semibold mt-2 truncate text-slate-900 dark:text-white">
                 {topPerformingCampaignByScans?.campaign_name || "—"}
               </p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 {fmt(topPerformingCampaignByScans?.total_scans || 0)} scans
               </p>
             </div>
-            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
-              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 bg-slate-50/80 dark:bg-slate-950/50 hover:bg-white dark:hover:bg-slate-900/80 shadow-sm hover:shadow-lg transition-all duration-300">
+              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">
                 Impressions
               </p>
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="text-2xl font-bold tracking-tight bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                 {fmt(impressions)}
               </p>
             </div>
           </div>
         </section>
 
-        <div className="flex items-center gap-4 pt-2">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 dark:text-slate-400">
+        <div className="flex items-center gap-4 pt-4">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-700 to-transparent" />
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-4 py-1.5 rounded-full">
             Campaign Analysis
           </p>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-700 to-transparent" />
         </div>
 
         {/* ── 2. Main grid: Campaign table + right column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
           {/* LEFT (2-col): Campaign Performance Table */}
           <div className="lg:col-span-2 space-y-7">
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
-              <div className="px-7 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
-                <Trophy className="h-5 w-5 text-blue-500" />
-                <h2 className="font-bold text-gray-900 dark:text-white text-lg">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 via-white to-blue-50 dark:from-slate-800/50 dark:via-slate-900/50 dark:to-slate-800/50 px-8 py-6 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30">
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <h2 className="font-bold text-slate-900 dark:text-white text-xl">
                   Campaign Performance
                 </h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 dark:bg-slate-900/60 text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50/80 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold">
                     <tr>
-                      <th className="px-6 py-3">Campaign</th>
-                      <th className="px-6 py-3 text-right">Impressions</th>
-                      <th className="px-6 py-3 text-right">Claims</th>
-                      <th className="px-6 py-3 text-right">Users</th>
+                      <th className="px-6 py-4">Campaign</th>
+                      <th className="px-6 py-4 text-right">Impressions</th>
+                      <th className="px-6 py-4 text-right">Claims</th>
+                      <th className="px-6 py-4 text-right">Users</th>
                       <th
-                        className="px-6 py-3 text-right"
+                        className="px-6 py-4 text-right"
                         title="Claims / QR Generated"
                       >
                         Conversion
                       </th>
 
-                      <th className="px-6 py-3 text-right">Est. Revenue</th>
+                      <th className="px-6 py-4 text-right">Est. Revenue</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-slate-200/50 dark:divide-slate-800/50">
                     {campaigns.map((c) => {
                       const pct =
                         c.total_qr > 0
@@ -1052,20 +1058,20 @@ export default async function ClientDashboard() {
                       return (
                         <tr
                           key={c.campaign_id}
-                          className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-200"
                         >
                           <td className="px-6 py-4">
-                            <p className="font-medium text-gray-900 dark:text-white">
+                            <p className="font-semibold text-slate-900 dark:text-white">
                               {c.campaign_name}
                             </p>
                           </td>
-                          <td className="px-6 py-4 text-right font-mono">
+                          <td className="px-6 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
                             {fmt(c.total_qr)}
                           </td>
-                          <td className="px-6 py-4 text-right font-mono">
+                          <td className="px-6 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
                             {fmt(c.total_claims)}
                           </td>
-                          <td className="px-6 py-4 text-right font-mono">
+                          <td className="px-6 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
                             {fmt(c.unique_users)}
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -1111,14 +1117,16 @@ export default async function ClientDashboard() {
             </div>
 
             {/* Chart 1: QR vs Claims per campaign */}
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm p-7">
-              <div className="flex items-center gap-2.5 mb-5">
-                <BarChart2 className="h-5 w-5 text-blue-500" />
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30">
+                  <BarChart2 className="h-5 w-5" />
+                </div>
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">
+                  <h2 className="font-bold text-slate-900 dark:text-white text-xl">
                     QR Generated vs Claims — Per Campaign
                   </h2>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Volume comparison
                   </p>
                 </div>
@@ -1127,14 +1135,16 @@ export default async function ClientDashboard() {
             </div>
 
             {/* Chart 2: Daily claims (last 7 days) */}
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm p-7">
-              <div className="flex items-center gap-2.5 mb-5">
-                <Activity className="h-5 w-5 text-violet-500" />
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-lg shadow-violet-500/30">
+                  <Activity className="h-5 w-5" />
+                </div>
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">
+                  <h2 className="font-bold text-slate-900 dark:text-white text-xl">
                     Daily Claims — Last 7 Days
                   </h2>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Claim activity trend
                   </p>
                 </div>
@@ -1143,55 +1153,57 @@ export default async function ClientDashboard() {
             </div>
 
             {/* Unique Users table */}
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
-              <div className="px-7 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
-                <Users className="h-5 w-5 text-amber-500" />
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-50 via-white to-amber-50 dark:from-slate-800/50 dark:via-slate-900/50 dark:to-slate-800/50 px-8 py-6 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30">
+                  <Users className="h-5 w-5" />
+                </div>
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">
+                  <h2 className="font-bold text-slate-900 dark:text-white text-xl">
                     Unique Users
                   </h2>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Customers who claimed at least once
                   </p>
                 </div>
               </div>
               {uniqueUsers.length === 0 ? (
-                <div className="py-10 text-center text-sm text-gray-400">
+                <div className="py-12 text-center text-sm text-slate-400">
                   No users yet.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 dark:bg-slate-900/60 text-gray-400 dark:text-slate-500 text-xs uppercase tracking-wider">
+                    <thead className="bg-slate-50/80 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider font-semibold">
                       <tr>
-                        <th className="px-6 py-3">User</th>
-                        <th className="px-6 py-3">Phone</th>
-                        <th className="px-6 py-3">Campaign</th>
-                        <th className="px-6 py-3 text-right">Claims</th>
+                        <th className="px-6 py-4">User</th>
+                        <th className="px-6 py-4">Phone</th>
+                        <th className="px-6 py-4">Campaign</th>
+                        <th className="px-6 py-4 text-right">Claims</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-slate-200/50 dark:divide-slate-800/50">
                       {uniqueUsers.slice(0, 50).map((u, i) => (
                         <tr
                           key={i}
-                          className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-200"
                         >
-                          <td className="px-6 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs font-bold shrink-0">
                                 {(u.user_name || u.phone)
                                   .charAt(0)
                                   .toUpperCase()}
                               </div>
-                              <span className="font-medium text-gray-900 dark:text-white">
+                              <span className="font-semibold text-slate-900 dark:text-white">
                                 {u.user_name || "—"}
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-3 font-mono text-gray-600 dark:text-slate-400">
+                          <td className="px-6 py-4 font-mono text-slate-700 dark:text-slate-300">
                             {u.phone}
                           </td>
-                          <td className="px-6 py-3 text-gray-600 dark:text-slate-400">
+                          <td className="px-6 py-4 text-slate-700 dark:text-slate-300">
                             {u.campaign_name}
                           </td>
                           <td className="px-6 py-3 text-right">
