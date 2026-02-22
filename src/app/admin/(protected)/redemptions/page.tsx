@@ -44,6 +44,15 @@ export default function RedemptionsPage() {
           "[Redemptions] fetched from campaign_user_details_v1:",
           data?.length,
         );
+        // TEMPORARY DEBUG: Log raw DB value for first record
+        if (data && data.length > 0) {
+          console.log(
+            "[DEBUG] RAW DB redeemed_at (first record):",
+            data[0].redeemed_at,
+            "typeof:",
+            typeof data[0].redeemed_at,
+          );
+        }
         const mapped = (data || []).map(
           (
             row: {

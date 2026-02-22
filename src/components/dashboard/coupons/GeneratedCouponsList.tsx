@@ -39,6 +39,17 @@ export default function GeneratedCouponsList({
   const [searchQuery, setSearchQuery] = useState("");
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
+  // TEMPORARY DEBUG: Log raw coupon data on mount
+  if (coupons.length > 0) {
+    console.log("[DEBUG] GeneratedCouponsList - RAW coupons[0]:", coupons[0]);
+    console.log(
+      "[DEBUG] GeneratedCouponsList - redeemed_at type:",
+      typeof coupons[0].redeemed_at,
+      "value:",
+      coupons[0].redeemed_at,
+    );
+  }
+
   // 1. Summary Metrics
   const summary = useMemo(() => {
     const totalDiscount = coupons.reduce(

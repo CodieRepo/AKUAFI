@@ -93,6 +93,14 @@ export default function CouponVerification({
         finalStatus = "redeemed";
       else if (data.status === "expired") finalStatus = "expired";
 
+      // TEMPORARY DEBUG: Log raw redeemed_at from DB
+      console.log(
+        "[DEBUG] CouponVerification.tsx - RAW redeemed_at:",
+        data.redeemed_at,
+        "typeof:",
+        typeof data.redeemed_at,
+      );
+
       setCouponData({
         coupon_code: cleanCode,
         campaign_name: data.campaign_name || "Unknown Campaign",
@@ -298,7 +306,19 @@ export default function CouponVerification({
                 <div className="flex justify-between">
                   <span className="opacity-70">Redeemed:</span>
                   <span className="font-medium text-right">
-                    {formatToIST(couponData.redeemed_at, "medium")}
+                    {(() => {
+                      const formatted = formatToIST(
+                        couponData.redeemed_at,
+                        "medium",
+                      );
+                      console.log(
+                        "[DEBUG] CouponVerification.tsx - Formatted IST:",
+                        formatted,
+                        "input was:",
+                        couponData.redeemed_at,
+                      );
+                      return formatted;
+                    })()}
                   </span>
                 </div>
               )}

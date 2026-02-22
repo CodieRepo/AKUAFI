@@ -17,6 +17,17 @@ interface CouponTableProps {
 }
 
 export default function CouponTable({ coupons, loading }: CouponTableProps) {
+  // TEMPORARY DEBUG: Log raw coupon data
+  if (coupons.length > 0) {
+    console.log("[DEBUG] CouponTable - RAW coupons[0]:", coupons[0]);
+    console.log(
+      "[DEBUG] CouponTable - redeemed_at type:",
+      typeof coupons[0].redeemed_at,
+      "value:",
+      coupons[0].redeemed_at,
+    );
+  }
+
   if (loading)
     return (
       <div className="p-8 text-center text-text-muted">Loading coupons...</div>

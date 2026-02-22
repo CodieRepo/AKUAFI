@@ -36,6 +36,21 @@ export default function RedemptionTable({
   redemptions,
   loading,
 }: RedemptionTableProps) {
+  // TEMPORARY DEBUG LOGS - IST CONVERSION DEBUGGING
+  if (redemptions.length > 0) {
+    const firstRedemption = redemptions[0];
+    console.log(
+      "[DEBUG] RedemptionTable.tsx - RAW redeemed_at:",
+      firstRedemption.redeemed_at,
+      "typeof:",
+      typeof firstRedemption.redeemed_at,
+    );
+    console.log(
+      "[DEBUG] RedemptionTable.tsx - Formatted IST:",
+      formatToISTCompact(firstRedemption.redeemed_at),
+    );
+  }
+
   if (loading && redemptions.length === 0) {
     return (
       <div className="p-12 text-center text-gray-500 dark:text-gray-400">
