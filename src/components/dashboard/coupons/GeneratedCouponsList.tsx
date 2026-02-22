@@ -11,7 +11,7 @@ import {
   QrCode,
   Copy,
 } from "lucide-react";
-import { formatToISTDate, formatToISTCompact } from "@/lib/formatTimestamp";
+import { formatToISTCompact } from "@/lib/formatTimestamp";
 
 export interface CouponData {
   id: string;
@@ -310,7 +310,7 @@ export default function GeneratedCouponsList({
                       </td>
                       <td className="px-6 py-3">{statusBadgex}</td>
                       <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
-                        {formatToISTDate(coupon.generated_at)}
+                        {formatToISTCompact(coupon.generated_at)}
                       </td>
                       <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
                         {coupon.redeemed_at

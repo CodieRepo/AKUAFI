@@ -60,6 +60,82 @@ export function istDateKey(input: string | Date | null | undefined): string {
   return `${year}-${month}-${day}`;
 }
 
+function parseIstDayKey(dayKey: string): {
+  year: number;
+  month: number;
+  day: number;
+} | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey.trim());
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return null;
+  }
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > 31) return null;
+
+  return { year, month, day };
+}
+
+export function formatIstDayKey(dayKey: string | null | undefined): string {
+  if (!dayKey) return "—";
+  const parsed = parseIstDayKey(dayKey);
+  if (!parsed) return "—";
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const day = String(parsed.day).padStart(2, "0");
+  const month = monthNames[parsed.month - 1];
+  return `${day} ${month} ${parsed.year}`;
+}
+
+export function istWeekdayFromDayKey(
+  dayKey: string | null | undefined,
+): string {
+  if (!dayKey) return "";
+  const parsed = parseIstDayKey(dayKey);
+  if (!parsed) return "";
+
+  const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+  let year = parsed.year;
+  const month = parsed.month;
+  const day = parsed.day;
+
+  if (month < 3) year -= 1;
+  const weekday =
+    (year +
+      Math.floor(year / 4) -
+      Math.floor(year / 100) +
+      Math.floor(year / 400) +
+      t[month - 1] +
+      day) %
+    7;
+
+  const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return labels[weekday] ?? "";
+}
+
 export function formatToIST(
   input: string | Date | null | undefined,
   format: "short" | "medium" | "long" = "medium",

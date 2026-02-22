@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import CouponVerification from "@/components/dashboard/coupons/CouponVerification";
 import GeneratedCouponsList from "@/components/dashboard/coupons/GeneratedCouponsList";
-import { formatUtcToIst, istDateKey } from "@/lib/formatTimestamp";
+import { istDateKey, istWeekdayFromDayKey } from "@/lib/formatTimestamp";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmt(n: number) {
@@ -31,18 +31,6 @@ function getLast7Days() {
     if (key) out.push(key);
   }
   return out;
-}
-function weekdayLabelFromIstDateKey(dateKey: string) {
-  if (!dateKey) return "";
-  return formatUtcToIst(`${dateKey}T00:00:00+05:30`, {
-    year: undefined,
-    month: undefined,
-    day: undefined,
-    hour: undefined,
-    minute: undefined,
-    second: undefined,
-    weekday: "short",
-  });
 }
 function claimLabel(pct: number) {
   if (pct >= 20)
@@ -240,7 +228,7 @@ function DailyClaimsChart({
                 fontSize={9}
                 fill="#9ca3af"
               >
-                {weekdayLabelFromIstDateKey(d.date)}
+                {istWeekdayFromDayKey(d.date)}
               </text>
             </g>
           );
