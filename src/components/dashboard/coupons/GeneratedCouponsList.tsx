@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   Filter,
@@ -38,10 +38,6 @@ export default function GeneratedCouponsList({
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [claimingId, setClaimingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    console.log("TZFIX-vFinal build loaded");
-  }, []);
 
   // 1. Summary Metrics
   const summary = useMemo(() => {
@@ -121,7 +117,6 @@ export default function GeneratedCouponsList({
           <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <QrCode className="h-5 w-5 text-pink-500" />
             Generated Coupons
-            <span className="text-[10px] opacity-60">TZFIX-vFinal</span>
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Track issued QR coupons and their status.
@@ -241,7 +236,7 @@ export default function GeneratedCouponsList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-slate-800/50">
-                {filteredCoupons.map((coupon, index) => {
+                {filteredCoupons.map((coupon) => {
                   // Status Badging Logic
                   let statusBadgex;
                   if (coupon.status === "active") {
@@ -305,23 +300,11 @@ export default function GeneratedCouponsList({
                       <td className="px-6 py-3">{statusBadgex}</td>
                       <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
                         {formatToISTCompact(coupon.generated_at)}
-                        {index === 0 && (
-                          <pre className="text-xs opacity-60 whitespace-pre-wrap">
-                            RAW: {String(coupon.generated_at)} | type:{" "}
-                            {typeof coupon.generated_at}
-                          </pre>
-                        )}
                       </td>
                       <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
                         {coupon.redeemed_at
                           ? formatToISTCompact(coupon.redeemed_at)
                           : "-"}
-                        {index === 0 && (
-                          <pre className="text-xs opacity-60 whitespace-pre-wrap">
-                            RAW: {String(coupon.redeemed_at)} | type:{" "}
-                            {typeof coupon.redeemed_at}
-                          </pre>
-                        )}
                       </td>
                       <td className="px-6 py-3 text-gray-500 dark:text-slate-400 text-xs">
                         {coupon.status === "active" ? (

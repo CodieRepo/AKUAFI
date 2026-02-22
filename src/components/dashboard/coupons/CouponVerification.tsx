@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { formatToISTDate, formatToIST } from "@/lib/formatTimestamp";
 import { Button } from "@/components/ui/Button";
 import {
@@ -24,10 +24,6 @@ export default function CouponVerification({
     "idle" | "valid" | "invalid" | "redeemed" | "expired"
   >("idle");
   const [couponData, setCouponData] = useState<any>(null);
-
-  useEffect(() => {
-    console.log("TZFIX-vFinal build loaded");
-  }, []);
 
   const MAX_LENGTH = 25;
   const MIN_LENGTH = 5;
@@ -160,8 +156,7 @@ export default function CouponVerification({
       <div className="flex items-center gap-2 mb-4">
         <ScanLine className="h-5 w-5 text-blue-600 dark:text-blue-400" />
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          Verify Coupon{" "}
-          <span className="text-[10px] opacity-60">TZFIX-vFinal</span>
+          Verify Coupon
         </h3>
       </div>
 
@@ -300,17 +295,11 @@ export default function CouponVerification({
                 </div>
               )}
               {couponData?.redeemed_at && (
-                <div>
-                  <div className="flex justify-between">
-                    <span className="opacity-70">Redeemed:</span>
-                    <span className="font-medium text-right">
-                      {formatToIST(couponData.redeemed_at, "medium")}
-                    </span>
-                  </div>
-                  <pre className="text-xs opacity-60 whitespace-pre-wrap">
-                    RAW: {String(couponData.redeemed_at)} | type:{" "}
-                    {typeof couponData.redeemed_at}
-                  </pre>
+                <div className="flex justify-between">
+                  <span className="opacity-70">Redeemed:</span>
+                  <span className="font-medium text-right">
+                    {formatToIST(couponData.redeemed_at, "medium")}
+                  </span>
                 </div>
               )}
             </div>
