@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
-import { createClient } from '@/utils/supabase/client';
-import { Loader2, Lock } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { createClient } from "@/utils/supabase/client";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam === 'unauthorized') {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "unauthorized") {
       setError("You are not authorized to access the admin area.");
     }
   }, [searchParams]);
@@ -40,15 +40,21 @@ function LoginForm() {
       if (data.user) {
         // Refresh router to sync server-side session
         router.refresh();
-        
+
         // Use replace to prevent back-navigation to login
-        router.replace('/admin/dashboard');
+        router.replace("/admin/dashboard");
       }
-    } catch (err: any) {
-      console.error('Login error:', err);
+    } catch (err: { message?: string } | Error | string | unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (typeof err === "object" && err !== null && "message" in err
+              ? (err as { message: string }).message
+              : null) || "Failed to login";
+      console.error("Login error:", err);
       // Clean up local session if auth failed partially
       await supabase.auth.signOut();
-      setError(err.message || 'Failed to login');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -59,17 +65,19 @@ function LoginForm() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-8">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <Image 
-              src="/logo/akuafi-logo.png" 
-              alt="Akuafi" 
-              width={200} 
-              height={72} 
+            <Image
+              src="/logo/akuafi-logo.png"
+              alt="Akuafi"
+              width={200}
+              height={72}
               priority
-              className="h-16 w-auto object-contain" 
+              className="h-16 w-auto object-contain"
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Access</h1>
-          <p className="text-sm text-gray-500 mt-2">Login to manage campaigns</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Login to manage campaigns
+          </p>
         </div>
 
         {error && (
@@ -80,7 +88,9 @@ function LoginForm() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Email</label>
+            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+              Email
+            </label>
             <input
               type="email"
               required
@@ -89,9 +99,11 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          
+
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Password</label>
+            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+              Password
+            </label>
             <input
               type="password"
               required
@@ -102,7 +114,7 @@ function LoginForm() {
           </div>
 
           <Button type="submit" className="w-full mt-2" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Login'}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Login"}
           </Button>
         </form>
       </div>

@@ -52,20 +52,15 @@ export default function AdminSidebar() {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  // Mobile Overlay
-  const MobileOverlay = () => (
-    <div 
-      className={cn(
-        "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden", 
-        isOpen ? "block" : "hidden"
-      )} 
-      onClick={() => setIsOpen(false)}
-    />
-  );
-
   return (
     <>
-      <MobileOverlay />
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden",
+          isOpen ? "block" : "hidden",
+        )}
+        onClick={() => setIsOpen(false)}
+      />
       
       {/* Mobile Toggle Button */}
       <button 
