@@ -26,6 +26,7 @@ export default function Page() {
   const params = useParams();
   const qr_token = params?.qr_token as string;
   const hasRedeemedRef = useRef(false);
+  const otpInputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   // View States: 'loading' | 'error' | 'used' | 'form' | 'success'
   const [view, setView] = useState<'loading' | 'error' | 'used' | 'form' | 'success'>('loading');
@@ -54,6 +55,39 @@ export default function Page() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
     if (val.length <= 10) setFormData(prev => ({ ...prev, phone: val }));
+  };
+
+  const handleOtpDigitChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const nextOtp = Array.from({ length: 6 }, (_, i) => otp[i] ?? '');
+    nextOtp[index] = digit;
+    setOtp(nextOtp.join('').trimEnd());
+
+    if (digit && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !(otp[index] ?? '') && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+
+    setOtp(pasted);
+    const focusIndex = Math.min(pasted.length, 5);
+    otpInputRefs.current[focusIndex]?.focus();
   };
 
   // 1. Fetch Bottle on Mount
@@ -198,38 +232,63 @@ export default function Page() {
 
   if (view === 'loading') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
+      <div className="relative flex flex-col items-center justify-center min-h-screen p-4 text-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl" />
         <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-        <p className="text-gray-600">Verifying QR Code…</p>
+        <p className="text-gray-600 tracking-wide">Verifying QR Code...</p>
       </div>
     );
   }
 
   if (view === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
+      <div className="relative flex flex-col items-center justify-center min-h-screen p-4 text-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl" />
         <AkuafiLogo />
-        <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
-          <AlertCircle className="h-8 w-8" />
+        <div className="w-full max-w-sm rounded-[18px] border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_14px_40px_-24px_rgba(37,99,235,0.35)] p-7 animate-in fade-in duration-300">
+          <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <AlertCircle className="h-8 w-8" />
+          </div>
+          <h1 className="text-xl font-semibold tracking-wide text-gray-900 mb-2">Something went wrong</h1>
+          <p className="text-gray-600 max-w-xs mx-auto">{errorMsg}</p>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-        <p className="text-gray-600 max-w-xs">{errorMsg}</p>
       </div>
     );
   }
 
   if (view === 'used') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
+      <div className="relative flex flex-col items-center justify-center min-h-screen p-4 text-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl" />
         <AkuafiLogo />
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 w-full max-w-sm">
-          <div className="h-16 w-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <AlertCircle className="h-8 w-8" />
+        <div className="bg-white/70 rounded-[20px] backdrop-blur-xl shadow-[0_18px_50px_-28px_rgba(30,41,59,0.45)] border border-white/60 p-8 w-full max-w-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-26px_rgba(245,158,11,0.35)] animate-in fade-in duration-300">
+          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-amber-500 flex items-center justify-center mb-5 mx-auto shadow-inner">
+            <AlertCircle className="h-9 w-9" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-3">This QR has already been used.</h1>
-          <p className="text-gray-500 text-sm">
+          <h1 className="text-2xl font-semibold tracking-wide text-gray-900 mb-2">QR Already Used</h1>
+          <p className="text-gray-500 text-sm leading-6 mb-6">
             If you believe this is an error, please contact support.
           </p>
+          <div className="space-y-3">
+            <Button
+              type="button"
+              className="w-full rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] text-white border-0 shadow-[0_14px_30px_-18px_rgba(37,99,235,0.75)] hover:from-[#1E4FD8] hover:to-[#0284C7] transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+              onClick={() => window.location.reload()}
+            >
+              Scan Again
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-xl border-gray-200 bg-white/70 hover:bg-white text-gray-700"
+              onClick={() => window.location.href = '/contact'}
+            >
+              Contact Support
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -237,101 +296,132 @@ export default function Page() {
 
   if (view === 'form') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl" />
         <div className="w-full max-w-md">
           <AkuafiLogo />
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="bg-white/70 backdrop-blur-xl rounded-[20px] shadow-[0_18px_46px_-28px_rgba(37,99,235,0.40)] border border-white/70 p-7 animate-in fade-in duration-300">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Claim Your Reward</h1>
-              <p className="text-sm text-gray-500 mt-1">Enter your details to generate your coupon.</p>
+              <h1 className="text-2xl font-semibold tracking-wide text-gray-900">Claim Your Reward</h1>
+              <p className="text-sm text-gray-500 mt-1 leading-6">Enter your details to generate your coupon.</p>
             </div>
 
             <form onSubmit={otpSent ? handleVerifyAndRedeem : handleSendCode} className="space-y-4">
               {!otpSent ? (
                 <>
-                  {/* Name */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Name <span className="text-red-500">*</span></label>
                     <div className="relative">
-                      <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <User className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                       <input
                         type="text"
                         required
-                        placeholder="Your Name"
-                        className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none"
+                        placeholder=" "
+                        className="peer w-full h-12 pl-10 pr-3 rounded-xl border border-gray-200 bg-white/80 text-sm text-gray-900 shadow-sm outline-none transition-all duration-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
                         value={formData.name}
                         onChange={handleNameChange}
                       />
+                      <label className="absolute left-10 top-3.5 text-sm text-gray-500 transition-all duration-200 pointer-events-none peer-focus:-top-2 peer-focus:left-3 peer-focus:text-[11px] peer-focus:px-2 peer-focus:bg-white peer-focus:text-[#2563EB] peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:px-2 peer-[:not(:placeholder-shown)]:bg-white">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
                     </div>
                   </div>
 
-                  {/* Phone */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Phone Number <span className="text-red-500">*</span></label>
-                    <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-1 focus-within:ring-primary">
-                      <div className="bg-gray-100 flex items-center px-3 border-r border-gray-300">
+                    <div className="flex h-12 rounded-xl border border-gray-200 bg-white/80 overflow-hidden shadow-sm transition-all duration-200 focus-within:border-[#2563EB] focus-within:ring-4 focus-within:ring-blue-100">
+                      <div className="bg-blue-50/70 flex items-center px-3 border-r border-gray-200">
                         <Phone className="h-3.5 w-3.5 text-gray-500 mr-1" />
                         <span className="text-sm font-medium text-gray-600">+91</span>
                       </div>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="9876543210"
-                        className="w-full h-10 px-3 text-sm outline-none"
-                        value={formData.phone}
-                        onChange={handlePhoneChange}
-                      />
+                      <div className="relative flex-1">
+                        <input
+                          type="tel"
+                          required
+                          placeholder=" "
+                          className="peer w-full h-12 px-3 text-sm text-gray-900 outline-none bg-transparent"
+                          value={formData.phone}
+                          onChange={handlePhoneChange}
+                        />
+                        <label className="absolute left-3 top-3.5 text-sm text-gray-500 transition-all duration-200 pointer-events-none peer-focus:-top-2 peer-focus:text-[11px] peer-focus:px-2 peer-focus:bg-white peer-focus:text-[#2563EB] peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:px-2 peer-[:not(:placeholder-shown)]:bg-white">
+                          Phone Number <span className="text-red-500">*</span>
+                        </label>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">10-digit mobile number</p>
                   </div>
 
-                  {/* Location — OPTIONAL */}
                   <div className="pt-3 border-t border-gray-100">
-                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-                      Location <span className="text-gray-400 font-normal normal-case">(optional)</span>
-                    </label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <textarea
-                        placeholder="Enter your city / area… (optional)"
-                        className="w-full h-20 pl-10 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
+                        placeholder=" "
+                        className="peer w-full h-24 pl-10 pr-3 py-3 rounded-xl border border-gray-200 bg-white/80 text-sm text-gray-900 shadow-sm outline-none transition-all duration-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 resize-none"
                         value={formData.address}
                         onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                       />
+                      <label className="absolute left-10 top-3 text-sm text-gray-500 transition-all duration-200 pointer-events-none peer-focus:-top-2 peer-focus:left-3 peer-focus:text-[11px] peer-focus:px-2 peer-focus:bg-white peer-focus:text-[#2563EB] peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:px-2 peer-[:not(:placeholder-shown)]:bg-white">
+                        Location <span className="text-gray-400 font-normal">(optional)</span>
+                      </label>
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full mt-2" disabled={loadingAction || formData.phone.length !== 10}>
+                  <Button
+                    type="submit"
+                    className="w-full mt-2 h-12 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] text-white border-0 shadow-[0_16px_34px_-20px_rgba(37,99,235,0.80)] hover:from-[#1E4FD8] hover:to-[#0284C7] transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                    disabled={loadingAction || formData.phone.length !== 10}
+                  >
                     {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Send Verification Code</>}
                   </Button>
                 </>
               ) : (
-                // OTP Step
-                <div className="animate-in slide-in-from-right fade-in duration-300">
-                  <div className="mb-2 p-3 rounded-lg bg-green-50 border border-green-100 text-center">
-                    <p className="text-xs text-green-700 font-medium">Code sent to +91 {formData.phone}</p>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Verification Code</label>
-                    <div className="relative">
-                      <ShieldCheck className="absolute left-3 top-2.5 h-4 w-4 text-green-600" />
-                      <input
-                        type="text"
-                        required
-                        maxLength={6}
-                        placeholder="Enter 6-digit code"
-                        className="w-full h-10 pl-10 pr-3 rounded-lg border border-gray-300 text-sm focus:ring-1 focus:ring-primary outline-none tracking-widest text-center text-lg"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      />
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="mb-4 rounded-2xl border border-green-100 bg-white/85 backdrop-blur-sm px-4 py-3 shadow-[0_14px_28px_-20px_rgba(22,163,74,0.35)] transition-all duration-300">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                        <CheckCircle className="h-4 w-4" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-green-700">Verification code sent</p>
+                        <p className="text-xs text-gray-600">+91 {formData.phone}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
+                  </div>
+                  <div className="mb-5">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <ShieldCheck className="h-4 w-4 text-[#16A34A]" />
+                      <label className="text-xs font-semibold text-gray-700 uppercase tracking-[0.12em]">Verification Code</label>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <input
+                          key={index}
+                          ref={(el) => { otpInputRefs.current[index] = el; }}
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={1}
+                          className="h-12 w-11 rounded-xl border border-gray-200 bg-white/90 text-center text-lg font-semibold tracking-wider text-gray-900 outline-none transition-all duration-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
+                          value={otp[index] ?? ''}
+                          onChange={(e) => handleOtpDigitChange(index, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                          onPaste={handleOtpPaste}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-center">
+                      Resend available in 00:30
+                    </p>
+                    <p className="text-xs text-gray-500 mt-3 text-center">
                       <button type="button" onClick={() => setOtpSent(false)} className="text-primary hover:underline">
-                        ← Change number
+                        Change number
                       </button>
                     </p>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loadingAction || otp.length !== 6}>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] text-white border-0 shadow-[0_16px_34px_-20px_rgba(37,99,235,0.80)] hover:from-[#1E4FD8] hover:to-[#0284C7] transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                    disabled={loadingAction || otp.length !== 6}
+                  >
                     {loadingAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="mr-2 h-4 w-4" /> Verify &amp; Claim Reward</>}
                   </Button>
                 </div>
@@ -346,9 +436,11 @@ export default function Page() {
   // Success View
   if (view === 'success') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-green-50 to-gray-50 text-center animate-in fade-in zoom-in duration-500">
+      <div className="relative flex flex-col items-center justify-center min-h-screen p-4 text-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50 animate-in fade-in duration-500">
+        <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl" />
         <AkuafiLogo />
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 w-full max-w-sm">
+        <div className="bg-white/75 backdrop-blur-xl rounded-[20px] shadow-[0_18px_50px_-28px_rgba(22,163,74,0.45)] border border-white/70 p-8 w-full max-w-sm">
 
           {/* Success badge */}
           <div className="flex justify-center mb-4">
