@@ -909,7 +909,7 @@ export default async function ClientDashboard() {
             </p>
             <p className="text-2xl font-bold mt-1">{fmt(impressions)}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">
-              Total coupons generated
+              Total QR views across campaigns
             </p>
           </div>
 
