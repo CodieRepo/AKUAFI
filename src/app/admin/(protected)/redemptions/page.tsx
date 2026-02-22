@@ -6,8 +6,11 @@ import { Search, RefreshCw, Smartphone, QrCode } from "lucide-react";
 import RedemptionTable, {
   Redemption,
 } from "@/components/admin/redemptions/RedemptionTable";
-import { StatCard } from "@/components/admin/ui/StatCard";
-import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/ui/AdminPageHeader";
+import { AdminStatCard } from "@/components/admin/ui/AdminStatCard";
+import { AdminButton } from "@/components/admin/ui/AdminButton";
+import { AdminCard } from "@/components/admin/ui/AdminCard";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
 import { istDateKey } from "@/lib/formatTimestamp";
 
 export default function RedemptionsPage() {
@@ -150,114 +153,134 @@ export default function RedemptionsPage() {
     .sort();
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Redemptions Monitor
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
-            Real-time view of coupon claims.
+    <div className="space-y-8">
+      <AdminPageHeader
+        title="Redemptions Monitor"
+        description="Real-time view of coupon claims and user activity"
+        actions={
+          <div className="flex items-center gap-3">
             {isRefreshing && (
-              <span className="text-xs text-blue-500 flex items-center animate-pulse">
-                <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> Syncing...
-              </span>
+              <AdminBadge variant="info" size="md">
+                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                Syncing...
+              </AdminBadge>
             )}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchRedemptions()}
-            disabled={isRefreshing || loading}
-            className="dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-        </div>
-      </div>
+            <AdminButton
+              variant="secondary"
+              size="sm"
+              onClick={() => fetchRedemptions()}
+              disabled={isRefreshing || loading}
+              icon={
+                <RefreshCw
+                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+              }
+            >
+              Refresh
+            </AdminButton>
+          </div>
+        }
+      />
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
+        <AdminStatCard
           label="Total Redemptions"
           value={totalScans}
-          icon={<QrCode className="h-5 w-5" />}
+          icon={QrCode}
+          iconColor="text-blue-600 dark:text-blue-400"
           loading={loading}
+          description="All-time claims"
         />
-        <StatCard
+        <AdminStatCard
           label="Unique Users"
           value={uniqueUsers}
-          icon={<Smartphone className="h-5 w-5" />}
+          icon={Smartphone}
+          iconColor="text-purple-600 dark:text-purple-400"
           loading={loading}
+          description="Distinct phone numbers"
         />
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl shadow-sm border border-green-100 dark:border-green-800/30 flex flex-col items-center justify-center text-center">
-          <span className="text-green-700 dark:text-green-400 font-semibold mb-2 flex items-center gap-2">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-            Live System
-          </span>
-          <p className="text-xs text-green-600 dark:text-green-500">
-            Auto-refreshing every 10s
-          </p>
-        </div>
+        <AdminCard hover className="p-6">
+          <div className="flex flex-col items-center justify-center text-center h-full">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+              </span>
+              <span className="text-base font-bold text-green-600 dark:text-green-400">
+                Live System
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Auto-refreshing every 10 seconds
+            </p>
+          </div>
+        </AdminCard>
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search phone, campaign, code..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      <AdminCard className="p-5" noPadding={false}>
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search phone, campaign, code..."
+              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white transition-all duration-200"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <select
-            className="h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-gray-300"
-            value={selectedCampaign}
-            onChange={(e) => setSelectedCampaign(e.target.value)}
-          >
-            <option value="all">All Campaigns</option>
-            {campaigns.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto">
+            <select
+              className="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-gray-300 transition-all duration-200"
+              value={selectedCampaign}
+              onChange={(e) => setSelectedCampaign(e.target.value)}
+            >
+              <option value="all">All Campaigns</option>
+              {campaigns.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
 
-          <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
-            <button
-              onClick={() => setDateRange("all")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRange === "all" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-            >
-              All Time
-            </button>
-            <button
-              onClick={() => setDateRange("7days")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRange === "7days" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-            >
-              7 Days
-            </button>
-            <button
-              onClick={() => setDateRange("today")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRange === "today" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-            >
-              Today
-            </button>
+            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setDateRange("all")}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                  dateRange === "all"
+                    ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                onClick={() => setDateRange("7days")}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                  dateRange === "7days"
+                    ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
+              >
+                7 Days
+              </button>
+              <button
+                onClick={() => setDateRange("today")}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                  dateRange === "today"
+                    ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
+              >
+                Today
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </AdminCard>
 
       <RedemptionTable
         redemptions={filteredData}

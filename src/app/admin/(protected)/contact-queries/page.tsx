@@ -7,9 +7,25 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Mail,
+  Calendar,
+  CheckCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { formatToISTDate, istDateKey } from "@/lib/formatTimestamp";
+import { AdminPageHeader } from "@/components/admin/ui/AdminPageHeader";
+import { AdminStatCard } from "@/components/admin/ui/AdminStatCard";
+import {
+  AdminTable,
+  AdminTableHeader,
+  AdminTableBody,
+  AdminTableRow,
+  AdminTableCell,
+  AdminTableHeadCell,
+} from "@/components/admin/ui/AdminTable";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
+import { AdminLoadingState } from "@/components/admin/ui/AdminLoadingState";
+import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
 
 type QueryRow = {
   id: string;
@@ -101,24 +117,15 @@ export default function ContactQueriesPage() {
   ];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    );
+    return <AdminLoadingState />;
   }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <MessageSquare className="h-6 w-6 text-blue-600" /> Contact Queries
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Inquiries submitted through the Akuafi website
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Contact Queries"
+        description="Inquiries submitted through the Akuafi website"
+      />
 
       {error && (
         <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-3 text-sm">
@@ -128,19 +135,35 @@ export default function ContactQueriesPage() {
       )}
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((m) => (
-          <div
-            key={m.label}
-            className={`rounded-xl p-4 ${m.color} border border-current/10`}
-          >
-            <div className="text-2xl mb-1">{m.icon}</div>
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
-              {m.label}
-            </p>
-            <p className="text-3xl font-bold mt-0.5">{m.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <AdminStatCard
+          label="Total Queries"
+          value={totalQueries}
+          icon={MessageSquare}
+          iconColor="text-blue-600 dark:text-blue-400"
+          description="All time inquiries"
+        />
+        <AdminStatCard
+          label="Today's Queries"
+          value={todayQueries}
+          icon={Calendar}
+          iconColor="text-violet-600 dark:text-violet-400"
+          description="Received today"
+        />
+        <AdminStatCard
+          label="Unread"
+          value={unreadQueries}
+          icon={Mail}
+          iconColor="text-amber-600 dark:text-amber-400"
+          description="Awaiting review"
+        />
+        <AdminStatCard
+          label="Replied"
+          value={repliedQueries}
+          icon={CheckCircle}
+          iconColor="text-green-600 dark:text-green-400"
+          description="Response sent"
+        />
       </div>
 
       {/* Filter Tabs */}
@@ -161,79 +184,92 @@ export default function ContactQueriesPage() {
       </div>
 
       {/* Queries Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-3">Name</th>
-                <th className="px-6 py-3">Company</th>
-                <th className="px-6 py-3">Email</th>
-                <th className="px-6 py-3">Interest</th>
-                <th className="px-6 py-3">Received</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-12 text-center text-gray-400 dark:text-gray-500"
+      {filtered.length === 0 ? (
+        <AdminEmptyState
+          icon={MessageSquare}
+          title={filter === "all" ? "No queries yet" : `No ${filter} queries`}
+          description={
+            filter === "all"
+              ? "Contact queries from your website will appear here"
+              : `No queries with status "${filter}" at the moment`
+          }
+        />
+      ) : (
+        <AdminTable>
+          <AdminTableHeader>
+            <AdminTableRow>
+              <AdminTableHeadCell>Name</AdminTableHeadCell>
+              <AdminTableHeadCell>Company</AdminTableHeadCell>
+              <AdminTableHeadCell>Email</AdminTableHeadCell>
+              <AdminTableHeadCell>Interest</AdminTableHeadCell>
+              <AdminTableHeadCell>Received</AdminTableHeadCell>
+              <AdminTableHeadCell>Status</AdminTableHeadCell>
+              <AdminTableHeadCell> </AdminTableHeadCell>
+            </AdminTableRow>
+          </AdminTableHeader>
+          <AdminTableBody>
+            {filtered.map((q) => (
+              <AdminTableRow
+                key={q.id}
+                className={q.status === "new" ? "font-medium" : ""}
+              >
+                <AdminTableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="font-semibold">{q.full_name}</span>
+                  </div>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {q.company || "—"}
+                  </span>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <a
+                    href={`mailto:${q.email}`}
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    No queries{" "}
-                    {filter !== "all" ? `with status "${filter}"` : "yet"}.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((q) => (
-                  <tr
-                    key={q.id}
-                    className={`hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors ${q.status === "new" ? "font-medium" : ""}`}
+                    {q.email}
+                  </a>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <span className="text-gray-600 dark:text-gray-300">
+                    {q.interest}
+                  </span>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {formatToISTDate(q.created_at)}
+                  </span>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <AdminBadge
+                    variant={
+                      q.status === "new"
+                        ? "info"
+                        : q.status === "replied"
+                          ? "success"
+                          : "warning"
+                    }
                   >
-                    <td className="px-6 py-4 text-gray-900 dark:text-white">
-                      {q.full_name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
-                      {q.company || "—"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <a
-                        href={`mailto:${q.email}`}
-                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        {q.email}
-                      </a>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {q.interest}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {formatToISTDate(q.created_at)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase ${STATUS_STYLES[q.status] || ""}`}
-                      >
-                        {q.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/contact-queries/${q.id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium transition-colors"
-                      >
-                        View <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    {q.status}
+                  </AdminBadge>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <Link
+                    href={`/admin/contact-queries/${q.id}`}
+                    className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium transition-colors"
+                  >
+                    View <ChevronRight className="h-3 w-3" />
+                  </Link>
+                </AdminTableCell>
+              </AdminTableRow>
+            ))}
+          </AdminTableBody>
+        </AdminTable>
+      )}
     </div>
   );
 }

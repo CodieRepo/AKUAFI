@@ -1,6 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
+import {
+  AdminTable,
+  AdminTableHeader,
+  AdminTableHeadCell,
+  AdminTableBody,
+  AdminTableRow,
+  AdminTableCell,
+} from "@/components/admin/ui/AdminTable";
+import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { AdminLoadingState } from "@/components/admin/ui/AdminLoadingState";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { QrCode, User, Calendar, Tag, Ticket } from "lucide-react";
 import { formatToISTCompact } from "@/lib/formatTimestamp";
@@ -52,131 +63,95 @@ export default function RedemptionTable({
   }
 
   if (loading && redemptions.length === 0) {
-    return (
-      <div className="p-12 text-center text-gray-500 dark:text-gray-400">
-        Scanning for redemptions...
-      </div>
-    );
+    return <AdminLoadingState text="Scanning for redemptions..." />;
   }
 
   if (redemptions.length === 0) {
     return (
-      <div className="p-12 flex flex-col items-center justify-center text-center">
-        <div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-400 dark:text-gray-500">
-          <QrCode className="h-8 w-8" />
-        </div>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          No redemptions found
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-sm">
-          Try adjusting your filters or wait for new scans.
-        </p>
-      </div>
+      <AdminEmptyState
+        icon={QrCode}
+        title="No redemptions found"
+        description="Try adjusting your filters or wait for new scans to appear"
+      />
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-            <tr>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">
-                Time
-              </th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">
-                Campaign
-              </th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">
-                User Details
-              </th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">
-                Coupon
-              </th>
-              <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-            {redemptions.map((r, idx) => (
-              <motion.tr
-                key={r.id + r.qr_token}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.03 }}
-                className="group hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                    {formatToISTCompact(r.redeemed_at)}
+    <AdminTable>
+      <AdminTableHeader>
+        <tr>
+          <AdminTableHeadCell>Time</AdminTableHeadCell>
+          <AdminTableHeadCell>Campaign</AdminTableHeadCell>
+          <AdminTableHeadCell>User Details</AdminTableHeadCell>
+          <AdminTableHeadCell>Coupon</AdminTableHeadCell>
+          <AdminTableHeadCell align="right">Status</AdminTableHeadCell>
+        </tr>
+      </AdminTableHeader>
+      <AdminTableBody>
+        {redemptions.map((r, idx) => (
+          <AdminTableRow key={r.id + r.qr_token}>
+            <AdminTableCell>
+              <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
+                <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="font-medium">
+                  {formatToISTCompact(r.redeemed_at)}
+                </span>
+              </div>
+            </AdminTableCell>
+            <AdminTableCell>
+              <div className="flex items-center gap-2.5">
+                <Tag className="h-4 w-4 text-purple-500" />
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {r.campaign_name || "Unknown"}
+                </span>
+              </div>
+            </AdminTableCell>
+            <AdminTableCell>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 shadow-sm">
+                  <User className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {r.user_name || r.phone}
                   </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5 text-blue-500" />
-                    <span className="font-medium text-gray-900 dark:text-gray-200">
-                      {r.campaign_name || "Unknown"}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                      <User className="h-4 w-4" />
+                  {r.user_name && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                      {r.phone}
                     </div>
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-200">
-                        {r.user_name || r.phone}
-                      </div>
-                      {r.user_name && (
-                        <div className="text-xs text-gray-400 font-mono">
-                          {r.phone}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
+                  )}
+                </div>
+              </div>
+            </AdminTableCell>
+            <AdminTableCell>
+              <div className="flex items-center gap-2.5">
+                <Ticket className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                {r.coupon_code && r.coupon_code !== "-" ? (
                   <div className="flex items-center gap-2">
-                    <Ticket className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                    {r.coupon_code && r.coupon_code !== "-" ? (
-                      <span className="font-mono font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded border border-green-100 dark:border-green-900/30 text-sm">
-                        {r.coupon_code}
-                        {r.discount_value ? (
-                          <span className="ml-1.5 font-normal text-xs text-green-600 dark:text-green-500">
-                            {formatINR(r.discount_value)}
-                          </span>
-                        ) : (
-                          ""
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">—</span>
-                    )}
-                    {r.coupon_status && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wide font-medium ${
-                          r.coupon_status === "redeemed" ||
-                          r.coupon_status === "claimed"
-                            ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                            : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                        }`}
-                      >
-                        {r.coupon_status}
+                    <AdminBadge variant="success" size="md">
+                      {r.coupon_code}
+                    </AdminBadge>
+                    {r.discount_value && (
+                      <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                        {formatINR(r.discount_value)}
                       </span>
                     )}
                   </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <StatusBadge status="redeemed" />
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-600 text-sm">
+                    —
+                  </span>
+                )}
+              </div>
+            </AdminTableCell>
+            <AdminTableCell align="right">
+              <StatusBadge status="redeemed" />
+            </AdminTableCell>
+          </AdminTableRow>
+        ))}
+      </AdminTableBody>
+    </AdminTable>
   );
 }

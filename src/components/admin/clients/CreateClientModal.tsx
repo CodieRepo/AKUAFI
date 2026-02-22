@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2 } from "lucide-react";
-// Wait, I should check if 'sonner' or 'react-hot-toast' is installed.
-// Creating without toast import first, will check package.json in next step if generic alert is needed or strictly toast.
-// Plan said "Success Toast", I'll assume a standard simple alert or console if no library found, but usually standard stacks have one.
-// Actually, I'll use a simple embedded success message or standard alert for now to be safe, or just 'alert()' if no UI lib.
-// Better: I see 'Global' css has 'glass-panel', I'll use that style.
+import { X } from "lucide-react";
+import { AdminButton } from "@/components/admin/ui/AdminButton";
+import { AdminInput } from "@/components/admin/ui/AdminInput";
 
 interface CreateClientModalProps {
   isOpen: boolean;
@@ -109,103 +106,82 @@ export default function CreateClientModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
-        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-md bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+        <div className="px-6 py-5 border-b border-gray-200/50 dark:border-gray-800/50 flex items-center justify-between bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
             Create New Client
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+            className="p-2 rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 text-gray-500 transition-all duration-200"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium">
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium">
               {error}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Client Name
-            </label>
-            <input
-              type="text"
-              name="client_name"
-              value={formData.client_name}
-              onChange={handleChange}
-              placeholder="e.g. Acme Corp"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
-            />
-          </div>
+          <AdminInput
+            label="Client Name"
+            name="client_name"
+            type="text"
+            value={formData.client_name}
+            onChange={handleChange}
+            placeholder="e.g. Acme Corp"
+            required
+          />
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="client@company.com"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
-            />
-          </div>
+          <AdminInput
+            label="Email Address"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="client@company.com"
+            required
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Confirm
-              </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
-              />
-            </div>
+            <AdminInput
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+            />
+            <AdminInput
+              label="Confirm"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+            />
           </div>
 
           <div className="pt-2">
-            <button
+            <AdminButton
               type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full"
               disabled={loading}
-              className="w-full flex items-center justify-center py-2.5 rounded-xl bg-[#0A66C2] hover:bg-[#004182] text-white font-medium transition-all shadow-lg shadow-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed"
+              loading={loading}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                  Creating...
-                </>
-              ) : (
-                "Create Client"
-              )}
-            </button>
+              {loading ? "Creating..." : "Create Client"}
+            </AdminButton>
           </div>
         </form>
       </div>

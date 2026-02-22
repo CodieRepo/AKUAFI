@@ -1,7 +1,27 @@
 ﻿import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Megaphone,
+  QrCode,
+  Ticket,
+  UserCheck,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
+import { AdminCard } from "@/components/admin/ui/AdminCard";
+import { AdminStatCard } from "@/components/admin/ui/AdminStatCard";
+import {
+  AdminTable,
+  AdminTableHeader,
+  AdminTableBody,
+  AdminTableRow,
+  AdminTableCell,
+  AdminTableHeadCell,
+} from "@/components/admin/ui/AdminTable";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
 
 interface Campaign {
   id: string;
@@ -37,26 +57,6 @@ function formatINR(value: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function StatCard({
-  label,
-  value,
-  subtext,
-}: {
-  label: string;
-  value: string | number;
-  subtext?: string;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-900">
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </p>
-      {subtext ? <p className="mt-2 text-[10px] text-gray-400">{subtext}</p> : null}
-    </div>
-  );
 }
 
 export default async function ClientDetailPage({
@@ -157,163 +157,178 @@ export default async function ClientDetailPage({
   );
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div>
         <Link
           href="/admin/dashboard"
-          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors font-medium"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Dashboard
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Dashboard
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">
-          {clientData.client_name}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">Client analytics overview</p>
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <Building2 className="h-7 w-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {clientData.client_name}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Client analytics overview
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Stat Cards â€” 6 card grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AdminStatCard
           label="Campaigns"
           value={stats.total_campaigns}
-          subtext="Total campaigns for this client"
+          icon={Megaphone}
+          iconColor="text-purple-600 dark:text-purple-400"
+          description="Total campaigns for this client"
         />
-        <StatCard
+        <AdminStatCard
           label="QR Generated"
           value={stats.total_qr}
-          subtext="Total campaign impressions"
+          icon={QrCode}
+          iconColor="text-blue-600 dark:text-blue-400"
+          description="Total campaign impressions"
         />
-        <StatCard
+        <AdminStatCard
           label="Claims"
           value={stats.total_claims}
-          subtext="Successful coupon claims"
+          icon={Ticket}
+          iconColor="text-green-600 dark:text-green-400"
+          description="Successful coupon claims"
         />
-        <StatCard
+        <AdminStatCard
           label="Unique Users"
           value={stats.unique_users}
-          subtext="Distinct claiming users"
+          icon={UserCheck}
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          description="Distinct claiming users"
         />
-        <StatCard
+        <AdminStatCard
           label="Conversion"
           value={`${stats.conversion_rate.toFixed(1)}%`}
-          subtext="Claims as percentage of QR generated"
+          icon={TrendingUp}
+          iconColor="text-amber-600 dark:text-amber-400"
+          description="Claims as % of QR generated"
         />
-        {/* Total Estimated Revenue — sum of per-campaign estimated revenue values */}
-        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-emerald-700">
-            Total Estimated Revenue
-          </p>
-          <p className="mt-1 text-3xl font-bold text-emerald-800">
-            {formatINR(totalEstimatedRevenue)}
-          </p>
-          <p className="text-xs text-emerald-600 mt-1">
-            Aggregated across all active campaigns.
-          </p>
-        </div>
+        <AdminCard className="p-6" hover>
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Est. Revenue
+              </p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                {formatINR(totalEstimatedRevenue)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Across all campaigns
+              </p>
+            </div>
+          </div>
+        </AdminCard>
       </div>
 
       {/* Campaigns Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="font-bold text-gray-900">Campaigns</h2>
+      <div>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Campaigns
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Per-campaign performance metrics
+          </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-gray-500">
-              <tr>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Campaign Name
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  QR Generated
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Claims
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Unique Users
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Conversion
-                </th>
-                <th
-                  className="px-6 py-3 font-medium text-xs uppercase tracking-wider"
-                  title="Per-campaign estimated revenue"
-                >
-                  Est. Revenue
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {campaignList.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-10 text-center text-gray-400"
-                  >
-                    No campaigns found for this client.
-                  </td>
-                </tr>
-              ) : (
-                campaignList.map((c) => (
-                  <tr
-                    key={c.campaign_id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-semibold text-gray-900">
-                      {c.campaign_name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {c.total_qr.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
+        {campaignList.length === 0 ? (
+          <AdminCard className="p-12 text-center">
+            <Megaphone className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+            <p className="text-gray-500 dark:text-gray-400">
+              No campaigns found for this client.
+            </p>
+          </AdminCard>
+        ) : (
+          <AdminTable>
+            <AdminTableHeader>
+              <AdminTableRow>
+                <AdminTableHeadCell>Campaign Name</AdminTableHeadCell>
+                <AdminTableHeadCell>QR Generated</AdminTableHeadCell>
+                <AdminTableHeadCell>Claims</AdminTableHeadCell>
+                <AdminTableHeadCell>Unique Users</AdminTableHeadCell>
+                <AdminTableHeadCell>Conversion</AdminTableHeadCell>
+                <AdminTableHeadCell>Est. Revenue</AdminTableHeadCell>
+                <AdminTableHeadCell>Action</AdminTableHeadCell>
+              </AdminTableRow>
+            </AdminTableHeader>
+            <AdminTableBody>
+              {campaignList.map((c) => (
+                <AdminTableRow key={c.campaign_id}>
+                  <AdminTableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                        <Megaphone className="h-5 w-5 text-white" />
+                      </div>
+                      <span className="font-semibold">{c.campaign_name}</span>
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-4 w-4 text-blue-500" />
+                      <span>{c.total_qr.toLocaleString()}</span>
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <AdminBadge variant="success">
                       {c.total_claims.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {c.unique_users.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    </AdminBadge>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    {c.unique_users.toLocaleString()}
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <AdminBadge variant="info">
                       {c.conversion_rate.toFixed(1)}%
-                    </td>
-                    <td className="px-6 py-4">
-                      {c.estimated_revenue > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="font-semibold text-emerald-700">
-                            {formatINR(c.estimated_revenue)}
-                          </span>
-                          <span className="inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
-                            MOV set
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
-                          Config missing
+                    </AdminBadge>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    {c.estimated_revenue > 0 ? (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                          {formatINR(c.estimated_revenue)}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/campaign/${c.campaign_id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                      >
-                        View <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <AdminBadge variant="success" size="sm">
+                          MOV set
+                        </AdminBadge>
+                      </div>
+                    ) : (
+                      <AdminBadge variant="warning" size="sm">
+                        Config missing
+                      </AdminBadge>
+                    )}
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <Link
+                      href={`/admin/campaign/${c.campaign_id}`}
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm font-semibold"
+                    >
+                      View Details
+                    </Link>
+                  </AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </AdminTableBody>
+          </AdminTable>
+        )}
       </div>
     </div>
   );
 }
-
-
-

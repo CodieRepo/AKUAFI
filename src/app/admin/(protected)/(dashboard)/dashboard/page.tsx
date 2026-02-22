@@ -2,7 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { BarChart2, TrendingUp, Activity } from "lucide-react";
+import {
+  BarChart2,
+  TrendingUp,
+  Activity,
+  Users,
+  Megaphone,
+  QrCode,
+  Ticket,
+  UserCheck,
+  DollarSign,
+} from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/ui/AdminPageHeader";
+import { AdminStatCard } from "@/components/admin/ui/AdminStatCard";
+import { AdminCard } from "@/components/admin/ui/AdminCard";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
 
 type ClientRow = {
   client_id: string;
@@ -27,32 +41,6 @@ function formatINR(value: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number | string;
-  hint?: string;
-}) {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-        {label}
-      </p>
-      <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </p>
-      {hint ? (
-        <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
-          {hint}
-        </p>
-      ) : null}
-    </div>
-  );
 }
 
 // ── Chart 1: QR vs Claims per Client (vertical bars) ──────────────────────────
@@ -500,79 +488,93 @@ export default function AdminDashboard() {
     return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   const chartSkeleton = (
-    <div className="h-52 bg-gray-50 dark:bg-gray-700/30 rounded-lg animate-pulse" />
+    <div className="h-52 bg-gray-100/50 dark:bg-white/5 rounded-xl animate-pulse" />
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 py-2">
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Dashboard Overview
-          </h1>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-            Live
-          </span>
-        </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Platform-wide analytics across all clients
-        </p>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        title="Dashboard"
+        description="Platform-wide analytics and insights across all clients"
+        actions={
+          <AdminBadge variant="success" size="md">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
+            Live Data
+          </AdminBadge>
+        }
+      />
 
       {/* Stat Cards */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"
+              className="h-40 bg-white/20 dark:bg-white/5 rounded-2xl animate-pulse"
             />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          <AdminStatCard
             label="Total Clients"
             value={totalClients}
-            hint="Clients currently onboarded."
+            icon={Users}
+            iconColor="text-blue-600 dark:text-blue-400"
+            description="Active clients"
           />
-          <StatCard
-            label="Total Campaigns"
+          <AdminStatCard
+            label="Campaigns"
             value={totalCampaigns}
-            hint="All campaigns created across clients."
+            icon={Megaphone}
+            iconColor="text-purple-600 dark:text-purple-400"
+            description="All campaigns"
           />
-          <StatCard
+          <AdminStatCard
             label="QR Generated"
             value={totalQR}
-            hint="Total impressions available platform-wide."
+            icon={QrCode}
+            iconColor="text-indigo-600 dark:text-indigo-400"
+            description="Total codes"
           />
-          <StatCard
+          <AdminStatCard
             label="Total Claims"
             value={totalClaims}
-            hint="All successful claims across clients."
+            icon={Ticket}
+            iconColor="text-green-600 dark:text-green-400"
+            description="Successful claims"
           />
-          <StatCard
+          <AdminStatCard
             label="Unique Users"
             value={uniqueUsers}
-            hint="Distinct users who claimed at least once."
+            icon={UserCheck}
+            iconColor="text-amber-600 dark:text-amber-400"
+            description="Distinct users"
           />
-          <StatCard
-            label="Platform Revenue Impact"
-            value={formatINR(Math.max(platformRevenue, 0))}
-            hint="Aggregated across all active campaigns."
+          <AdminStatCard
+            label="Revenue Impact"
+            value={formatINR(platformRevenue)}
+            icon={DollarSign}
+            iconColor="text-emerald-600 dark:text-emerald-400"
+            description="Estimated revenue"
           />
         </div>
       )}
 
-      {/* Chart 1 — QR vs Claims per Client */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <BarChart2 className="h-5 w-5 text-blue-500" />
+      {/* Chart 1 - QR vs Claims */}
+      <AdminCard className="p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+            <BarChart2
+              className="h-6 w-6 text-blue-600 dark:text-blue-400"
+              strokeWidth={2.5}
+            />
+          </div>
           <div>
-            <h2 className="font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               QR Generated vs Claims — Per Client
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5" title="Volume view by client">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               Side-by-side volume comparison across all clients
             </p>
           </div>
@@ -586,19 +588,24 @@ export default function AdminDashboard() {
         ) : (
           <QRvsClaimsChart data={clients} />
         )}
-      </div>
+      </AdminCard>
 
-      {/* Chart 2 — Claim Rate % per Client */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <TrendingUp className="h-5 w-5 text-amber-500" />
+      {/* Chart 2 - Claim Rate % per Client */}
+      <AdminCard className="p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+            <TrendingUp
+              className="h-6 w-6 text-amber-600 dark:text-amber-400"
+              strokeWidth={2.5}
+            />
+          </div>
           <div>
-            <h2 className="font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Claim Rate % — Conversion per Client
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5" title="Sorted highest to lowest">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               Sorted best to worst ·{" "}
-              <span className="text-red-400">&lt;5% Low</span> ·{" "}
+              <span className="text-red-500">&lt;5% Low</span> ·{" "}
               <span className="text-amber-500">5–15% Medium</span> ·{" "}
               <span className="text-emerald-500">&gt;15% High</span>
             </p>
@@ -613,17 +620,22 @@ export default function AdminDashboard() {
         ) : (
           <ClaimRateChart data={clients} />
         )}
-      </div>
+      </AdminCard>
 
       {/* Chart 3 — Platform Overview */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Activity className="h-5 w-5 text-purple-500" />
+      <AdminCard className="p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+            <Activity
+              className="h-6 w-6 text-purple-600 dark:text-purple-400"
+              strokeWidth={2.5}
+            />
+          </div>
           <div>
-            <h2 className="font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Platform Growth Overview
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5" title="Trendline for platform totals">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               Cumulative QR vs Claims across all clients
             </p>
           </div>
@@ -637,7 +649,36 @@ export default function AdminDashboard() {
         ) : (
           <PlatformOverviewChart data={clients} />
         )}
-      </div>
+      </AdminCard>
+
+      {/* Chart 3 - Platform Overview */}
+      <AdminCard className="p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+            <BarChart2
+              className="h-6 w-6 text-purple-600 dark:text-purple-400"
+              strokeWidth={2.5}
+            />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Platform Overview
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Comprehensive performance metrics
+            </p>
+          </div>
+        </div>
+        {loading ? (
+          chartSkeleton
+        ) : clients.length === 0 ? (
+          <div className="h-40 flex items-center justify-center text-sm text-gray-400">
+            No data yet.
+          </div>
+        ) : (
+          <PlatformOverviewChart data={clients} />
+        )}
+      </AdminCard>
     </div>
   );
 }

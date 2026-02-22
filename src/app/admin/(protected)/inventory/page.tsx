@@ -5,12 +5,31 @@ import Link from "next/link";
 import {
   Package,
   Plus,
-  ChevronRight,
-  Loader2,
+  Box,
+  Boxes,
+  TrendingDown,
+  CheckCircle,
   AlertCircle,
+  Loader2,
+  ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { formatToISTDate } from "@/lib/formatTimestamp";
+import { AdminPageHeader } from "@/components/admin/ui/AdminPageHeader";
+import { AdminButton } from "@/components/admin/ui/AdminButton";
+import { AdminStatCard } from "@/components/admin/ui/AdminStatCard";
+import {
+  AdminTable,
+  AdminTableHeader,
+  AdminTableBody,
+  AdminTableRow,
+  AdminTableCell,
+  AdminTableHeadCell,
+} from "@/components/admin/ui/AdminTable";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
+import { AdminLoadingState } from "@/components/admin/ui/AdminLoadingState";
+import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { AdminInput } from "@/components/admin/ui/AdminInput";
 
 type BatchRow = {
   id: string;
@@ -158,35 +177,25 @@ function AddBatchModal({
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Batch Name
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              placeholder="e.g. Feb 2026 – Delhi Restaurant"
-              value={form.batch_name}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, batch_name: e.target.value }))
-              }
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Total Bottles
-            </label>
-            <input
-              type="number"
-              min={1}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              placeholder="500"
-              value={form.total_bottles}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, total_bottles: e.target.value }))
-              }
-            />
-          </div>
+          <AdminInput
+            label="Batch Name"
+            type="text"
+            placeholder="e.g. Feb 2026 – Delhi Restaurant"
+            value={form.batch_name}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, batch_name: e.target.value }))
+            }
+          />
+          <AdminInput
+            label="Total Bottles"
+            type="number"
+            placeholder="500"
+            value={form.total_bottles}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, total_bottles: e.target.value }))
+            }
+            min={1}
+          />
           {error && (
             <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -194,25 +203,23 @@ function AddBatchModal({
             </div>
           )}
           <div className="flex gap-3 pt-2">
-            <button
+            <AdminButton
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              variant="secondary"
+              fullWidth
             >
               Cancel
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
               type="submit"
               disabled={loading}
-              className="flex-1 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#004182] text-white text-sm font-medium transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              loading={loading}
+              icon={!loading ? <Plus className="h-4 w-4" /> : undefined}
+              fullWidth
             >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
               Create Batch
-            </button>
+            </AdminButton>
           </div>
         </form>
       </div>
@@ -327,32 +334,21 @@ export default function InventoryPage() {
   ];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    );
+    return <AdminLoadingState />;
   }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Package className="h-6 w-6 text-blue-600" /> Inventory
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Track water bottle stock dispatched to clients
-          </p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#0A66C2] hover:bg-[#004182] text-white rounded-lg font-medium transition-colors shadow-sm text-sm"
-        >
-          <Plus className="h-4 w-4" /> New Batch
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Inventory"
+        description="Track water bottle stock dispatched to clients"
+        actions={
+          <AdminButton onClick={() => setShowModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Batch
+          </AdminButton>
+        }
+      />
 
       {/* Error */}
       {error && (
@@ -363,118 +359,132 @@ export default function InventoryPage() {
       )}
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((m) => (
-          <div
-            key={m.label}
-            className={`rounded-xl p-4 ${m.color} border border-current/10`}
-          >
-            <div className="text-2xl mb-1">{m.icon}</div>
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-70">
-              {m.label}
-            </p>
-            <p className="text-3xl font-bold mt-0.5">{m.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <AdminStatCard
+          label="Total Dispatched"
+          value={totalDispatched.toLocaleString()}
+          icon={Box}
+          iconColor="text-blue-600 dark:text-blue-400"
+          description="Bottles sent to clients"
+        />
+        <AdminStatCard
+          label="Total Remaining"
+          value={totalRemaining.toLocaleString()}
+          icon={Boxes}
+          iconColor="text-green-600 dark:text-green-400"
+          description="Available in stock"
+        />
+        <AdminStatCard
+          label="Active Batches"
+          value={activeBatches}
+          icon={Package}
+          iconColor="text-amber-600 dark:text-amber-400"
+          description="Currently in use"
+        />
+        <AdminStatCard
+          label="Completed Batches"
+          value={completedBatches}
+          icon={CheckCircle}
+          iconColor="text-gray-600 dark:text-gray-400"
+          description="Fully dispatched"
+        />
       </div>
 
       {/* Batches Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="font-bold text-gray-900 dark:text-white">
-            Inventory Batches
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-3">Client</th>
-                <th className="px-6 py-3">Batch Name</th>
-                <th className="px-6 py-3 text-right">Total</th>
-                <th className="px-6 py-3 text-right">Remaining</th>
-                <th className="px-6 py-3">Dispatched</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {batches.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-12 text-center text-gray-400 dark:text-gray-500"
-                  >
-                    No batches yet. Create your first batch to start tracking.
-                  </td>
-                </tr>
-              ) : (
-                batches.map((b) => {
-                  const usedPct =
-                    b.total_bottles > 0
-                      ? Math.round(
-                          ((b.total_bottles - b.remaining_bottles) /
-                            b.total_bottles) *
-                            100,
-                        )
-                      : 0;
-                  return (
-                    <tr
-                      key={b.id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+      {batches.length === 0 ? (
+        <AdminEmptyState
+          icon={Package}
+          title="No batches yet"
+          description="Create your first batch to start tracking inventory"
+          action={
+            <AdminButton onClick={() => setShowModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Batch
+            </AdminButton>
+          }
+        />
+      ) : (
+        <AdminTable>
+          <AdminTableHeader>
+            <AdminTableRow>
+              <AdminTableHeadCell>Client</AdminTableHeadCell>
+              <AdminTableHeadCell>Batch Name</AdminTableHeadCell>
+              <AdminTableHeadCell align="right">Total</AdminTableHeadCell>
+              <AdminTableHeadCell align="right">Remaining</AdminTableHeadCell>
+              <AdminTableHeadCell>Dispatched</AdminTableHeadCell>
+              <AdminTableHeadCell>Status</AdminTableHeadCell>
+              <AdminTableHeadCell> </AdminTableHeadCell>
+            </AdminTableRow>
+          </AdminTableHeader>
+          <AdminTableBody>
+            {batches.map((b) => {
+              const usedPct =
+                b.total_bottles > 0
+                  ? Math.round(
+                      ((b.total_bottles - b.remaining_bottles) /
+                        b.total_bottles) *
+                        100,
+                    )
+                  : 0;
+              return (
+                <AdminTableRow key={b.id}>
+                  <AdminTableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                        <Package className="h-5 w-5 text-white" />
+                      </div>
+                      <span className="font-semibold">{b.client_name}</span>
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {b.batch_name}
+                    </span>
+                  </AdminTableCell>
+                  <AdminTableCell align="right">
+                    <span className="font-mono font-semibold">
+                      {b.total_bottles.toLocaleString()}
+                    </span>
+                  </AdminTableCell>
+                  <AdminTableCell align="right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-mono font-semibold">
+                        {b.remaining_bottles.toLocaleString()}
+                      </span>
+                      <div className="w-20 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full"
+                          style={{ width: `${100 - usedPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {formatToISTDate(b.dispatched_at)}
+                    </span>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <AdminBadge
+                      variant={b.status === "active" ? "success" : "default"}
                     >
-                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                        {b.client_name}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                        {b.batch_name}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono text-gray-900 dark:text-white">
-                        {b.total_bottles.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="font-mono font-semibold text-gray-900 dark:text-white">
-                            {b.remaining_bottles.toLocaleString()}
-                          </span>
-                          <div className="w-20 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-500 rounded-full"
-                              style={{ width: `${100 - usedPct}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        {formatToISTDate(b.dispatched_at)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase ${
-                            b.status === "active"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                              : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                          }`}
-                        >
-                          {b.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Link
-                          href={`/admin/inventory/${b.id}`}
-                          className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium transition-colors"
-                        >
-                          View <ChevronRight className="h-3 w-3" />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      {b.status}
+                    </AdminBadge>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <Link
+                      href={`/admin/inventory/${b.id}`}
+                      className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-medium transition-colors"
+                    >
+                      View <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  </AdminTableCell>
+                </AdminTableRow>
+              );
+            })}
+          </AdminTableBody>
+        </AdminTable>
+      )}
 
       {showModal && (
         <AddBatchModal

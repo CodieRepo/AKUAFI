@@ -2,9 +2,31 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Users, Plus, ChevronRight } from "lucide-react";
+import {
+  Users,
+  Plus,
+  Building2,
+  Megaphone,
+  QrCode,
+  Ticket,
+  UserCheck,
+} from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import CreateClientModal from "@/components/admin/clients/CreateClientModal";
+import { AdminPageHeader } from "@/components/admin/ui/AdminPageHeader";
+import { AdminButton } from "@/components/admin/ui/AdminButton";
+import { AdminCard } from "@/components/admin/ui/AdminCard";
+import {
+  AdminTable,
+  AdminTableHeader,
+  AdminTableBody,
+  AdminTableRow,
+  AdminTableCell,
+  AdminTableHeadCell,
+} from "@/components/admin/ui/AdminTable";
+import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { AdminLoadingState } from "@/components/admin/ui/AdminLoadingState";
+import { AdminBadge } from "@/components/admin/ui/AdminBadge";
 
 interface ClientDashboard {
   client_id: string;
@@ -79,155 +101,173 @@ export default function ClientsPage() {
   }, [fetchClients]);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header — Create Client button preserved */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Clients
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage client accounts and campaign analytics
-          </p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#0A66C2] hover:bg-[#004182] text-white rounded-lg font-medium transition-colors shadow-sm"
-        >
-          <Plus size={18} />
-          Create Client
-        </button>
-      </div>
+    <div className="space-y-8">
+      <AdminPageHeader
+        title="Clients"
+        description="Manage client accounts and campaign analytics"
+        actions={
+          <AdminButton
+            variant="primary"
+            size="md"
+            onClick={() => setIsModalOpen(true)}
+            icon={<Plus className="h-4 w-4" />}
+          >
+            Create Client
+          </AdminButton>
+        }
+      />
 
-      {/* Analytics Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        {/* Totals summary bar */}
-        {!isLoading && clients.length > 0 && (
-          <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 flex gap-8 text-xs text-gray-500 dark:text-gray-400">
-            <span>
-              <span className="font-semibold text-gray-700 dark:text-gray-200">
-                {clients.length}
-              </span>{" "}
-              clients
-            </span>
-            <span>
-              <span className="font-semibold text-gray-700 dark:text-gray-200">
-                {clients
-                  .reduce((s, c) => s + c.total_campaigns, 0)
-                  .toLocaleString()}
-              </span>{" "}
-              campaigns
-            </span>
-            <span>
-              <span className="font-semibold text-gray-700 dark:text-gray-200">
-                {clients.reduce((s, c) => s + c.total_qr, 0).toLocaleString()}
-              </span>{" "}
-              QR generated
-            </span>
-            <span>
-              <span className="font-semibold text-gray-700 dark:text-gray-200">
-                {clients
-                  .reduce((s, c) => s + c.total_claims, 0)
-                  .toLocaleString()}
-              </span>{" "}
-              claims
-            </span>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-              <tr>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Client Name
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+      {/* Summary Stats */}
+      {!isLoading && clients.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <AdminCard className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Total Clients
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {clients.length}
+                </p>
+              </div>
+            </div>
+          </AdminCard>
+          <AdminCard className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                <Megaphone className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   Campaigns
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  QR Generated
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {clients
+                    .reduce((s, c) => s + c.total_campaigns, 0)
+                    .toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </AdminCard>
+          <AdminCard className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
+                <QrCode className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  QR Codes
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {clients.reduce((s, c) => s + c.total_qr, 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </AdminCard>
+          <AdminCard className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <Ticket className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   Claims
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Unique Users
-                </th>
-                <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {isLoading ? (
-                [...Array(3)].map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    {[...Array(6)].map((__, j) => (
-                      <td key={j} className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : error ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-8 text-center text-red-500"
-                  >
-                    {error}
-                  </td>
-                </tr>
-              ) : clients.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
-                    <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No clients yet. Create one to get started.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                clients.map((client) => (
-                  <tr
-                    key={client.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
-                      {client.client_name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.total_campaigns.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.total_qr.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                        {client.total_claims.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {client.unique_users.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/admin/clients/${client.id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm font-medium"
-                      >
-                        View <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {clients
+                    .reduce((s, c) => s + c.total_claims, 0)
+                    .toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </AdminCard>
         </div>
-      </div>
+      )}
 
-      {/* Create Client Modal — untouched */}
+      {/* Clients Table */}
+      {isLoading ? (
+        <AdminLoadingState text="Loading clients..." />
+      ) : error ? (
+        <AdminCard className="p-8 text-center">
+          <p className="text-red-500 dark:text-red-400">{error}</p>
+        </AdminCard>
+      ) : clients.length === 0 ? (
+        <AdminEmptyState
+          icon={Users}
+          title="No clients yet"
+          description="Create your first client to get started with campaign management"
+          action={
+            <AdminButton onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Client
+            </AdminButton>
+          }
+        />
+      ) : (
+        <AdminTable>
+          <AdminTableHeader>
+            <AdminTableRow>
+              <AdminTableHeadCell>Client Name</AdminTableHeadCell>
+              <AdminTableHeadCell>Campaigns</AdminTableHeadCell>
+              <AdminTableHeadCell>QR Generated</AdminTableHeadCell>
+              <AdminTableHeadCell>Claims</AdminTableHeadCell>
+              <AdminTableHeadCell>Unique Users</AdminTableHeadCell>
+              <AdminTableHeadCell>Action</AdminTableHeadCell>
+            </AdminTableRow>
+          </AdminTableHeader>
+          <AdminTableBody>
+            {clients.map((client) => (
+              <AdminTableRow key={client.id}>
+                <AdminTableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                    </div>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {client.client_name}
+                    </span>
+                  </div>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="h-4 w-4 text-purple-500" />
+                    <span>{client.total_campaigns.toLocaleString()}</span>
+                  </div>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <div className="flex items-center gap-2">
+                    <QrCode className="h-4 w-4 text-blue-500" />
+                    <span>{client.total_qr.toLocaleString()}</span>
+                  </div>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <AdminBadge variant="success">
+                    {client.total_claims.toLocaleString()}
+                  </AdminBadge>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-indigo-500" />
+                    <span>{client.unique_users.toLocaleString()}</span>
+                  </div>
+                </AdminTableCell>
+                <AdminTableCell>
+                  <Link
+                    href={`/admin/clients/${client.id}`}
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm font-semibold"
+                  >
+                    View Details
+                  </Link>
+                </AdminTableCell>
+              </AdminTableRow>
+            ))}
+          </AdminTableBody>
+        </AdminTable>
+      )}
+
       <CreateClientModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
