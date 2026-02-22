@@ -272,140 +272,113 @@ function ClaimRateChart({ data }: { data: ClientRow[] }) {
   );
 }
 
-// ── Chart 3: Platform Overview (stacked visual comparison) ───────────────────
-function PlatformOverviewChart({ data }: { data: ClientRow[] }) {
+// ── Chart 3: Client Performance Leaderboard (ranked by engagement score) ─────
+function ClientLeaderboardChart({ data }: { data: ClientRow[] }) {
   if (!data.length) return null;
 
-  const totalQR = data.reduce((s, d) => s + d.total_qr, 0);
-  const totalClaims = data.reduce((s, d) => s + d.total_claims, 0);
-  const claimRate =
-    totalQR > 0 ? ((totalClaims / totalQR) * 100).toFixed(1) : "0.0";
-  const claimPct = totalQR > 0 ? (totalClaims / totalQR) * 100 : 0;
+  // Calculate engagement score: weighted combination of metrics
+  const ranked = [...data]
+    .map((d) => ({
+      ...d,
+      score:
+        d.total_campaigns * 100 +
+        d.total_qr * 10 +
+        d.total_claims * 50 +
+        d.unique_users * 25,
+      rate: d.total_qr > 0 ? (d.total_claims / d.total_qr) * 100 : 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6); // Top 6 clients
 
-  // Per-client cumulative area — build points across clients
-  const W = 480;
-  const H = 160;
-  const PAD = { top: 12, bottom: 32, left: 8, right: 8 };
-  const innerW = W - PAD.left - PAD.right;
-  const innerH = H - PAD.top - PAD.bottom;
-  const maxQR = Math.max(...data.map((d) => d.total_qr), 1);
+  if (!ranked.length) return null;
 
-  const points = (key: "total_qr" | "total_claims") =>
-    data
-      .map((d, i) => {
-        const x = PAD.left + (i / Math.max(data.length - 1, 1)) * innerW;
-        const y = PAD.top + innerH - (d[key] / maxQR) * innerH;
-        return `${x},${y}`;
-      })
-      .join(" ");
+  const maxScore = ranked[0]?.score || 1;
 
-  const qrPts = points("total_qr");
-  const claimsPts = points("total_claims");
+  const getRankColor = (rank: number) => {
+    if (rank === 1) return "from-yellow-400 to-yellow-600"; // Gold
+    if (rank === 2) return "from-gray-300 to-gray-500"; // Silver
+    if (rank === 3) return "from-amber-600 to-amber-800"; // Bronze
+    return "from-teal-400 to-teal-600"; // Teal for others
+  };
 
-  // Build filled polygon for area
-  const areaPolygon = (pts: string, color: string) => {
-    const first = pts.split(" ")[0];
-    const last = pts.split(" ").at(-1)!;
-    const [lx] = last.split(",");
-    const [fx] = first.split(",");
-    return (
-      <polygon
-        points={`${fx},${PAD.top + innerH} ${pts} ${lx},${PAD.top + innerH}`}
-        fill={color}
-        fillOpacity={0.15}
-      />
-    );
+  const getRankTextColor = (rank: number) => {
+    if (rank === 1) return "text-yellow-600";
+    if (rank === 2) return "text-gray-600";
+    if (rank === 3) return "text-amber-700";
+    return "text-teal-600";
   };
 
   return (
-    <div className="space-y-4">
-      {/* Summary tiles */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          {
-            label: "Total QR",
-            val: totalQR.toLocaleString(),
-            color: "text-blue-600",
-          },
-          {
-            label: "Total Claims",
-            val: totalClaims.toLocaleString(),
-            color: "text-emerald-600",
-          },
-          {
-            label: "Platform Rate",
-            val: `${claimRate}%`,
-            color:
-              claimPct >= 15
-                ? "text-emerald-600"
-                : claimPct >= 5
-                  ? "text-amber-600"
-                  : "text-red-500",
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 text-center"
-          >
-            <p className="text-xs text-gray-400 mb-1">{item.label}</p>
-            <p className={`text-xl font-bold ${item.color}`}>{item.val}</p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-3">
+      {ranked.map((client, idx) => {
+        const rank = idx + 1;
+        const scorePercent = (client.score / maxScore) * 100;
 
-      {/* Area chart */}
-      {data.length > 1 && (
-        <div className="w-full overflow-x-auto">
-          <svg width={W} height={H} aria-label="Platform QR vs Claims trend">
-            {areaPolygon(qrPts, "#3b82f6")}
-            {areaPolygon(claimsPts, "#10b981")}
-            <polyline
-              points={qrPts}
-              fill="none"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points={claimsPts}
-              fill="none"
-              stroke="#10b981"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Client name labels */}
-            {data.map((d, i) => {
-              const x = PAD.left + (i / Math.max(data.length - 1, 1)) * innerW;
-              return (
-                <text
-                  key={d.client_id}
-                  x={x}
-                  y={H - 6}
-                  textAnchor="middle"
-                  fontSize={10}
-                  fill="#9ca3af"
+        return (
+          <div
+            key={client.client_id}
+            className="flex items-center gap-3 group hover:bg-gray-50/50 dark:hover:bg-gray-700/20 rounded-lg p-2 transition-colors"
+          >
+            {/* Rank Badge */}
+            <div
+              className={`flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${getRankColor(rank)} flex items-center justify-center shadow-sm`}
+            >
+              <span className="text-white font-bold text-sm">{rank}</span>
+            </div>
+
+            {/* Client Info & Metrics */}
+            <div className="flex-1 min-w-0">
+              {/* Client Name & Score */}
+              <div className="flex items-center justify-between mb-1.5">
+                <h4 className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">
+                  {client.client_name}
+                </h4>
+                <span
+                  className={`text-xs font-bold ${getRankTextColor(rank)} ml-2`}
                 >
-                  {d.client_name.length > 8
-                    ? d.client_name.slice(0, 7) + "…"
-                    : d.client_name}
-                </text>
-              );
-            })}
-          </svg>
-          <div className="flex gap-6 mt-1">
-            <span className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="w-3 h-1.5 rounded bg-blue-500 inline-block" />
-              QR Generated
-            </span>
-            <span className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="w-3 h-1.5 rounded bg-emerald-500 inline-block" />
-              Claims
-            </span>
+                  {client.score.toLocaleString()} pts
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-1.5">
+                <div
+                  className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getRankColor(rank)} transition-all duration-500 rounded-full`}
+                  style={{ width: `${scorePercent}%` }}
+                />
+              </div>
+
+              {/* Mini Stats */}
+              <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  {client.total_campaigns} campaigns
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                  {client.total_qr.toLocaleString()} QR
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {client.total_claims} claims
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  {client.rate.toFixed(1)}% rate
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
+
+      {/* Legend */}
+      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-400 text-center">
+          Engagement score = campaigns + QR volume + claims + unique users
+          (weighted)
+        </p>
+      </div>
     </div>
   );
 }
@@ -622,21 +595,18 @@ export default function AdminDashboard() {
         )}
       </AdminCard>
 
-      {/* Chart 3 — Platform Overview */}
+      {/* Chart 3 — Client Performance Leaderboard */}
       <AdminCard className="p-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-            <Activity
-              className="h-6 w-6 text-purple-600 dark:text-purple-400"
-              strokeWidth={2.5}
-            />
+          <div className="p-3 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl shadow-sm">
+            <Activity className="h-6 w-6 text-white" strokeWidth={2.5} />
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              Platform Growth Overview
+              Client Performance Leaderboard
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Cumulative QR vs Claims across all clients
+              Top clients ranked by engagement score
             </p>
           </div>
         </div>
@@ -647,36 +617,7 @@ export default function AdminDashboard() {
             No data yet.
           </div>
         ) : (
-          <PlatformOverviewChart data={clients} />
-        )}
-      </AdminCard>
-
-      {/* Chart 3 - Platform Overview */}
-      <AdminCard className="p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-            <BarChart2
-              className="h-6 w-6 text-purple-600 dark:text-purple-400"
-              strokeWidth={2.5}
-            />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              Platform Overview
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Comprehensive performance metrics
-            </p>
-          </div>
-        </div>
-        {loading ? (
-          chartSkeleton
-        ) : clients.length === 0 ? (
-          <div className="h-40 flex items-center justify-center text-sm text-gray-400">
-            No data yet.
-          </div>
-        ) : (
-          <PlatformOverviewChart data={clients} />
+          <ClientLeaderboardChart data={clients} />
         )}
       </AdminCard>
     </div>
