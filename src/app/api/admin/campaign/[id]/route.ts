@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function DELETE(
     request: NextRequest,
@@ -25,11 +26,20 @@ export async function DELETE(
 
     const { data: { session }, error: authError } = await supabase.auth.getSession();
 
-    if (authError || !session) {
+    if (authError || !session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Perform Deletion using Admin Client (Service Role) to bypass RLS restrictions if necessary
+    // 2. Verify Admin (must happen before any service-role client is created/used)
+    try {
+        await verifyAdmin();
+    } catch (error: any) {
+        const message = error?.message || 'Unauthorized';
+        const status = message.includes('Forbidden') ? 403 : 401;
+        return NextResponse.json({ error: message }, { status });
+    }
+
+    // 3. Perform Deletion using Admin Client (Service Role) to bypass RLS restrictions if necessary
     // and ensure complete cleanup.
     const supabaseAdmin = getSupabaseAdmin();
 
