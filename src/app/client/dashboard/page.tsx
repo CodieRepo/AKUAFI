@@ -619,20 +619,6 @@ export default async function ClientDashboard() {
       : Promise.resolve({ data: [] }),
   ]);
 
-  // TEMPORARY DEBUG: Log raw coupon data from DB
-  if (couponsProper && couponsProper.length > 0) {
-    console.log(
-      "[SERVER DEBUG] Dashboard - RAW couponsProper[0]:",
-      couponsProper[0],
-    );
-    console.log(
-      "[SERVER DEBUG] Dashboard - redeemed_at type:",
-      typeof couponsProper[0].redeemed_at,
-      "value:",
-      couponsProper[0].redeemed_at,
-    );
-  }
-
   // 3. Process top metrics
   const metrics = overviewRow as any;
   const totalCampaigns = Number(metrics?.total_campaigns || 0);
@@ -712,6 +698,13 @@ export default async function ClientDashboard() {
     date,
     count: claimsByDate[date],
   }));
+  const dailyClaimsRawDebug = ((dailyClaimsRaw || []) as any[])
+    .slice(0, 2)
+    .map((r) => ({
+      dayKey: istDateKey(r.redeemed_at || ""),
+      rawTimestamp: r.redeemed_at,
+      rawType: typeof r.redeemed_at,
+    }));
 
   // 7. Generated coupons — include discount_value
   const generatedCoupons = (couponsProper || []).map((r: any) => {
@@ -1139,6 +1132,9 @@ export default async function ClientDashboard() {
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-white">
                     Daily Claims — Last 7 Days
+                    <span className="text-[10px] opacity-60 ml-2">
+                      TZFIX-vFinal
+                    </span>
                   </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Claim activity trend
@@ -1146,6 +1142,26 @@ export default async function ClientDashboard() {
                 </div>
               </div>
               <DailyClaimsChart data={dailyClaims} />
+              <div className="mt-3 space-y-1">
+                {dailyClaimsRawDebug.length === 0 ? (
+                  <pre className="text-xs opacity-60 whitespace-pre-wrap">
+                    RAW: no dailyClaimsRaw rows | type: undefined
+                  </pre>
+                ) : (
+                  dailyClaimsRawDebug.map((debugItem, idx) => (
+                    <div key={`daily-claims-raw-${idx}`}>
+                      <pre className="text-xs opacity-60 whitespace-pre-wrap">
+                        RAW: {String(debugItem.rawTimestamp)} | type:{" "}
+                        {debugItem.rawType}
+                      </pre>
+                      <pre className="text-xs opacity-60 whitespace-pre-wrap">
+                        RAW: {String(debugItem.dayKey)} | type:{" "}
+                        {typeof debugItem.dayKey}
+                      </pre>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Unique Users table */}

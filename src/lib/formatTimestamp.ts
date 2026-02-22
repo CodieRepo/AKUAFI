@@ -4,12 +4,35 @@ function isLikelyPreformatted(s: string): boolean {
   return /[A-Za-z]{3,}|,/.test(s);
 }
 
+function normalizeToUtcIsoString(s: string): string {
+  const value = s.trim();
+
+  if (/[zZ]$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value)) {
+    return value;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(value)) {
+    return value.replace(" ", "T") + "Z";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(value)) {
+    return value + "Z";
+  }
+
+  return value;
+}
+
 function parseTemporalInput(input: string | Date): Date | null {
   if (typeof input === "string" && isLikelyPreformatted(input)) {
     return null;
   }
 
-  const date = input instanceof Date ? input : new Date(input);
+  const normalizedInput =
+    typeof input === "string" ? normalizeToUtcIsoString(input) : input;
+  const date =
+    normalizedInput instanceof Date
+      ? normalizedInput
+      : new Date(normalizedInput);
   if (Number.isNaN(date.getTime())) return null;
   return date;
 }
@@ -24,7 +47,9 @@ export function formatUtcToIst(
     return input;
   }
 
-  const date = parseTemporalInput(input);
+  const normalizedInput =
+    typeof input === "string" ? normalizeToUtcIsoString(input) : input;
+  const date = parseTemporalInput(normalizedInput);
   if (!date) return "—";
 
   return new Intl.DateTimeFormat("en-IN", {
@@ -42,7 +67,9 @@ export function formatUtcToIst(
 export function istDateKey(input: string | Date | null | undefined): string {
   if (!input) return "";
 
-  const date = parseTemporalInput(input);
+  const normalizedInput =
+    typeof input === "string" ? normalizeToUtcIsoString(input) : input;
+  const date = parseTemporalInput(normalizedInput);
   if (!date) return "";
 
   const parts = new Intl.DateTimeFormat("en-CA", {
