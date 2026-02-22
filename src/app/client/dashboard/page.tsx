@@ -333,33 +333,33 @@ function SmartSuggestionsCard({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
-        <span className="text-base">📊</span>
-        <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+    <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
+        <span className="text-lg">📊</span>
+        <h3 className="font-bold text-gray-900 dark:text-white">
           Growth Suggestions
         </h3>
       </div>
-      <div className="divide-y divide-gray-100 dark:divide-slate-800">
+      <div className="divide-y divide-gray-200/50 dark:divide-white/5">
         {suggestions.map((s, i) => (
           <div
             key={i}
-            className={`p-4 bg-gradient-to-br ${s.gradientCls} border-l-4 ${s.borderCls} group hover:brightness-95 dark:hover:brightness-110 transition-all duration-200`}
+            className={`p-5 bg-gradient-to-br ${s.gradientCls} border-l-4 ${s.borderCls} group hover:brightness-95 dark:hover:brightness-110 transition-all duration-200`}
           >
             <div className="flex items-start gap-3">
-              <span className="text-xl mt-0.5 shrink-0">{s.emoji}</span>
+              <span className="text-2xl mt-0.5 shrink-0">{s.emoji}</span>
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
                     {s.title}
                   </p>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.badgeCls}`}
+                    className={`text-[10px] px-2.5 py-1 rounded-full font-semibold ${s.badgeCls}`}
                   >
                     {s.badge}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
                   {s.body}
                 </p>
               </div>
@@ -390,26 +390,26 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
         : "bg-red-500";
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-base">📈</span>
-        <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+    <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm p-6">
+      <div className="flex items-center gap-2.5 mb-5">
+        <span className="text-lg">📈</span>
+        <h3 className="font-bold text-gray-900 dark:text-white">
           Campaign Health
         </h3>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* Conversion */}
         <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <p className="text-xs text-gray-500 dark:text-slate-400">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-xs font-medium text-gray-600 dark:text-slate-400">
               Conversion Rate
             </p>
             <span className="text-sm font-bold text-gray-900 dark:text-white">
               {conversionPct.toFixed(1)}%
             </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+          <div className="h-2.5 w-full rounded-full bg-gray-100 dark:bg-slate-700/50 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ${barCls}`}
               style={{
@@ -421,15 +421,15 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
 
         {/* Claim Rate = same as conversion for this context */}
         <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <p className="text-xs text-gray-500 dark:text-slate-400">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-xs font-medium text-gray-600 dark:text-slate-400">
               Claim Rate
             </p>
             <span className="text-sm font-bold text-gray-900 dark:text-white">
               {conversionPct.toFixed(1)}%
             </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+          <div className="h-2.5 w-full rounded-full bg-gray-100 dark:bg-slate-700/50 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ${barCls}`}
               style={{
@@ -440,12 +440,12 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
         </div>
 
         {/* Engagement level tile */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/80 dark:bg-slate-800/40 border border-gray-200/50 dark:border-white/5">
           <div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-500 uppercase tracking-[0.1em] mb-1">
               Engagement Level
             </p>
-            <p className="text-xs text-gray-500 dark:text-slate-400">
+            <p className="text-xs text-gray-600 dark:text-slate-400">
               {engagement === "High"
                 ? "> 5% conversion"
                 : engagement === "Medium"
@@ -454,7 +454,7 @@ function CampaignHealthCard({ conversionPct }: { conversionPct: number }) {
             </p>
           </div>
           <span
-            className={`text-xs font-bold px-3 py-1 rounded-full ${engagementCls}`}
+            className={`text-xs font-bold px-3 py-1.5 rounded-full ${engagementCls}`}
           >
             {engagement}
           </span>
@@ -478,35 +478,35 @@ function BestCampaignCard({ campaigns }: { campaigns: CampaignMetricRow[] }) {
   if (!ranked.length) return null;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
-        <span className="text-base">🏆</span>
-        <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+    <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
+        <span className="text-lg">🏆</span>
+        <h3 className="font-bold text-gray-900 dark:text-white">
           Best Performing Campaigns
         </h3>
       </div>
-      <div className="divide-y divide-gray-100 dark:divide-slate-800">
+      <div className="divide-y divide-gray-200/50 dark:divide-white/5">
         {ranked.map((c, i) => (
           <div
             key={c.campaign_id}
-            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors"
+            className="flex items-center gap-3 px-6 py-4 hover:bg-white/40 dark:hover:bg-white/[0.02] transition-all duration-200"
           >
-            <span className="text-sm font-bold text-gray-300 dark:text-slate-600 w-4 shrink-0 text-center">
+            <span className="text-base font-bold text-gray-300 dark:text-slate-600 w-5 shrink-0 text-center">
               {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1.5">
                 {c.campaign_name}
               </p>
-              <div className="mt-1 h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="mt-1.5 h-2 w-full bg-gray-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full ${i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : "bg-amber-500"}`}
+                  className={`h-full rounded-full transition-all duration-500 ${i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : "bg-amber-500"}`}
                   style={{ width: `${Math.min(c.pct, 100)}%` }}
                 />
               </div>
             </div>
             <span
-              className={`text-xs font-bold shrink-0 ${i === 0 ? "text-emerald-600 dark:text-emerald-400" : i === 1 ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"}`}
+              className={`text-sm font-bold shrink-0 ${i === 0 ? "text-emerald-600 dark:text-emerald-400" : i === 1 ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"}`}
             >
               {c.pct}%
             </span>
@@ -762,23 +762,23 @@ export default async function ClientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black text-gray-900 dark:text-white font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50/30 dark:from-black dark:via-slate-950 dark:to-slate-900 text-gray-900 dark:text-white font-sans">
+      <div className="max-w-[1600px] mx-auto px-6 sm:px-8 py-8 space-y-8">
         {/* ── Header */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25">
                 <Sparkles className="h-4 w-4" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400">
                 Dashboard
               </span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
               {client.client_name}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+            <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-2 mt-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -789,65 +789,65 @@ export default async function ClientDashboard() {
         </header>
 
         {/* ── 1. Top Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
           {[
             {
               label: "Campaigns",
               value: fmt(totalCampaigns),
-              icon: <Zap className="h-4 w-4" />,
+              icon: <Zap className="h-5 w-5" />,
               color: "text-violet-500",
               hint: "Total campaigns created for this client.",
             },
             {
               label: "QR Generated",
               value: fmt(totalQR),
-              icon: <QrCode className="h-4 w-4" />,
+              icon: <QrCode className="h-5 w-5" />,
               color: "text-blue-500",
               hint: "Total QR generated across campaigns.",
             },
             {
               label: "Total Claims",
               value: fmt(totalClaims),
-              icon: <CheckCircle2 className="h-4 w-4" />,
+              icon: <CheckCircle2 className="h-5 w-5" />,
               color: "text-emerald-500",
               hint: "Total successful coupon claims.",
             },
             {
               label: "Unique Users",
               value: fmt(totalUsers),
-              icon: <Users className="h-4 w-4" />,
+              icon: <Users className="h-5 w-5" />,
               color: "text-amber-500",
               hint: "Distinct users who claimed at least once.",
             },
             {
               label: "Conversion",
               value: `${conversionPct}%`,
-              icon: <TrendingUp className="h-4 w-4" />,
+              icon: <TrendingUp className="h-5 w-5" />,
               color: "text-pink-500",
               hint: "Claims divided by impressions.",
             },
           ].map(({ label, value, icon, color, hint }) => (
             <div
               key={label}
-              className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+              className="group relative bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="min-w-0 flex-1">
                   <p
-                    className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider"
+                    className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3"
                     title={hint}
                   >
                     {label}
                   </p>
-                  <p className="text-2xl font-bold mt-1">{value}</p>
+                  <p className="text-3xl font-bold tracking-tight">{value}</p>
                 </div>
                 <div
-                  className={`p-2 rounded-lg bg-gray-50 dark:bg-slate-800 ${color}`}
+                  className={`p-2.5 rounded-xl bg-gray-50/80 dark:bg-slate-800/60 ${color} group-hover:scale-110 transition-transform duration-200`}
                 >
                   {icon}
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
+              <p className="text-[10px] text-gray-400 dark:text-slate-500 leading-relaxed">
                 {hint}
               </p>
             </div>
@@ -856,40 +856,40 @@ export default async function ClientDashboard() {
 
         {/* ── Discount Metrics Row (shown once any coupon has a discount) */}
         {totalDiscountIssued > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
-              <div className="text-green-600 dark:text-green-400 mb-2">💰</div>
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200">
+              <div className="text-2xl mb-3">💰</div>
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
                 Total Discount Issued
               </p>
-              <p className="text-2xl font-bold mt-1 text-green-700 dark:text-green-400">
+              <p className="text-3xl font-bold tracking-tight text-green-700 dark:text-green-400">
                 ₹{totalDiscountIssued.toLocaleString()}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
+              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
                 Across all active + claimed coupons
               </p>
             </div>
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
-              <div className="text-emerald-600 dark:text-emerald-400 mb-2">
-                📈
-              </div>
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200">
+              <div className="text-2xl mb-3">📈</div>
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
                 Estimated Revenue Impact
               </p>
-              <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">
+              <p className="text-3xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
                 ₹{estimatedRevenue.toLocaleString()}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
+              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
                 Claimed coupons only
               </p>
             </div>
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm">
-              <div className="text-blue-500 mb-2">🎯</div>
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200">
+              <div className="text-2xl mb-3">🎯</div>
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
                 Avg Discount / Coupon
               </p>
-              <p className="text-2xl font-bold mt-1">₹{avgDiscount}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
+              <p className="text-3xl font-bold tracking-tight">
+                ₹{avgDiscount}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
                 Across {(couponsProper || []).length} coupons
               </p>
             </div>
@@ -897,88 +897,94 @@ export default async function ClientDashboard() {
         )}
 
         {/* ── Analytics Metrics Row: Impressions · Reach · Revenue */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {/* Impressions */}
           <div
-            className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+            className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
             title="Total impressions across all campaigns"
           >
-            <div className="text-violet-500 mb-2">👁️</div>
-            <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl mb-3">👁️</div>
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
               Impressions
             </p>
-            <p className="text-2xl font-bold mt-1">{fmt(impressions)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
+            <p className="text-3xl font-bold tracking-tight">
+              {fmt(impressions)}
+            </p>
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
               Total QR views across campaigns
             </p>
           </div>
 
           {/* Estimated Reach */}
           <div
-            className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+            className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
             title="Projected reach based on current distribution"
           >
-            <div className="text-blue-500 mb-2">📡</div>
-            <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl mb-3">📡</div>
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
               Estimated Reach
             </p>
-            <p className="text-2xl font-bold mt-1">{fmt(estimatedReach)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
+            <p className="text-3xl font-bold tracking-tight">
+              {fmt(estimatedReach)}
+            </p>
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
               Projected audience exposure based on QR distribution
             </p>
           </div>
 
           {/* Estimated Revenue (MOV-based) */}
           <div
-            className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 shadow-sm"
+            className="group bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200"
             title="Revenue estimate aggregated from all campaign rows"
           >
-            <div className="text-emerald-500 mb-2">💵</div>
-            <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl mb-3">💵</div>
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3">
               Estimated Revenue
             </p>
-            <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+            <p className="text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
               ₹{estimatedRevenueByMOV.toLocaleString()}
             </p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2">
               Aggregated across all active campaigns.
             </p>
           </div>
         </div>
 
         {/* ── My Earnings */}
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+        <section className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
+          <div className="px-7 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
             <TrendingUp className="h-5 w-5 text-emerald-500" />
-            <h2 className="font-bold text-gray-900 dark:text-white">
+            <h2 className="font-bold text-gray-900 dark:text-white text-lg">
               My Earnings
             </h2>
           </div>
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
                 Total Bottles Distributed
               </p>
-              <p className="text-2xl font-bold mt-1">
+              <p className="text-2xl font-bold tracking-tight">
                 {fmt(totalBottlesDistributed)}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
                 Total Scans
               </p>
-              <p className="text-2xl font-bold mt-1">{fmt(totalScans)}</p>
+              <p className="text-2xl font-bold tracking-tight">
+                {fmt(totalScans)}
+              </p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
                 Revenue Generated
               </p>
-              <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">
+              <p className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
                 ₹{estimatedRevenueByMOV.toLocaleString()}
               </p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
                 Top Performing Campaign
               </p>
               <p className="text-sm font-semibold mt-2 truncate text-gray-900 dark:text-white">
@@ -988,31 +994,33 @@ export default async function ClientDashboard() {
                 {fmt(topPerformingCampaignByScans?.total_scans || 0)} scans
               </p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-900/40">
-              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="rounded-xl border border-gray-200/50 dark:border-white/10 p-5 bg-white/40 dark:bg-white/[0.02] hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-200">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">
                 Impressions
               </p>
-              <p className="text-2xl font-bold mt-1">{fmt(impressions)}</p>
+              <p className="text-2xl font-bold tracking-tight">
+                {fmt(impressions)}
+              </p>
             </div>
           </div>
         </section>
 
-        <div className="flex items-center gap-3 pt-1">
-          <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800" />
-          <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-slate-500">
+        <div className="flex items-center gap-4 pt-2">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 dark:text-slate-400">
             Campaign Analysis
           </p>
-          <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
         </div>
 
         {/* ── 2. Main grid: Campaign table + right column */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
           {/* LEFT (2-col): Campaign Performance Table */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+          <div className="lg:col-span-2 space-y-7">
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
+              <div className="px-7 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
                 <Trophy className="h-5 w-5 text-blue-500" />
-                <h2 className="font-bold text-gray-900 dark:text-white">
+                <h2 className="font-bold text-gray-900 dark:text-white text-lg">
                   Campaign Performance
                 </h2>
               </div>
@@ -1103,14 +1111,14 @@ export default async function ClientDashboard() {
             </div>
 
             {/* Chart 1: QR vs Claims per campaign */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm p-7">
+              <div className="flex items-center gap-2.5 mb-5">
                 <BarChart2 className="h-5 w-5 text-blue-500" />
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white">
+                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">
                     QR Generated vs Claims — Per Campaign
                   </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                     Volume comparison
                   </p>
                 </div>
@@ -1119,14 +1127,14 @@ export default async function ClientDashboard() {
             </div>
 
             {/* Chart 2: Daily claims (last 7 days) */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm p-7">
+              <div className="flex items-center gap-2.5 mb-5">
                 <Activity className="h-5 w-5 text-violet-500" />
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white">
+                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">
                     Daily Claims — Last 7 Days
                   </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                     Claim activity trend
                   </p>
                 </div>
@@ -1135,14 +1143,14 @@ export default async function ClientDashboard() {
             </div>
 
             {/* Unique Users table */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-white/10 shadow-sm overflow-hidden">
+              <div className="px-7 py-5 border-b border-gray-200/50 dark:border-white/10 flex items-center gap-2.5">
                 <Users className="h-5 w-5 text-amber-500" />
                 <div>
-                  <h2 className="font-bold text-gray-900 dark:text-white">
+                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">
                     Unique Users
                   </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                     Customers who claimed at least once
                   </p>
                 </div>
@@ -1204,7 +1212,7 @@ export default async function ClientDashboard() {
           </div>
 
           {/* RIGHT (1-col): Smart Suggestions + Campaign Health + Best Campaign + Verify */}
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* ── Smart Suggestions ─────────────────────────────────── */}
             <SmartSuggestionsCard
               conversionPct={parseFloat(conversionPct)}
